@@ -25,6 +25,15 @@ CALL, NO_APPROVAL = "call", "call_without_approval"
 ALLOW = "EFFECT_ALLOW"
 
 
+NO_APPROVAL_EVIDENCE: dict[str, Any] = {
+    "approval_id": "",
+    "approved": False,
+    "approver": "",
+    "approver_groups": [],
+    "bound": False,
+}
+
+
 def cerbos_request(request: PolicyInput) -> dict[str, Any]:
     subject = request.subject
     ctx = request.ctx
@@ -55,6 +64,8 @@ def cerbos_request(request: PolicyInput) -> dict[str, Any]:
             "tool_ref": request.tool_ref,
             "tool_tags": list(request.tool_tags),
             "arguments": data["arguments"],
+            "user_id": ctx.user_id,
+            "approval": {**NO_APPROVAL_EVIDENCE, **(request.approval or {})},
         },
     }
     return {

@@ -244,7 +244,8 @@ class ToolNodeExecutor:
     """Calls the node's tool through the (authorising) tool executor.
 
     ``names`` maps a spec tool name (``post_payment``) to the registry's model-facing name
-    (``erp__post_payment``); unmapped names are used as they are.
+    (``erp__post_payment``); unmapped names are used as they are. Behind an approval node the
+    decision travels with the call as ``ApprovalEvidence`` bound to these exact arguments.
     """
 
     def __init__(self, tools: ToolExecutor, names: Mapping[str, str] | None = None) -> None:
@@ -252,14 +253,34 @@ class ToolNodeExecutor:
         self.names = dict(names or {})
 
     async def __call__(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> Any:
+        from agent_runtime.approvals import ApproverNotAllowedError, evidence_for
+
         spec_name = str(node.config["tool"])
+        name = self.names.get(spec_name, spec_name)
         cfg = _cfg(node)
         arguments = resolve(cfg.get("args", {}), values)
+        gate = node.config.get("approval_node")
+        try:
+            evidence = (
+                evidence_for(
+                    values.get(str(gate)),
+                    approval_id=f"{ctx.run_id}:{gate}",
+                    tool=name,
+                    arguments=arguments,
+                    required_group=node.config.get("approvers"),
+                    ctx=ctx,
+                )
+                if gate
+                else None
+            )
+        except ApproverNotAllowedError as exc:
+            raise ToolNodeError(f"approval_invalid: {exc}") from exc
         result = await self.tools.execute(
             ToolCall(
-                name=self.names.get(spec_name, spec_name),
+                name=name,
                 arguments=arguments,
                 idempotency_key=f"{ctx.run_id}:{node.id}",
+                approval=evidence,
             ),
             ctx,
         )

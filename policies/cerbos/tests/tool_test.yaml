@@ -32,6 +32,26 @@ resources:
     kind: tool
     id: erp__post_payment
     attr: { <<: *base, risk_tier: medium, side_effect: irreversible, arguments: { amount_aud: 500 } }
+  payment_approved:
+    kind: tool
+    id: erp__post_payment
+    attr:
+      <<: *base
+      risk_tier: medium
+      side_effect: irreversible
+      arguments: { amount_aud: 528 }
+      user_id: alice
+      approval: { approval_id: "run-1:pay.approval", approved: true, approver: j.smith, approver_groups: ["/acme/approvers"], bound: true }
+  payment_self_approved:
+    kind: tool
+    id: erp__post_payment
+    attr:
+      <<: *base
+      risk_tier: medium
+      side_effect: irreversible
+      arguments: { amount_aud: 528 }
+      user_id: alice
+      approval: { approval_id: "run-1:pay.approval", approved: true, approver: alice, approver_groups: ["/acme/approvers"], bound: true }
   payment_over_limit:
     kind: tool
     id: erp__post_payment
@@ -61,6 +81,14 @@ tests:
     input: { principals: [alice], resources: [payment], actions: [call, call_without_approval] }
     expected:
       - { principal: alice, resource: payment, actions: { call: EFFECT_ALLOW, call_without_approval: EFFECT_DENY } }
+  - name: a bound approval by an approver lets the payment run
+    input: { principals: [alice], resources: [payment_approved], actions: [call, call_without_approval] }
+    expected:
+      - { principal: alice, resource: payment_approved, actions: { call: EFFECT_ALLOW, call_without_approval: EFFECT_ALLOW } }
+  - name: the requester cannot approve their own payment
+    input: { principals: [alice], resources: [payment_self_approved], actions: [call_without_approval] }
+    expected:
+      - { principal: alice, resource: payment_self_approved, actions: { call_without_approval: EFFECT_DENY } }
   - name: argument above the tier limit is denied
     input: { principals: [alice], resources: [payment_over_limit], actions: [call] }
     expected:

@@ -140,3 +140,59 @@ test_irreversible_is_never_plainly_allowed if {
 }
 
 test_decision_carries_policy_version if tools.decision.version == tools.version with input as base
+
+# ---------------------------------------------------------------- approval evidence (Step 15)
+
+approved_by(who, groups, bound) := {
+	"approval_id": "run-1:pay.approval",
+	"approved": true,
+	"approver": who,
+	"approver_groups": groups,
+	"bound": bound,
+}
+
+payment(approval, risk) := with_input({
+	"tool": "erp__post_payment",
+	"side_effect": "irreversible",
+	"arguments": {"amount_aud": 528},
+	"ctx": object.union(base.ctx, {"risk_tier": risk}),
+	"approval": approval,
+})
+
+test_bound_approval_from_an_approver_allows_the_payment if {
+	d := tools.decision with input as payment(approved_by("j.smith", ["/acme/approvers"], true), "medium")
+	d.effect == "allow"
+	d.reasons == ["approved by j.smith (run-1:pay.approval)"]
+}
+
+test_approval_not_bound_to_these_arguments_still_needs_approval if {
+	d := tools.decision with input as payment(approved_by("j.smith", ["/acme/approvers"], false), "medium")
+	d.effect == "require_approval"
+}
+
+test_rejected_decision_still_needs_approval if {
+	rejected := object.union(approved_by("j.smith", ["/acme/approvers"], true), {"approved": false})
+	d := tools.decision with input as payment(rejected, "medium")
+	d.effect == "require_approval"
+}
+
+test_requester_cannot_approve_their_own_payment if {
+	d := tools.decision with input as payment(approved_by("alice", ["/acme/approvers"], true), "medium")
+	d.effect == "require_approval"
+}
+
+test_approver_outside_the_group_does_not_count if {
+	d := tools.decision with input as payment(approved_by("bob", ["/acme/finance"], true), "medium")
+	d.effect == "require_approval"
+}
+
+test_one_approval_never_satisfies_two_person_approval if {
+	d := tools.decision with input as payment(approved_by("j.smith", ["/acme/two-person-approvers"], true), "high")
+	d.effect == "require_approval"
+}
+
+test_approval_never_overrides_a_denial if {
+	over := object.union(payment(approved_by("j.smith", ["/acme/approvers"], true), "medium"), {"arguments": {"amount_aud": 20000}})
+	d := tools.decision with input as over
+	d.effect == "deny"
+}

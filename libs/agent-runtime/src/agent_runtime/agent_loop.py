@@ -47,6 +47,7 @@ from agent_contracts.models import (
     Trust,
 )
 
+from agent_runtime.approvals import ApproverNotAllowedError, evidence_for
 from agent_runtime.executors import render
 
 DEFAULT_SYSTEM = (
@@ -208,6 +209,48 @@ class AgentLoopExecutor(AgentLoop):
 
     # ------------------------------------------------------------------ loop
 
+    def _with_evidence(
+        self,
+        node: PlanNode,
+        calls: list[ToolCall],
+        decision: Mapping[str, Any],
+        ctx: RunContext,
+    ) -> list[ToolCall]:
+        """Approved calls carry the decision as evidence bound to each call's arguments."""
+        gate = str(node.config.get("approval_node", ""))
+        approvers = {
+            self.names.get(str(k), str(k)): v
+            for k, v in dict(node.config.get("approvers") or {}).items()
+        }
+        return [
+            c.model_copy(
+                update={
+                    "approval": evidence_for(
+                        decision,
+                        approval_id=f"{ctx.run_id}:{gate}:{c.id}",
+                        tool=c.name,
+                        arguments=c.arguments,
+                        required_group=approvers.get(c.name),
+                        ctx=ctx,
+                    )
+                }
+            )
+            for c in calls
+        ]
+
+    @staticmethod
+    def _refused(calls: list[ToolCall], reason: str) -> list[Message]:
+        return [
+            Message(
+                role=Role.TOOL,
+                name=c.name,
+                tool_call_id=c.id,
+                content=json.dumps({"error": f"not approved: {reason}"}),
+                trust=Trust.UNTRUSTED,
+            )
+            for c in calls
+        ]
+
     async def __call__(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> Any:
         cfg = dict(node.config.get("config") or {})
         model_name = str(node.config.get("model") or "default")
@@ -226,7 +269,12 @@ class AgentLoopExecutor(AgentLoop):
             step, repairs = int(previous["step"]), int(previous["repairs"])
             pending = [ToolCall.model_validate(c) for c in previous["pending"]]
             if isinstance(approval, Mapping) and approval.get("approved"):
-                messages += await self._run_calls(node, pending, ctx, step)
+                try:
+                    pending = self._with_evidence(node, pending, approval, ctx)
+                except ApproverNotAllowedError as exc:
+                    messages += self._refused(pending, str(exc))
+                else:
+                    messages += await self._run_calls(node, pending, ctx, step)
             else:
                 messages += [
                     Message(

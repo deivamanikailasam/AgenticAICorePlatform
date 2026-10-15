@@ -3,11 +3,12 @@ from typing import Any
 
 import pytest
 from agent_contracts.dummies.models import ScriptedModelClient
-from agent_contracts.models import Message, NodeKind, PlanNode, Role
+from agent_contracts.models import Message, NodeKind, PlanNode, Role, ToolCall
 from agent_contracts.testing import ctx
 from agent_runtime.executors import (
     LlmNodeExecutor,
     RouterNodeExecutor,
+    ToolNodeExecutor,
     lookup,
     render,
     resolve,
@@ -88,3 +89,44 @@ async def test_router_by_function() -> None:
     node = _node(NodeKind.ROUTER, routes=["big", "small"], fn="pick")
     router = RouterNodeExecutor(functions={"pick": lambda v: "big"})
     assert (await router(node, VALUES, ctx()))["_outcome"] == "big"
+
+
+async def test_tool_node_behind_an_approval_sends_bound_evidence() -> None:
+    from agent_contracts.models import ToolResult, arguments_digest
+    from agent_runtime.executors import ToolNodeError
+
+    seen: list[ToolCall] = []
+
+    class Recording:
+        async def execute(self, call: ToolCall, run_ctx: Any) -> ToolResult:
+            seen.append(call)
+            return ToolResult(call_id=call.id, tool=call.name, ok=True, output={"paid": True})
+
+    node = PlanNode(
+        id="pay",
+        kind=NodeKind.TOOL,
+        config={
+            "tool": "post_payment",
+            "approval_node": "pay.approval",
+            "approvers": "group:finance-approvers",
+            "config": {"args": {"amount_aud": "$input.amount"}},
+        },
+    )
+    values = {
+        "input": {"amount": 528},
+        "pay.approval": {"approved": True, "by": "j.smith", "groups": ["/acme/finance-approvers"]},
+    }
+    executor = ToolNodeExecutor(Recording(), {"post_payment": "erp__post_payment"})  # type: ignore[arg-type]
+    c = ctx()
+    await executor(node, values, c)
+    evidence = seen[0].approval
+    assert evidence is not None
+    assert (evidence.tool, evidence.approver) == ("erp__post_payment", "j.smith")
+    assert evidence.arguments_digest == arguments_digest({"amount_aud": 528})
+    assert evidence.approval_id == f"{c.run_id}:pay.approval"
+    outsider = {
+        **values,
+        "pay.approval": {"approved": True, "by": "eve", "groups": ["/acme/sales"]},
+    }
+    with pytest.raises(ToolNodeError, match="approval_invalid"):
+        await executor(node, outsider, c)

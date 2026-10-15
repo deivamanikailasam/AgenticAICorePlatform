@@ -19,7 +19,7 @@ package agent.tools
 
 import rego.v1
 
-version := "2026-10-15.1"
+version := "2026-10-15.2"
 
 cfg := data.agent.config
 
@@ -84,15 +84,35 @@ approvers := "group:two-person-approvers" if {
 	input.side_effect == "irreversible"
 } else := "group:approvers"
 
+# A person's decision on this exact call (Step 15): approved, bound by the platform to this
+# tool and these arguments, by someone other than the requester, who is in the policy's
+# approver group. Two-person approval cannot be satisfied by one decision (Step 28).
+approval_satisfied if {
+	input.approval.approved == true
+	input.approval.bound == true
+	input.approval.approver != ""
+	input.approval.approver != input.ctx.user_id
+	approvers != "group:two-person-approvers"
+	some g in input.approval.approver_groups
+	endswith(g, sprintf("/%s", [trim_prefix(approvers, "group:")]))
+}
+
 # ------------------------------------------------------------------ decision
 
-default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.1"}
+default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.2"}
 
 decision := {"effect": "deny", "reasons": sort(deny), "version": version} if count(deny) > 0
 
 decision := {"effect": "require_approval", "reasons": sort(approval), "approvers": approvers, "version": version} if {
 	count(deny) == 0
 	count(approval) > 0
+	not approval_satisfied
+}
+
+decision := {"effect": "allow", "reasons": [sprintf("approved by %s (%s)", [input.approval.approver, input.approval.approval_id])], "version": version} if {
+	count(deny) == 0
+	count(approval) > 0
+	approval_satisfied
 }
 
 decision := {"effect": "allow", "reasons": [sprintf("%s tool allowed", [input.side_effect])], "version": version} if {

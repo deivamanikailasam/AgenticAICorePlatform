@@ -186,10 +186,41 @@ async def test_tool_needing_approval_interrupts_and_resumes(adapter: str) -> Non
     assert first.status is RunStatus.INTERRUPTED
     assert first.state.next_nodes == ("approval",)
     assert recorder.calls == []
-    done = await adapter_.resume(handle, c.run_id, {"approved": True, "by": "j.smith"}, c)
+    decision = {"approved": True, "by": "j.smith", "groups": ["/acme/finance-approvers"]}
+    done = await adapter_.resume(handle, c.run_id, decision, c)
     assert done.status is RunStatus.SUCCEEDED, done.state.error
     assert done.output["answer"] == "recorded it"
     assert recorder.calls == [{"expression": "5"}]
+
+
+@pytest.mark.parametrize("adapter", ADAPTERS)
+async def test_approval_from_someone_outside_the_spec_group_does_not_count(adapter: str) -> None:
+    executor = await tools()
+    recorder = Recorder()
+    await executor.registry.register(recorder)
+    text = react_spec(
+        adapter,
+        extra_tools='  - ref: local://test/record\n    approval: { required: true, approvers: "group:finance-approvers" }',
+    )
+    spec = load_spec_text(text)
+    model = ScriptedModelClient(
+        [
+            Message(
+                role=Role.ASSISTANT,
+                tool_calls=(ToolCall(name="record", arguments={"expression": "5"}),),
+            ),
+            Message(role=Role.ASSISTANT, content="could not record"),
+        ]
+    )
+    adapter_ = adapter_for(spec, compile_spec(spec), model=model, tools=executor)
+    handle = await adapter_.build(compile_spec(spec))
+    c = ctx()
+    await adapter_.invoke(handle, {"question": "record 5"}, c)
+    decision = {"approved": True, "by": "mallory", "groups": ["/acme/sales"]}
+    done = await adapter_.resume(handle, c.run_id, decision, c)
+    assert done.status is RunStatus.SUCCEEDED, done.state.error
+    assert recorder.calls == []
+    assert "not in group:finance-approvers" in model.requests[-1].messages[-1].content
 
 
 class TextOnlyStandIn(GoldenStandIn):

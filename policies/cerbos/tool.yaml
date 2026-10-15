@@ -32,6 +32,13 @@ resourcePolicy:
       cleared: >-
         V.required_groups.exists(r,
           P.attr.groups.exists(g, g.endsWith("/" + r)) || r in P.attr.roles)
+      # Step 15: a bound approval by someone other than the requester, in the approvers group.
+      # Written so that a missing or null attribute gives false (the approval rules then apply).
+      approval_satisfied: >-
+        "approval" in R.attr && R.attr.approval != null &&
+        R.attr.approval.approved == true && R.attr.approval.bound == true &&
+        R.attr.approval.approver != "" && R.attr.approval.approver != R.attr.user_id &&
+        R.attr.approval.approver_groups.exists(g, g.endsWith("/approvers"))
       over_limit: >-
         R.id in C.constraints ? C.constraints[R.id].filter(c,
           c.risk_tier == R.attr.risk_tier && c.argument in R.attr.arguments &&
@@ -145,7 +152,9 @@ resourcePolicy:
       roles: ["*"]
       condition:
         match:
-          expr: R.attr.side_effect == "irreversible"
+          expr: >-
+            R.attr.side_effect == "irreversible" &&
+            (R.attr.risk_tier == "high" || !V.approval_satisfied)
       output:
         when:
           ruleActivated: >-
@@ -158,7 +167,7 @@ resourcePolicy:
       roles: ["*"]
       condition:
         match:
-          expr: R.attr.side_effect == "write" && "external" in R.attr.tool_tags && R.attr.risk_tier == "medium"
+          expr: R.attr.side_effect == "write" && "external" in R.attr.tool_tags && R.attr.risk_tier == "medium" && !V.approval_satisfied
       output:
         when:
           ruleActivated: '{"approval": "external-facing write in a medium-risk agent", "approvers": "group:approvers"}'
@@ -169,7 +178,7 @@ resourcePolicy:
       roles: ["*"]
       condition:
         match:
-          expr: R.attr.side_effect == "write" && R.attr.risk_tier == "high"
+          expr: R.attr.side_effect == "write" && R.attr.risk_tier == "high" && !V.approval_satisfied
       output:
         when:
           ruleActivated: '{"approval": "write in a high-risk agent", "approvers": "group:approvers"}'

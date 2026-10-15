@@ -4,7 +4,9 @@ For every call, in this order:
 1. look the tool up (unknown tools are refused before policy, so nothing about them leaks);
 2. ask the policy decision point, with who is calling (``current_caller``), the tenant, agent,
    tool, side effect, data class, arguments and risk tier; ``deny`` and ``require_approval`` stop
-   here. A grant in the agent's spec can tighten ``allow`` to ``require_approval``, never loosen;
+   here. A grant in the agent's spec can tighten ``allow`` to ``require_approval``, never loosen.
+   A person's approval travels with the call as evidence; its binding to this tool and these
+   arguments is verified here and policy decides whether it satisfies the approval (Step 15);
 3. count the call against the tool's per-minute limit for this tenant and agent;
 4. run it through the inner executor (validation, idempotency, timeouts, retries, spill);
 5. audit the decision and the outcome, allowed or not.
@@ -31,6 +33,7 @@ from agent_contracts.models import (
     ToolCall,
     ToolErrorCode,
     ToolResult,
+    arguments_digest,
 )
 
 from agent_tools.ratelimit import MemoryRateLimiter, RateLimiter
@@ -62,6 +65,22 @@ class ToolGrant:
     approvers: str | None = None
 
 
+def approval_facts(call: ToolCall) -> dict[str, Any] | None:
+    """What policy may rely on about a person's decision for this call. ``bound`` is verified
+    here, by the platform: the evidence names this tool and the digest of these exact arguments,
+    so it cannot be replayed for a different call."""
+    ev = call.approval
+    if ev is None:
+        return None
+    return {
+        "approval_id": ev.approval_id,
+        "approved": ev.approved,
+        "approver": ev.approver,
+        "approver_groups": list(ev.approver_groups),
+        "bound": ev.tool == call.name and ev.arguments_digest == arguments_digest(call.arguments),
+    }
+
+
 @dataclass
 class AuthorisingToolExecutor(ToolExecutor):
     inner: ToolExecutor
@@ -89,10 +108,18 @@ class AuthorisingToolExecutor(ToolExecutor):
                 arguments=dict(call.arguments),
                 subject=dict(caller.subject) if caller else {},
                 allowed_tools=tuple(self.grants) if self.grants is not None else None,
+                approval=approval_facts(call),
             )
         )
         grant = (self.grants or {}).get(call.name)
-        if decision.effect is PolicyEffect.ALLOW and grant is not None and grant.approval_required:
+        facts = approval_facts(call) or {}
+        approved = bool(facts.get("approved") and facts.get("bound"))
+        if (
+            decision.effect is PolicyEffect.ALLOW
+            and grant is not None
+            and grant.approval_required
+            and not approved
+        ):
             return decision.model_copy(
                 update={
                     "effect": PolicyEffect.REQUIRE_APPROVAL,
@@ -117,6 +144,11 @@ class AuthorisingToolExecutor(ToolExecutor):
             "tool": call.name,
             "call_id": call.id,
         }
+        if call.approval is not None:
+            payload |= {
+                "approval_id": call.approval.approval_id,
+                "approver": call.approval.approver,
+            }
         try:
             payload["ref"] = (await self.registry.get(call.name)).spec.ref
         except KeyError:

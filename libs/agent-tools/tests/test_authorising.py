@@ -171,3 +171,75 @@ async def test_valkey_limiter_shares_the_count_between_instances() -> None:
     finally:
         await a.aclose()
         await b.aclose()
+
+
+# ---------------------------------------------------------------- approval evidence (Step 15)
+
+
+class _Payment(CalculatorTool):
+    @property
+    def spec(self) -> Any:
+        from agent_contracts.models import SideEffect
+
+        return super().spec.model_copy(
+            update={"name": "pay", "side_effect": SideEffect.IRREVERSIBLE, "idempotent": False}
+        )
+
+
+def _evidence(arguments: dict[str, Any], tool: str = "pay", approver: str = "j.smith") -> Any:
+    from agent_contracts.models import ApprovalEvidence, arguments_digest
+
+    return ApprovalEvidence(
+        approval_id="run-1:pay.approval",
+        approved=True,
+        approver=approver,
+        approver_groups=("/acme/approvers",),
+        tool=tool,
+        arguments_digest=arguments_digest(arguments),
+    )
+
+
+async def _payment_executor() -> tuple[AuthorisingToolExecutor, MemoryAuditSink]:
+    reg = InMemoryToolRegistry()
+    await reg.register(_Payment())
+    audit = MemoryAuditSink()
+    return (
+        AuthorisingToolExecutor(PlatformToolExecutor(reg), reg, RulesPolicyDecisionPoint(), audit),
+        audit,
+    )
+
+
+async def test_irreversible_call_with_bound_approval_runs_and_is_audited_with_the_approver() -> (
+    None
+):
+    ex, audit = await _payment_executor()
+    args = {"expression": "528"}
+    call = ToolCall(
+        name="pay", arguments=args, idempotency_key="run-1:pay", approval=_evidence(args)
+    )
+    result = await ex.execute(call, CTX)
+    assert result.ok, result.error
+    event = (await audit.read())[-1].event
+    assert (event.payload["approver"], event.payload["decision"]) == ("j.smith", "allow")
+
+
+async def test_approval_replayed_for_other_arguments_or_another_tool_does_not_count() -> None:
+    ex, _ = await _payment_executor()
+    approved_for_528 = _evidence({"expression": "528"})
+    other_args = await ex.execute(
+        ToolCall(name="pay", arguments={"expression": "99999"}, approval=approved_for_528), CTX
+    )
+    assert other_args.error_code is ToolErrorCode.APPROVAL_REQUIRED
+    other_tool = _evidence({"expression": "528"}, tool="refund")
+    wrong_tool = await ex.execute(
+        ToolCall(name="pay", arguments={"expression": "528"}, approval=other_tool), CTX
+    )
+    assert wrong_tool.error_code is ToolErrorCode.APPROVAL_REQUIRED
+
+
+async def test_requester_approving_their_own_call_does_not_count() -> None:
+    ex, _ = await _payment_executor()
+    args = {"expression": "528"}
+    own = _evidence(args, approver=CTX.user_id)
+    result = await ex.execute(ToolCall(name="pay", arguments=args, approval=own), CTX)
+    assert result.error_code is ToolErrorCode.APPROVAL_REQUIRED

@@ -82,11 +82,24 @@ class RegexPiiGuardrail(Guardrail):
 
 
 class RulesPolicyDecisionPoint(PolicyDecisionPoint):
-    """In-process rules: same tenant only; irreversible needs approval. OPA: Step 10."""
+    """In-process rules: same tenant only; irreversible needs approval, satisfied by a bound
+    approval from someone else in an ``approvers`` group (as the OPA policy). OPA: Step 10."""
 
     async def decide(self, request: PolicyInput) -> PolicyDecision:
         if request.resource_tenant_id and request.resource_tenant_id != request.ctx.tenant_id:
             return PolicyDecision(effect=PolicyEffect.DENY, reasons=("cross-tenant access",))
+        ev = request.approval or {}
+        if (
+            request.side_effect is SideEffect.IRREVERSIBLE
+            and ev.get("approved") is True
+            and ev.get("bound") is True
+            and ev.get("approver") not in ("", None, request.ctx.user_id)
+            and any(str(g).endswith("/approvers") for g in ev.get("approver_groups", ()))
+        ):
+            return PolicyDecision(
+                effect=PolicyEffect.ALLOW,
+                reasons=(f"approved by {ev['approver']} ({ev.get('approval_id')})",),
+            )
         if request.side_effect is SideEffect.IRREVERSIBLE:
             return PolicyDecision(
                 effect=PolicyEffect.REQUIRE_APPROVAL,

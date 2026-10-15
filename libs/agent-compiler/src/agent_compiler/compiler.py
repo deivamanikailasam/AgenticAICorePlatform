@@ -75,6 +75,11 @@ def _expand_agents(reg: Registry, frag: PlanFragment, spec: AgentSpec) -> PlanFr
             "approval_tools": [
                 t.name for t in spec.tools if t.approval is not None and t.approval.required
             ],
+            "approvers_by_tool": {
+                t.name: t.approval.approvers
+                for t in spec.tools
+                if t.approval is not None and t.approval.required
+            },
         }
         sub = inner.build(section, f"{node.id}.")
         nodes.extend(sub.nodes)
@@ -109,7 +114,9 @@ def _insert_approvals(frag: PlanFragment, spec: AgentSpec) -> PlanFragment:
             kind=NodeKind.APPROVAL,
             config={"tool": tool.name, "ref": tool.ref, **tool.approval.model_dump()},
         )
-        nodes += [gate, node]
+        # the tool node reads the decision from its gate and sends it to policy as evidence
+        linked = {**node.config, "approval_node": gate.id, "approvers": tool.approval.approvers}
+        nodes += [gate, node.model_copy(update={"config": linked})]
         edges = [
             e.model_copy(update={"target": gate.id}) if e.target == node.id else e for e in edges
         ]

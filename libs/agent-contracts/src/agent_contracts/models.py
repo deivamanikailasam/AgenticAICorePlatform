@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Literal
@@ -67,11 +70,34 @@ class Trust(StrEnum):
     UNTRUSTED = "untrusted"  # tool results, retrieved documents, other agents' messages
 
 
+def arguments_digest(arguments: Mapping[str, Any]) -> str:
+    """SHA-256 of the arguments as canonical JSON: what an approval is bound to."""
+    canonical = json.dumps(arguments, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+class ApprovalEvidence(Frozen):
+    """A person's decision on one exact tool call (Step 15; routing, SLAs and edits: Step 28).
+
+    Bound to the tool and a digest of its arguments: the platform checks the binding before
+    policy sees the call, so an approval can never be reused for other arguments or another tool.
+    """
+
+    approval_id: str  # <run id>:<approval node id>
+    approved: bool
+    approver: str
+    approver_groups: tuple[str, ...] = ()
+    tool: str
+    arguments_digest: str
+    decided_at: datetime | None = None
+
+
 class ToolCall(Frozen):
     id: str = Field(default_factory=new_id)
     name: str
     arguments: dict[str, Any] = Field(default_factory=dict)
     idempotency_key: str | None = None
+    approval: ApprovalEvidence | None = None
 
 
 class Message(Frozen):
@@ -425,6 +451,9 @@ class PolicyInput(Frozen):
     tool_tags: tuple[str, ...] = ()
     # the tools the calling agent's spec grants (None = not called by an agent, e.g. a person via the gateway)
     allowed_tools: tuple[str, ...] | None = None
+    # a person's decision on this call: approved, approver, approver_groups, approval_id and
+    # bound (the platform verified it is for this tool and these exact arguments)
+    approval: dict[str, Any] | None = None
 
 
 class PolicyDecision(Frozen):

@@ -70,6 +70,7 @@ def test_every_attribute_is_sent_even_when_absent() -> None:
     body = cerbos_request(PolicyInput(ctx=CTX, tool="t"))
     attr = body["resources"][0]["resource"]["attr"]
     assert {"resource_tenant_id", "allowed_tools", "side_effect", "arguments"} <= set(attr)
+    assert attr["approval"]["approved"] is False  # no evidence: the approval rules still apply
     assert attr["side_effect"] == ""  # unknown: the policy denies it
     assert body["principal"]["attr"]["authenticated"] is False
 
@@ -117,6 +118,14 @@ def _case(**kw: Any) -> PolicyInput:
     return PolicyInput(**base)
 
 
+APPROVED = {
+    "approval_id": "run-1:pay.approval",
+    "approved": True,
+    "approver": "j.smith",
+    "approver_groups": ["/acme/approvers"],
+    "bound": True,
+}
+
 PARITY = {
     "authenticated read": _case(),
     "anonymous": _case(subject={}),
@@ -148,6 +157,27 @@ PARITY = {
         tool="erp__post_payment",
         side_effect=SideEffect.IRREVERSIBLE,
         arguments={"amount_aud": 20000},
+    ),
+    "payment approved and bound": _case(
+        tool="erp__post_payment",
+        side_effect=SideEffect.IRREVERSIBLE,
+        arguments={"amount_aud": 528},
+        approval=APPROVED,
+    ),
+    "payment approval not bound": _case(
+        tool="erp__post_payment",
+        side_effect=SideEffect.IRREVERSIBLE,
+        arguments={"amount_aud": 528},
+        approval={**APPROVED, "bound": False},
+    ),
+    "payment approved by the requester": _case(
+        tool="erp__post_payment",
+        side_effect=SideEffect.IRREVERSIBLE,
+        arguments={"amount_aud": 528},
+        approval={**APPROVED, "approver": CTX.user_id},
+    ),
+    "irreversible high approved by one person": _case(
+        side_effect=SideEffect.IRREVERSIBLE, ctx={"risk_tier": RiskTier.HIGH}, approval=APPROVED
     ),
     "payment over medium limit in high tier": _case(
         tool="erp__post_payment",

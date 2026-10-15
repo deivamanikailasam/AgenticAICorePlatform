@@ -38,10 +38,16 @@ class ReactPatternBuilder(PatternBuilder):
                 for i, t in enumerate(spec["tools"])
                 if (t.get("approval") or {}).get("required")
             ]
+            approvers = {
+                tools[i]: (t.get("approval") or {}).get("approvers")
+                for i, t in enumerate(spec["tools"])
+                if (t.get("approval") or {}).get("required")
+            }
             model, config, limit = "default", {}, spec["budgets"]["max_steps"]
         else:
             tools = list(section.get("tools", ()))
             approval_tools = list(section.get("approval_tools", ()))
+            approvers = dict(section.get("approvers_by_tool") or {})
             model = section.get("model") or "default"
             config = dict(section.get("config") or {})
             limit = section.get("max_iterations") or section["budgets"]["max_steps"]
@@ -54,6 +60,7 @@ class ReactPatternBuilder(PatternBuilder):
                 "loop": self.loop,
                 "tools": tools,
                 "approval_tools": approval_tools,
+                "approvers": approvers,
                 "model": model,
                 "config": config,
                 "max_iterations": int(limit),
