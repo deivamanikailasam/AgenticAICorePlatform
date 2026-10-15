@@ -174,10 +174,15 @@ def test_the_page_shows_live_tool_calls_and_an_approval_button(api: tuple[str, P
         page.click("#start")
         page.wait_for_selector("#approval", state="visible", timeout=30_000)
         assert "post_payment" in page.inner_text("#approval-detail")
+        shots = os.environ.get("AGENT_SCREENSHOTS")  # optional: where to save screenshots
+        if shots:
+            page.screenshot(path=f"{shots}/agent-api-approval.png", full_page=True)
         page.fill("#approver-token", token("jo"))
         page.click("#approve")
         expect(page.locator("#status")).to_have_text("succeeded", timeout=30_000)
         tools = page.inner_text("#tools")
+        if shots:
+            page.screenshot(path=f"{shots}/agent-api-done.png", full_page=True)
         browser.close()
     assert "erp__post_payment" in tools
     assert "INV-1002" in tools

@@ -48,3 +48,6 @@ Every term used in this repository, in plain English. Grows with each step.
 | Multi-hop retrieval | Answering by chaining searches, where a later search uses what an earlier one found |
 | Grounding | Every claim in an answer is supported by the passages it cites |
 | Naive RAG | One search, then one answer from what came back |
+| AG-UI | An open event protocol between agents and user interfaces (text, tool calls, state, interrupts) |
+| SSE | Server-sent events: a long HTTP response the server keeps writing events into |
+| Idempotency key | A client-chosen key that makes repeating the same request safe: the second one returns the first one's result |
