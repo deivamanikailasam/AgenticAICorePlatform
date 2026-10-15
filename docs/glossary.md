@@ -84,6 +84,13 @@ Every term used in this repository, in plain English. Grows with each step.
 | Agent Card | A JSON document an A2A agent publishes: what it can do, where to reach it, how to authenticate |
 | Signed Agent Card | An Agent Card carrying a digital signature, so a caller can check who published it |
 | Pinned key | A public key written into configuration ahead of time; only signatures from it are accepted |
+| Approval desk | The part of the platform that routes, times, shows and records human approvals |
+| SLA (approval) | How long reviewers have to decide before the request escalates or expires |
+| Escalation | Passing an undecided approval to a more senior group with a fresh deadline |
+| Two-person rule | Two different people, neither of them the requester, must approve the riskiest actions |
+| Edited approval | Approving a changed version of the proposed action; exactly the changed version runs |
+| Review-after | A sample of finished runs checked by people after the fact |
+| Take-over | A person stops the agent and finishes the work themselves |
 | Direct prompt injection | An attack typed by the person, trying to make the agent break its rules |
 | Indirect prompt injection | An attack hidden in content the agent reads: a document, web page, tool result or tool description |
 | Quarantine (guardrails) | Replacing flagged untrusted content with a notice, so the model never reads it |

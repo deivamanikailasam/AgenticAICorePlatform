@@ -44,3 +44,4 @@ ADR supersedes it.
 | [0036](0036-agent-registry.md) | Agent registry: Postgres default (Backstage alternative), immutable versions, draft → approved → deprecated → retired; only approved agents run or are delegated to in staging and prod | 25 |
 | [0037](0037-budgets-loops-and-circuits.md) | Budgets (tree, per tool, wall clock, depth), loop detection by progress, shared circuit breakers, graceful stop or summarise; LiteLLM team budget as the ceiling; ledger reconciled with the gateway | 26 |
 | [0038](0038-guardrails.md) | Guardrails: parallel pipeline at input, retrieved, output, tool args and results, MCP descriptions; rules always on, classifier and judge switchable; Presidio PII; quarantine untrusted content | 27 |
+| [0039](0039-human-in-the-loop.md) | Human-in-the-loop: approval desk with OPA routing and SLAs, edited arguments bound to evidence, escalation, two-person approval, safe expiry, irreversible tools always gated; review-after and take-over | 28 |

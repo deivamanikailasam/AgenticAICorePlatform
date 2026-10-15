@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 28 · Human-in-the-loop (next)
+**Current step:** 29 · Agent identity and secrets (next)
 
 ## Environment note (read first)
 
@@ -47,15 +47,17 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 25 Agent registry and discovery | done | `agent_registry` contract (lifecycle draft → approved → deprecated → retired, history, immutable versions by spec hash, approval expiry); Postgres default (migration 0005, row-locked changes), Backstage catalogue alternative, SQLite/memory; sync of all 20 specs incl. workers; `just agents` list/approve/deprecate/retire; `ApprovedOnly` gate in staging/prod at run creation (403) and before every delegation, in API and Temporal worker, audited; contract on 4 implementations (Postgres 6 passed on stand-in) | who may approve (Step 28); stop in-flight runs of a version (Step 38); registry data in OPA |
 | 26 Budgets and loop control | done | `budget_controller.platform` (budget tree; tokens, AUD, wall clock from open, tool calls total and per tool, delegation depth; named trips with numbers), `loop_detector.platform` (repeats without progress, no-progress, oscillation); model and tool wrappers in every run, children under parents, graceful `stopped` with partial transcript and reason; `on_exceed: stop \| summarise`; shared circuit breakers for tools (5) and model roles (3); LiteLLM team `agent-platform` over role keys; `agent_runtime.usage_ledger` (USD as reported, response id, paying key); `just cost-reconcile`; API loop tests (3rd identical call; AUD 1.0200 vs 1.00 after 34 calls); stand-in ledger USD 0.00015 = LiteLLM USD 0.00015 | cross-process budgets for runs split across API and worker; reconcile against Project 0 with real prices (VERIFY-ON-MAC); move pre-existing keys into the team |
 | 27 Guardrails | done | `libs/agent-guardrails`: injection rules (stricter on untrusted), classifier client (TEI `/predict`, fails closed), LLM judge; Presidio 2.2.362 PII (verified live, stand-in), cloud DLP stub; tool-arg limits, output schema and policy, topic, safety, secret leak; parallel pipeline audited without text; guarded model client (input stops, untrusted quarantined, output redacted) and tool executor (args denied, results quarantined); MCP descriptions screened at registration; baseline `prompt_injection` + `secret_leak` always on; `just eval-guardrails` 51/51 with Presidio (17/17 attacks, 23/23 benign; rules only, self-authored set) | injection classifier model deployment and measurement (open issue 11); Australian Presidio recognizers; red-team suites (Step 33) |
+| 28 Human-in-the-loop | done | approval desk in the run API: OPA routing `data.agent.approvals.route` (two-person > tool group > spec group > default; SLA 240/60/30 min; escalation group), rules router in parity with `opa eval`; inbox with action, reason, data, risk; approve / reject / edit-arguments (evidence bound to edited call) / escalate; two-person approval now satisfiable in OPA, Cerbos and rules PDP; SLA sweeper escalates once then cancels safely; irreversible tools refused without an approval step; payments need `finance-approvers`; `approval_gate.postgres` (migration 0007); review-after sampling and operator take-over; 10 HITL tests, 45 rego + 12 Cerbos tests, live Cerbos/OPA parity | leader-elected SLA sweeper (Step 37); Temporal-run approvals through the desk (API dispatch of temporal agents); durable review queue |
 
 ## Next
 
-- Step 28: Human-in-the-loop — `ApprovalGate`: pause before risky actions with approve, reject,
-  edit-arguments and escalate; approvals routed by OPA to the right group with SLA timers;
-  reviewers see the proposed action, reason, data and risk; decisions audited; review-after
-  (sampled QA) and take-over patterns (LangGraph interrupts for short waits → Temporal signals
-  for long). Done when an irreversible tool always waits for approval, an edited approval runs
-  with the edited arguments, and an expired approval cancels safely.
+- Step 29: Agent identity and secrets — each agent has a Keycloak service identity; user
+  requests carry delegated, down-scoped tokens (OAuth token exchange); tools get short-lived
+  credentials from OpenBao/Vault at call time, never from the prompt or environment;
+  credentials never enter model context; optional workload identity (SPIFFE/SPIRE) in
+  Kubernetes (Keycloak + OpenBao → cloud IAM and secret managers). Done when a tool call's audit
+  record names user, agent and credential lease; a leaked lease expires within minutes; no
+  secret appears in any trace or prompt.
 
 ## Open issues
 
