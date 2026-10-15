@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 7 · MCP client (next)
+**Current step:** 8 · Platform MCP server (next)
 
 ## Environment note (read first)
 
@@ -26,13 +26,15 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 4 Pattern compiler and runtime adapter skeleton | done | hello compiles and runs through the stub adapter; trace found in Tempo (stand-in) | trace in Project 0's Tempo/Grafana |
 | 5 Model access per role | done | roles resolve (unit + stand-in); tools, structured output with repair, streaming, retries; AUD cost per run/role; capability check in client and compiler | structured output on both real local Qwen models (`-m mac`); capability table vs model cards |
 | 6 Tool contract and registry | done | invalid args rejected before execution; duplicate key returns first result (memory + Valkey, race-safe); tool cards generated; Postgres registry contract; S3 spill (stand-in) | registry/idempotency/S3 against Project 0 services |
+| 7 MCP client | done | filesystem (stdio, 2025-11-25) + OAuth HTTP server (2026-07-28) discovered, called, traced, audited; unlisted refused (client + compiler) | against Project 0 Keycloak; audit into Project 0's log (Step 31) |
 
 ## Next
 
-- Step 7: MCP client over Streamable HTTP and stdio, 2026-07-28 with negotiation down to
-  2025-11-25, discovery, `mcp://server/tool` names, OAuth for remote servers, allowlist,
-  annotations untrusted unless the server is trusted; two servers (local + remote) traced and
-  audited; unlisted server refused.
+- Step 8: `services/mcp-gateway` exposing platform tools and `rag-core/search` as MCP tools with
+  Keycloak auth and OPA on every call, proxying allowlisted external servers; an external MCP
+  client calls `rag-core/search` with a user token and sees only permitted documents.
+  `rag-core` itself is Project 0 code (not reachable here): a stand-in search backend will be
+  needed for CI, with the real call VERIFY-ON-MAC.
 
 ## Open issues
 
