@@ -17,3 +17,4 @@ ADR supersedes it.
 | [0009](0009-opa-decides-every-tool-call.md) | OPA on every tool call; OpenFGA for relationships | 1 |
 | [0010](0010-otel-genai-conventions.md) | OTel GenAI semantic conventions | 1 |
 | [0011](0011-cloud-build-and-project-0-standin.md) | Cloud build + Project 0 stand-in for integration tests | 1 |
+| [0012](0012-component-registry-and-contract-tests.md) | Registry via entry points + shared contract tests | 2 |

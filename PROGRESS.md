@@ -2,28 +2,31 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 1 · Repo, workspace and link to Project 0 (in progress)
+**Current step:** 3 · The `agent.yaml` spec (next)
 
 ## Environment note (read first)
 
-This build runs in a **cloud container**, not on the Mac where Project 0 lives. Consequences:
+This build runs in a **cloud container**, not on the Mac where Project 0 lives (ADR 0011):
 
-- Project 0 services (LiteLLM, Postgres, Valkey, Keycloak, OPA, OTel Collector, …) are **not
-  reachable** from here. Any "Done when" item that needs a live Project 0 is marked
-  **VERIFY-ON-MAC** below and is *not* ticked until someone runs it on the Mac.
-- Commits are authored as `deivamanikailasam` but are **unsigned** (the SSH signing key lives on the
-  Mac). The owner accepted this on 2026-10-15.
-- Project 0's README, ADRs and justfile were not readable from here; conventions are taken from
-  the spec. Cross-check against `~/dev/rag-platform` on the Mac.
+- Project 0 is not reachable. Integration checks run against the **stand-in stack**
+  (`tests/stack/`, same upstream images). Items needing the real Project 0 are
+  **VERIFY-ON-MAC** and are not ticked.
+- Commits are authored as `deivamanikailasam`, **unsigned** (accepted by the owner, 2026-10-15).
+- Project 0's README/ADRs/justfile were not readable; conventions come from the spec.
+- Work happens on branch `claude/wonderful-heisenberg-kssi9q`; it is merged to `main` at the end
+  (owner's instruction). Step tags `step-NN` are created on this branch.
 
-## Done
+## Status by step
 
-- Spec exported to `docs/spec/` (Claude Doc revision 21).
+| Step | State | Verified here | VERIFY-ON-MAC |
+|---|---|---|---|
+| 1 Repo, workspace, link to Project 0 | done | `just check`; health, provisioning (idempotent) and `just up` against the stand-in; CI | health/provision/up against real Project 0; service names, realm, network name; SOPS file with Project 0's age key |
+| 2 Contracts and component registry | done | 46 dummies pass 23 contracts; `just components`; catalogue check | — |
 
 ## Next
 
-- Step 1: workspace, hygiene files, justfile, pre-commit, SOPS, ADRs 0001–0010, compose,
-  provisioning scripts, health script, CI.
+- Step 3: JSON Schema from Pydantic, loader with `${env}` and secret refs, semantic
+  validation, `spec_version` + migrations, `just validate agents/`, schema in `docs/reference/`.
 
 ## Open issues
 
@@ -31,3 +34,5 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives. 
 |---|---|---|
 | 1 | Project 0 unreachable from the build container: live checks deferred (VERIFY-ON-MAC) | owner |
 | 2 | Commits unsigned; re-sign or accept when merging | owner |
+| 3 | `secrets/dev.enc.env` must be created on the Mac with Project 0's age key | owner |
+| 4 | LiteLLM key values from provisioning must be moved into OpenBao (automated in Step 29) | Step 29 |
