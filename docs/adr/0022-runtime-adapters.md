@@ -1,6 +1,6 @@
 # ADR 0022: Runtime adapters — LangGraph default, Microsoft Agent Framework second, shared node semantics, dependency cooldown
 
-- **Status:** Accepted
+- **Status:** Accepted; point 6 amended by [ADR 0024](0024-agent-loop-engines.md) (Google ADK via A2A)
 - **Date:** 2026-10-15
 - **Step:** 11
 - **Deciders:** repository owner

@@ -29,3 +29,4 @@ ADR supersedes it.
 | [0021](0021-sandbox-engines-decision.md) | Sandbox engines: Firecracker and Kata implemented and verified on KVM; managed stays a stub | 9 |
 | [0022](0022-runtime-adapters.md) | Runtime adapters: LangGraph default, Agent Framework second, shared node semantics, dependency cooldown | 11 |
 | [0023](0023-deterministic-workflows.md) | Deterministic workflows: platform saga, journal replay, value paths, stable idempotency keys | 12 |
+| [0024](0024-agent-loop-engines.md) | Single tool-calling agent: native ReAct loop, agent_loop slot, framework engines, ADK via A2A | 13 |

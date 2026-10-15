@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 13 · Single tool-calling agent (next)
+**Current step:** 14 · Planning and reflection (next)
 
 ## Environment note (read first)
 
@@ -32,12 +32,13 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 10 Tool authorisation | done | Rego 21/21 (allow, deny, approval); cross-tenant call through the live gateway denied and audited; authorising executor with Valkey rate limits; on-behalf-of MCP (server sees alice); Cerbos 0.56.0 parity with OPA on 19 cases; OpenFGA v1.22.0 relationships | Project 0 OPA loading `data.agent.config`; realm group paths; token exchange per audience |
 | 11 Runtime adapter | done | LangGraph 1.2.12 and Microsoft Agent Framework 1.19.0 each pass the same 14 runtime contract tests; one agent.yaml gives identical state on both; hello-workflow on LangGraph with its Tempo trace | — |
 | 12 Deterministic workflows | done | on both engines: LLM + tool nodes in parallel then routing; saga undoes completed steps newest first (also after a policy denial); model-routed run replays identically without calling the model; sub-workflow; node timeout; tool nodes via the authorising executor with key `<run>:<node>` | — |
+| 13 Single tool-calling agent | done | ReAct loop: parallel reads, ordered writes, untrusted observations, bounded repairs, schema repair, `stopped` at max_steps, approval pause/resume, text ReAct fallback; agent_loop slot with native, OpenAI Agents SDK 0.22.3 and Pydantic AI 2.52.0 engines (contract); 8/8 golden tasks (stand-in model) on 3 engines × 2 adapters | golden tasks with the real local model (`-m mac`); Google ADK via A2A in Step 21 |
 
 ## Next
 
-- Step 13: single tool-calling agent (ReAct loop with parallel tool calls, final structured
-  answer with a repair retry, budget and approval stops; text ReAct parser for models without
-  native tool calling), plus the OpenAI Agents SDK, Pydantic AI and Google ADK adapters (ADR 0022).
+- Step 14: planning and reflection — plan-and-execute (re-plan on failure), ReWOO, reflection /
+  self-critique and evaluator-optimiser with bounded rounds; each reports cost and steps against
+  ReAct on the same task.
 
 ## Open issues
 
