@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 6 · Tool contract and registry (next)
+**Current step:** 7 · MCP client (next)
 
 ## Environment note (read first)
 
@@ -25,12 +25,14 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 3 The agent.yaml spec | done | readable errors with lines; `just validate agents/`; schema + reference generated and checked | — |
 | 4 Pattern compiler and runtime adapter skeleton | done | hello compiles and runs through the stub adapter; trace found in Tempo (stand-in) | trace in Project 0's Tempo/Grafana |
 | 5 Model access per role | done | roles resolve (unit + stand-in); tools, structured output with repair, streaming, retries; AUD cost per run/role; capability check in client and compiler | structured output on both real local Qwen models (`-m mac`); capability table vs model cards |
+| 6 Tool contract and registry | done | invalid args rejected before execution; duplicate key returns first result (memory + Valkey, race-safe); tool cards generated; Postgres registry contract; S3 spill (stand-in) | registry/idempotency/S3 against Project 0 services |
 
 ## Next
 
-- Step 6: `Tool` model with side-effect classes, idempotency, timeout, retry, data class, owner;
-  Postgres-backed registry with versions and deprecation; output size cap with spill to S3;
-  schema-invalid args rejected; duplicate idempotency key returns first result; tool cards.
+- Step 7: MCP client over Streamable HTTP and stdio, 2026-07-28 with negotiation down to
+  2025-11-25, discovery, `mcp://server/tool` names, OAuth for remote servers, allowlist,
+  annotations untrusted unless the server is trusted; two servers (local + remote) traced and
+  audited; unlisted server refused.
 
 ## Open issues
 

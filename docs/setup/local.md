@@ -69,6 +69,16 @@ just with-secrets just provision   # second run: every line says "exists"
 Move the new key values from `.tmp/litellm-keys.env` into OpenBao (automated in Step 29), then
 delete the file.
 
+Then apply the database migrations (tables for the tool registry and, later, checkpoints,
+memory and the agent registry):
+
+```bash
+just with-secrets just migrate     # second run: every line says "already applied"
+```
+
+`secrets/dev.env` also needs `AGENT_DB_DSN` (the `agent_app` role created by provisioning),
+`P0_S3_ACCESS_KEY` and `P0_S3_SECRET_KEY` (Project 0's SeaweedFS S3 credentials).
+
 ## 5. Start Project A services
 
 ```bash
