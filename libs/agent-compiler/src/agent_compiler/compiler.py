@@ -149,12 +149,29 @@ def check_capabilities(spec: AgentSpec, platform: PlatformConfig) -> None:
         raise CompileError("; ".join(problems))
 
 
+def check_tool_sources(spec: AgentSpec, platform: PlatformConfig) -> None:
+    """Refuse ``mcp://<server>/...`` tools whose server is not on the platform allowlist (Step 7)."""
+    unlisted = sorted(
+        {
+            t.ref.removeprefix("mcp://").split("/", 1)[0]
+            for t in spec.tools
+            if t.ref.startswith("mcp://")
+        }
+        - {s.name for s in platform.mcp.servers}
+    )
+    if unlisted:
+        raise CompileError(
+            f"MCP server(s) not on the allowlist (platform.yaml mcp.servers): {', '.join(unlisted)}"
+        )
+
+
 def compile_spec(
     spec: AgentSpec, reg: Registry | None = None, platform: PlatformConfig | None = None
 ) -> ExecutablePlan:
     reg = reg or default_registry
     if platform is not None:
         check_capabilities(spec, platform)
+        check_tool_sources(spec, platform)
     frag = _builder(reg, spec.pattern.value).build(_section(spec), "")
     frag = _insert_approvals(_expand_agents(reg, frag, spec), spec)
     _validate(frag)

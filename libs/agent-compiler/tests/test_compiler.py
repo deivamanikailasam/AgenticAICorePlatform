@@ -161,3 +161,23 @@ def test_compile_with_platform_records_alias_per_role() -> None:
 
     plan = compile_spec(load_spec(HELLO), platform=load_platform())
     assert plan.metadata["model_aliases"]["planner"] == "local-qwen-quality"
+
+
+def test_unlisted_mcp_servers_are_refused_at_compile_time() -> None:
+    from agent_compiler.compiler import check_tool_sources
+    from agent_spec.platform import Mcp, McpServer, load_platform
+
+    platform = load_platform()
+    spec = load_spec(ROOT / "agents/invoice-triage/agent.yaml")
+    with pytest.raises(CompileError, match=r"not on the allowlist .*: erp, rag-core"):
+        check_tool_sources(spec, platform)
+    listed = platform.model_copy(
+        update={
+            "mcp": Mcp(
+                servers=[
+                    McpServer(name=n, transport="http", url="http://x") for n in ("erp", "rag-core")
+                ]
+            )
+        }
+    )
+    check_tool_sources(spec, listed)
