@@ -19,3 +19,4 @@ ADR supersedes it.
 | [0011](0011-cloud-build-and-project-0-standin.md) | Cloud build + Project 0 stand-in for integration tests | 1 |
 | [0012](0012-component-registry-and-contract-tests.md) | Registry via entry points + shared contract tests | 2 |
 | [0013](0013-agent-yaml-v1-layout.md) | agent.yaml v1 layout, secret refs, mandatory budgets | 3 |
+| [0014](0014-compiler-plan-shape-and-approval-insertion.md) | Plan shape, compile-time approval gates, stub adapter | 4 |
