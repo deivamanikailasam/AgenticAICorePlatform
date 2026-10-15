@@ -20,7 +20,8 @@ Then the supervisor:
 
 Cascades are bounded (ASI08): the team's ``max_cost_aud`` covers every worker's spend, a worker
 that fails ``max_failures`` times is not used again (circuit breaker), and teams nested inside
-workers stop at ``max_depth``.
+workers stop at ``max_depth``. A team that ends without its ``output`` field stops the run
+(status ``stopped``, with the rounds as partial results) instead of reporting success.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 import jsonschema
-from agent_contracts.interfaces import ModelClient
+from agent_contracts.interfaces import ModelClient, StopRun
 from agent_contracts.models import (
     ChatRequest,
     Message,
@@ -259,7 +260,7 @@ class SupervisorExecutor:
         else:
             stop_reason = f"max_rounds ({cfg.get('max_rounds') or 8}) reached"
         output = cfg.get("output")
-        return {
+        result = {
             "answer": state.get(output)
             if output
             else {k: v for k, v in state.items() if k != "task"},
@@ -268,6 +269,9 @@ class SupervisorExecutor:
             "cost_by_agent": team.cost,
             "stop_reason": stop_reason,
         }
+        if output and output not in state:  # never report success without the answer
+            raise StopRun(stop_reason or f"the team finished without '{output}'", result)
+        return result
 
     async def _delegate(
         self,

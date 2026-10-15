@@ -153,6 +153,12 @@ class Team:
         return self.models[spec.name], tools
 
 
+def team_result(result: Any) -> dict[str, Any]:
+    """The supervisor's result, also when the run stopped without the report."""
+    out = result.output
+    return dict(out["partial"]) if isinstance(out, dict) and "partial" in out else dict(out)
+
+
 async def run_team(
     supervisor: Any, team: Team, spec: AgentSpec | None = None, path: Path = TEAM, **kw: Any
 ) -> tuple[Any, InMemorySpanExporter]:
@@ -246,7 +252,7 @@ async def test_delegation_goes_through_policy_and_unknown_workers_are_refused() 
         team,
         authorise=delegation_authoriser(RulesPolicyDecisionPoint(), audit),
     )
-    rounds = result.output["rounds"]
+    rounds = team_result(result)["rounds"]
     assert rounds[0]["outcome"].startswith("refused"), "the enum rejects a worker outside the team"
     assert rounds[1]["outcome"] == "ok"
     events = [r.event for r in await audit.read() if r.event.type == "agent.delegate"]
@@ -263,7 +269,9 @@ async def test_policy_can_deny_a_delegation() -> None:
         Team(scripts()),
         authorise=deny_analyst,
     )
-    assert result.output["rounds"][0]["outcome"] == "denied by policy: analyst is switched off"
+    assert (
+        team_result(result)["rounds"][0]["outcome"] == "denied by policy: analyst is switched off"
+    )
 
 
 async def test_worker_output_is_data_extra_fields_are_dropped_and_shown_delimited() -> None:
@@ -281,7 +289,7 @@ async def test_worker_output_is_data_extra_fields_are_dropped_and_shown_delimite
     ]
     supervisor = supervisor_script("researcher", "FINISH")
     result, _ = await run_team(supervisor, Team(poisoned))
-    state = result.output["state"]
+    state = team_result(result)["state"]
     assert "report" not in state, "only the worker's writes are kept"
     assert "approved" not in state
     second = supervisor.requests[1].messages
@@ -294,7 +302,7 @@ async def test_a_failing_worker_trips_its_circuit_and_the_team_budget_caps_spend
     broken = scripts()
     broken["research-report-researcher"] = [say("not json at all")] * 10
     result, _ = await run_team(supervisor_script(*["researcher"] * 4, "FINISH"), Team(broken))
-    outcomes = [r["outcome"] for r in result.output["rounds"]]
+    outcomes = [r["outcome"] for r in team_result(result)["rounds"]]
     assert outcomes[0].startswith(("failed", "rejected"))
     assert outcomes[1].startswith(("failed", "rejected"))
     assert outcomes[2].startswith("refused"), "an open circuit takes the worker off the menu"
@@ -303,19 +311,24 @@ async def test_a_failing_worker_trips_its_circuit_and_the_team_budget_caps_spend
     capped, _ = await run_team(
         supervisor_script("researcher", "analyst", "writer", "FINISH"), Team(scripts()), spec=spec
     )
-    assert capped.output["stop_reason"].startswith("team budget of AUD 0.003 used")
-    assert [r["agent"] for r in capped.output["rounds"]] == ["researcher", "analyst"]
+    assert capped.status is RunStatus.STOPPED, "no report: the run does not claim success"
+    assert team_result(capped)["stop_reason"].startswith("team budget of AUD 0.003 used")
+    assert [r["agent"] for r in team_result(capped)["rounds"]] == ["researcher", "analyst"]
 
 
 async def test_a_worker_is_not_started_before_the_state_it_reads_exists() -> None:
     result, _ = await run_team(supervisor_script("writer", "FINISH"), Team(scripts()))
-    assert result.output["rounds"][0]["outcome"] == "refused: needs sources, figures first"
+    assert team_result(result)["rounds"][0]["outcome"] == "refused: needs sources, figures first"
 
 
 async def test_the_rules_dispatcher_needs_no_model() -> None:
     spec = load_spec_text(TEAM.read_text().replace("dispatcher: llm", "dispatcher: rules"))
     result, _ = await run_team(Priced([]), Team(scripts()), spec=spec)
-    assert [r["agent"] for r in result.output["rounds"]] == ["researcher", "analyst", "writer"]
+    assert [r["agent"] for r in team_result(result)["rounds"]] == [
+        "researcher",
+        "analyst",
+        "writer",
+    ]
     assert result.output["answer"].startswith("Rooftop solar")
 
 
@@ -338,4 +351,4 @@ async def test_nested_teams_stop_at_max_depth(tmp_path: Path) -> None:
         spec=spec,
         path=tmp_path / "outer.yaml",
     )
-    assert "max_depth" in result.output["rounds"][0]["outcome"]
+    assert "max_depth" in team_result(result)["rounds"][0]["outcome"]
