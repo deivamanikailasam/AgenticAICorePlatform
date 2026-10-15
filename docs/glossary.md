@@ -80,3 +80,8 @@ Every term used in this repository, in plain English. Grows with each step.
 | Map-reduce | Doing the same step for many items in parallel (map), then combining the results (reduce) |
 | Debate | Agents arguing different sides while a judge decides |
 | Termination condition | What makes a pattern stop, by itself or because a limit was reached |
+| A2A (Agent2Agent) | An open protocol for agents on different systems to send each other tasks and messages |
+| Agent Card | A JSON document an A2A agent publishes: what it can do, where to reach it, how to authenticate |
+| Signed Agent Card | An Agent Card carrying a digital signature, so a caller can check who published it |
+| Pinned key | A public key written into configuration ahead of time; only signatures from it are accepted |
+| Push notification (A2A) | The remote agent calling back a URL you gave it when a task changes state |

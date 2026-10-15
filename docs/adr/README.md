@@ -40,3 +40,4 @@ ADR supersedes it.
 | [0032](0032-context-engineering.md) | Context engineering: per-section budgets, atomic tool groups, rolling summaries capped by budget, trim and offload strategies, JIT tools, untrusted stays data | 21 |
 | [0033](0033-supervisor-teams.md) | Supervisor teams: workers as child runs with their own tools and grants, typed shared state, OPA on delegation, cost roll-up, circuit breakers | 22 |
 | [0034](0034-team-patterns.md) | Handoff, group chat, map-reduce and debate on one team runtime; every pattern bounded by its own end, turns, items, budget and circuits | 23 |
+| [0035](0035-a2a-gateway.md) | A2A gateway: signed Agent Cards, Keycloak + OPA on inbound calls; remote agents as allowlisted tools with pinned card keys | 24 |

@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 24 · A2A server and client (next)
+**Current step:** 25 · Agent registry and discovery (next)
 
 ## Environment note (read first)
 
@@ -43,14 +43,15 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 21 Context engineering | done | `agent_runtime.context`: per-section budgets, atomic tool groups, tool-result compaction with pointers, `rolling_summary` (capped by budget) / `trim` / `offload_s3`, LLM and extractive summarisers, JIT tools with `load_tools`, cache-friendly order, untrusted summaries stay untrusted; `context:` in agent.yaml; native loop windows every call; `just eval-long-dialogue` (5×200 turns, 20 questions, window 8,192, stand-in): rolling summary 20/20 with 0 calls over vs baseline 20/20 with 12 over, trim 15/20, offload 11/20 | real-model run with LLM summaries; embedding ranking for JIT tools; context handling in framework engines |
 | 22 Supervisor and hierarchical teams | done | `pattern: supervisor`/`hierarchical` with typed shared state (reads/writes, JSON Schema), LLM and rules dispatchers; workers as child runs with their own tools, grants and budget (worker factory; API assembly); OPA `agent.delegate` (kill switch per agent) audited; worker output delimited and limited to its writes; team budget roll-up, circuit breaker, max_depth, stop without output; per-agent cost spans; `research-report` app (researcher, analyst, writer); 11 team tests + API test + 3 Rego tests | Cerbos delegation policy; per-worker checkpoints; research-report against Project 0 rag-core with a real model (VERIFY-ON-MAC) |
 | 23 Handoff, group chat, parallel and debate | done | `pattern: handoff`/`group_chat`/`map_reduce`/`debate` on the Step 22 team runtime (`Crew`): allowed handoff edges, round-robin or LLM speaker selection with `answer_from`, map-reduce with concurrency and max_items, debate with judge; termination by natural end, max_turns, max_items, team budget, circuits, depth; reference specs `support-handoff`, `review-chat`, `batch-summary`, `policy-debate`; `just eval-teams` 15/15 (7 tasks + 8 limit checks, stand-in agents) | real-model runs of the reference specs (VERIFY-ON-MAC) |
+| 24 A2A server and client | done | a2a-sdk 1.2.1, grpcio 1.84.0; `a2a-gateway` (127.0.0.1:8092) publishes `interop.a2a_publish` agents (`hello-workflow`) with ES256-signed Agent Cards over JSON-RPC, HTTP+JSON and gRPC, each agent in its own mount; Keycloak token (401) then OPA `a2a.inbound` (403, kill switch, audited); tasks run through agent-api as the caller (completed / input-required / failed, streaming); push only to allowlisted HTTPS hosts; `a2a://` tools only from `platform.yaml` `a2a.agents` with pinned card keys (unsigned, rogue-key, unpinned-kid and unlisted refused before any message); outbound via `tool.call` with `on_behalf_of` / client credentials / bearer; Pydantic AI ↔ Project A both ways; 10 gateway + 6 tool + 2 assembly tests, 4 rego tests | persistent A2A task store; token-by-token streaming; live check with Project 0 Keycloak (VERIFY-ON-MAC) |
 
 ## Next
 
-- Step 24: A2A server and client — `a2a-gateway` publishes chosen agents as A2A agents with
-  signed Agent Cards; calls remote A2A agents as tools; task lifecycle, streaming and push
-  notifications; Keycloak credentials; OPA on outbound and inbound calls; remote messages are
-  untrusted input. Done when an agent from another framework calls a Project A agent over A2A
-  and vice versa, and an unsigned or unlisted remote agent is refused.
+- Step 25: Agent registry and discovery — a Postgres catalogue of every agent with its version,
+  owner, risk tier, tools, autonomy, eval status and card; lifecycle states draft → approved →
+  deprecated → retired; supervisors can only delegate to approved agents. Done when `just agents`
+  lists all agents with status and a supervisor cannot delegate to a draft agent in staging or
+  prod.
 
 ## Open issues
 
