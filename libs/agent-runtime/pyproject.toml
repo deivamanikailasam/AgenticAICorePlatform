@@ -26,6 +26,7 @@ dependencies = [
 ]
 
 [project.entry-points."agent_platform.components"]
+"approval_gate.postgres" = "agent_runtime.approval_store:PostgresApprovalGate"
 "budget_controller.platform" = "agent_runtime.budget:PlatformBudgetController"
 "loop_detector.platform" = "agent_runtime.budget:PlatformLoopDetector"
 "model_client.litellm" = "agent_runtime.models.gateway:GatewayModelClient"

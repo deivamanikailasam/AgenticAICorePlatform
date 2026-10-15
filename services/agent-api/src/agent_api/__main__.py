@@ -6,10 +6,13 @@ import asyncio
 
 import uvicorn
 from agent_contracts.dummies.observability import JsonlAuditSink
+from agent_contracts.dummies.safety import InMemoryApprovalGate
 from agent_contracts.interfaces import Checkpointer
+from agent_runtime.approval_store import PostgresApprovalGate
 from agent_runtime.checkpoints import FieldCipher, PostgresCheckpointer
 from agent_runtime.models.ledger import PostgresUsageLedger
 from agent_spec.platform import load_platform
+from agent_tools.approvals import OpaApprovalRouter, RulesApprovalRouter
 from agent_tools.auth import KeycloakTokenVerifier
 from agent_tools.identity import TokenExchanger
 from agent_tools.pdp_factory import build_pdp
@@ -17,6 +20,7 @@ from agent_tools.secrets import EnvSecretResolver
 
 from agent_api.app import build_app
 from agent_api.assembly import Assembly
+from agent_api.desk import ApprovalDesk
 from agent_api.registry import registry_gate
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
@@ -56,7 +60,16 @@ def main() -> None:
         admit=gate.refusal,
         ledger=PostgresUsageLedger(settings.db_dsn) if settings.db_dsn else None,
     )
-    manager = RunManager(agents, assembly, store)
+    # Step 28: approvals durable in the agent database, routed by OPA (rules without OPA)
+    approval_gate = (
+        PostgresApprovalGate(settings.db_dsn) if settings.db_dsn else InMemoryApprovalGate()
+    )
+    router = (
+        OpaApprovalRouter(settings.opa_url)
+        if settings.pdp.startswith("opa")
+        else RulesApprovalRouter()
+    )
+    manager = RunManager(agents, assembly, store, desk=ApprovalDesk(approval_gate, router, audit))
     verifier = KeycloakTokenVerifier(
         settings.issuer, audience=settings.audience, jwks_url=settings.jwks_url
     )

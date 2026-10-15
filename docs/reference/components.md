@@ -18,6 +18,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | agent_registry | postgres | implemented | `agent_registry.postgres:PostgresAgentRegistry` |  |
 | agent_registry | sqlite | implemented | `agent_contracts.dummies.registry:SqliteAgentRegistry` | The same behaviour, persisted to a SQLite file (local development: ``just agents`` |
 | approval_gate | memory | dummy | `agent_contracts.dummies.safety:InMemoryApprovalGate` | Approval requests in a dictionary. |
+| approval_gate | postgres | implemented | `agent_runtime.approval_store:PostgresApprovalGate` |  |
 | approval_gate | ttl | dummy | `agent_contracts.dummies.safety:TtlApprovalGate` | Like ``memory`` but every request without an expiry gets a default one (SLA timer). |
 | audit_sink | jsonl | dummy | `agent_contracts.dummies.observability:JsonlAuditSink` | Hash-chained records appended to a JSON Lines file (a temp file by default). |
 | audit_sink | memory | dummy | `agent_contracts.dummies.observability:MemoryAuditSink` | Hash-chained records in a list. |
