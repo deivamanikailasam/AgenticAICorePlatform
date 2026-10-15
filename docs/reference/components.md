@@ -20,7 +20,9 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | budget_controller | ledger | dummy | `agent_contracts.dummies.safety:LedgerBudgetController` | Keeps every charge in a ledger (for audit) on top of the in-memory counters. |
 | budget_controller | memory | dummy | `agent_contracts.dummies.safety:InMemoryBudgetController` | Counters per run; every charge also counts against all ancestors. |
 | checkpointer | memory | dummy | `agent_contracts.dummies.state:InMemoryCheckpointer` | Checkpoints in a dictionary keyed by (tenant, thread). |
+| checkpointer | postgres | implemented | `agent_runtime.checkpoints:PostgresCheckpointer` | ``agent_runtime.checkpoints`` in the ``agent`` database (Project 0 Postgres). |
 | checkpointer | sqlite | dummy | `agent_contracts.dummies.state:SqliteCheckpointer` | Checkpoints in SQLite (in-memory by default). The 'SQLite (tests)' catalogue option. |
+| checkpointer | valkey | implemented | `agent_runtime.checkpoints:ValkeyCheckpointer` | Development only: checkpoints in Valkey (one list per thread). No retention guarantees. |
 | code_sandbox | firecracker | implemented | `sandbox_runner.engines:FirecrackerSandbox` | Firecracker microVMs: each run boots its own Linux kernel under KVM (ADR 0019, revised). |
 | code_sandbox | gvisor | implemented | `sandbox_runner.engines:GvisorSandbox` | gVisor (runsc): a user-space kernel between the code and the host kernel. Default. |
 | code_sandbox | kata | implemented | `sandbox_runner.engines:KataSandbox` | Kata Containers: each run in a lightweight VM (needs KVM on the host). |

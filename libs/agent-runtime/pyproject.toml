@@ -17,6 +17,10 @@ dependencies = [
     "openai-agents==0.22.3",
     # Pydantic AI (slim: no provider SDKs) as an agent-loop engine: 2.52.0, released 2026-09-30
     "pydantic-ai-slim==2.52.0",
+    # checkpoints (Step 18): Postgres and field encryption
+    "psycopg[binary]>=3.3.6,<4",
+    "redis>=8.1.0,<9",
+    "cryptography>=50.0.2,<51",
 ]
 
 [project.entry-points."agent_platform.components"]
@@ -29,6 +33,8 @@ dependencies = [
 "router.llm" = "agent_runtime.routing:LlmRouter"
 "router.embedding" = "agent_runtime.routing:EmbeddingRouter"
 "router.rules" = "agent_runtime.routing:RulesRouter"
+"checkpointer.postgres" = "agent_runtime.checkpoints:PostgresCheckpointer"
+"checkpointer.valkey" = "agent_runtime.checkpoints:ValkeyCheckpointer"
 "planner.llm" = "agent_runtime.reasoning:LlmPlanner"
 "critic.llm" = "agent_runtime.reasoning:LlmCritic"
 "agent_loop.openai_agents" = "agent_runtime.engines.openai_agents:OpenAIAgentsLoopExecutor"

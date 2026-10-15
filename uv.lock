@@ -176,11 +176,14 @@ dependencies = [
     { name = "agent-contracts" },
     { name = "agent-framework-core" },
     { name = "agent-spec" },
+    { name = "cryptography" },
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "langgraph" },
     { name = "openai-agents" },
+    { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-ai-slim" },
+    { name = "redis" },
 ]
 
 [package.metadata]
@@ -188,11 +191,14 @@ requires-dist = [
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-framework-core", specifier = "==1.19.0" },
     { name = "agent-spec", editable = "libs/agent-spec" },
+    { name = "cryptography", specifier = ">=50.0.2,<51" },
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "jsonschema", specifier = ">=4.26.0,<5" },
     { name = "langgraph", specifier = "==1.2.12" },
     { name = "openai-agents", specifier = "==0.22.3" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6,<4" },
     { name = "pydantic-ai-slim", specifier = "==2.52.0" },
+    { name = "redis", specifier = ">=8.1.0,<9" },
 ]
 
 [[package]]
