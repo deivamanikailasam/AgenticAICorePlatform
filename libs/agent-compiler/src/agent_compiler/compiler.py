@@ -64,11 +64,18 @@ def _expand_agents(reg: Registry, frag: PlanFragment, spec: AgentSpec) -> PlanFr
     edges = list(frag.edges)
     entry, exits = frag.entry, list(frag.exits)
     for node in frag.nodes:
-        if node.kind is not NodeKind.AGENT:
+        if node.kind is not NodeKind.AGENT or "loop" in node.config:  # loops are already built
             nodes.append(node)
             continue
         inner = _builder(reg, str(node.config["pattern"]))
-        section = {**node.config, "budgets": spec.budgets.model_dump(), "models": spec.models}
+        section = {
+            **node.config,
+            "budgets": spec.budgets.model_dump(),
+            "models": spec.models,
+            "approval_tools": [
+                t.name for t in spec.tools if t.approval is not None and t.approval.required
+            ],
+        }
         sub = inner.build(section, f"{node.id}.")
         nodes.extend(sub.nodes)
         edges.extend(sub.edges)

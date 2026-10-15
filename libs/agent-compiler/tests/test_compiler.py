@@ -53,11 +53,32 @@ def test_hello_compiles_with_metadata_and_stable_hash() -> None:
     assert plan.metadata["plan_hash"] == plan_hash(plan) == compile_spec(spec).metadata["plan_hash"]
 
 
+def _invoice(pattern: str) -> Any:
+    text = (ROOT / "agents/invoice-triage/agent.yaml").read_text()
+    return load_spec_text(text.replace("pattern: react", f"pattern: {pattern}"))
+
+
 def test_missing_inner_pattern_names_the_step() -> None:
     with pytest.raises(
-        CompileError, match=r"no pattern builder installed for 'react' \(it arrives in Step 13\)"
+        CompileError,
+        match=r"no pattern builder installed for 'plan_execute' \(it arrives in Step 14\)",
     ):
-        compile_spec(load_spec(ROOT / "agents/invoice-triage/agent.yaml"))
+        compile_spec(_invoice("plan_execute"))
+
+
+def test_react_agent_node_becomes_a_loop_with_an_approval_gate() -> None:
+    plan = compile_spec(load_spec(ROOT / "agents/invoice-triage/agent.yaml"))
+    loop = plan.node("resolve_exceptions.loop")
+    assert loop.kind is NodeKind.AGENT
+    assert loop.config["tools"] == ["get_invoice", "search"]
+    assert loop.config["approval_tools"] == ["post_payment"]
+    assert loop.config["model"] == "planner"
+    assert loop.config["max_iterations"] == 25
+    edges = {(e.source, e.target, e.condition) for e in plan.edges}
+    assert ("validate", "resolve_exceptions.loop", "on_error") in edges
+    assert ("resolve_exceptions.loop", "resolve_exceptions.approval", "needs_approval") in edges
+    assert ("resolve_exceptions.approval", "resolve_exceptions.loop", None) in edges
+    assert ("resolve_exceptions.loop", "pay.approval", None) in edges
 
 
 class _TwoStepAgent(PatternBuilder):
@@ -74,8 +95,8 @@ class _TwoStepAgent(PatternBuilder):
 def test_agent_nodes_expand_and_irreversible_tools_get_approval() -> None:
     reg = Registry()
     reg.discover()
-    reg.add("pattern_builder", "react", _TwoStepAgent)
-    plan = compile_spec(load_spec(ROOT / "agents/invoice-triage/agent.yaml"), reg)
+    reg.add("pattern_builder", "plan_execute", _TwoStepAgent)
+    plan = compile_spec(_invoice("plan_execute"), reg)
     ids = [n.id for n in plan.nodes]
     assert "resolve_exceptions.think" in ids
     assert "resolve_exceptions" not in ids

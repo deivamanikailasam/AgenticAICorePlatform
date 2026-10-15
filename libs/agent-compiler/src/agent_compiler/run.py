@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_contracts.dummies.runtime import BUILTIN_FUNCTIONS
-from agent_contracts.interfaces import ModelClient, RuntimeAdapter, ToolExecutor
+from agent_contracts.interfaces import ModelClient, RuntimeAdapter, ToolExecutor, ToolRegistry
 from agent_contracts.models import (
     ExecutablePlan,
     NodeKind,
@@ -23,6 +23,7 @@ from agent_contracts.models import (
     RunResult,
     RunStatus,
 )
+from agent_runtime.agent_loop import AgentLoopExecutor
 from agent_runtime.executors import (
     LlmNodeExecutor,
     RouterNodeExecutor,
@@ -59,7 +60,7 @@ def functions_for(plan: ExecutablePlan) -> dict[str, Callable[[dict[str, Any]], 
     return {n: resolve_function(n) for n in names}
 
 
-NEEDS_MODEL = {NodeKind.LLM, NodeKind.ROUTER}
+NEEDS_MODEL = {NodeKind.LLM, NodeKind.ROUTER, NodeKind.AGENT}
 
 
 def executors_for(
@@ -87,13 +88,24 @@ def executors_for(
         executors[NodeKind.LLM] = LlmNodeExecutor(model)
     if NodeKind.ROUTER in kinds:
         executors[NodeKind.ROUTER] = RouterNodeExecutor(model, functions)
-    if NodeKind.TOOL in kinds:
+    if kinds & {NodeKind.TOOL, NodeKind.AGENT} and any(
+        n.config.get("tools") or n.kind is NodeKind.TOOL for n in plan.nodes
+    ):
         if tools is None:
             raise LookupError(
                 f"spec '{spec.name}' has tool nodes: pass a tool executor (the authorising "
                 "executor with this spec's grants; see agent_tools.assemble)"
             )
         executors[NodeKind.TOOL] = ToolNodeExecutor(tools, tool_names(plan))
+    if NodeKind.AGENT in kinds:
+        if model is None:
+            raise LookupError(f"spec '{spec.name}' has agent nodes: a model client is needed")
+        registry = getattr(tools, "registry", None)
+        if tools is None or registry is None:
+            if any(n.config.get("tools") for n in plan.nodes if n.kind is NodeKind.AGENT):
+                raise LookupError("agent nodes with tools need a tool executor with a registry")
+            tools, registry = _no_tools()
+        executors[NodeKind.AGENT] = AgentLoopExecutor(model, tools, registry, tool_names(plan))
     if NodeKind.SUBPLAN in kinds:
         base = Path(spec_path).parent if spec_path else Path.cwd()
 
@@ -118,6 +130,14 @@ def executors_for(
 
         executors[NodeKind.SUBPLAN] = SubplanNodeExecutor(run_subplan)
     return executors
+
+
+def _no_tools() -> tuple[ToolExecutor, ToolRegistry]:
+    from agent_tools.executor import PlatformToolExecutor
+    from agent_tools.registry import InMemoryToolRegistry
+
+    registry = InMemoryToolRegistry()
+    return PlatformToolExecutor(registry), registry
 
 
 def adapter_for(

@@ -1,0 +1,8 @@
+{"id": "calc-multiply", "question": "What is 17 multiplied by 23?", "tool": "calculator", "arguments": {"expression": "17 * 23"}, "expect": "391"}
+{"id": "calc-precedence", "question": "Compute 2 + 3 * 4.", "tool": "calculator", "arguments": {"expression": "2 + 3 * 4"}, "expect": "14"}
+{"id": "calc-division", "question": "What is 1000 divided by 8?", "tool": "calculator", "arguments": {"expression": "1000 / 8"}, "expect": "125"}
+{"id": "calc-power", "question": "What is 2 to the power of 10?", "tool": "calculator", "arguments": {"expression": "2 ** 10"}, "expect": "1024"}
+{"id": "words-short", "question": "How many words are in: 'the quick brown fox'?", "tool": "word_count", "arguments": {"text": "the quick brown fox"}, "expect": "4"}
+{"id": "words-sentence", "question": "Count the words in: 'agents call tools under policy'.", "tool": "word_count", "arguments": {"text": "agents call tools under policy"}, "expect": "5"}
+{"id": "chars", "question": "How many characters are in 'hello'?", "tool": "word_count", "arguments": {"text": "hello"}, "expect": "5"}
+{"id": "calc-gst", "question": "What is 10% GST on AUD 250? Give the GST amount.", "tool": "calculator", "arguments": {"expression": "250 * 0.1"}, "expect": "25"}

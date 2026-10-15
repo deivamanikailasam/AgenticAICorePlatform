@@ -20,6 +20,7 @@ agent-compile = "agent_compiler.cli:main"
 "pattern_builder.workflow" = "agent_compiler.patterns.graph:GraphPatternBuilder"
 "pattern_builder.state_machine" = "agent_compiler.patterns.graph:StateMachinePatternBuilder"
 "pattern_builder.hybrid" = "agent_compiler.patterns.graph:HybridPatternBuilder"
+"pattern_builder.react" = "agent_compiler.patterns.react:ReactPatternBuilder"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }
