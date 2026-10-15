@@ -96,6 +96,7 @@ version = "0.1.0"
 source = { editable = "services/agent-api" }
 dependencies = [
     { name = "ag-ui-protocol" },
+    { name = "agent-audit" },
     { name = "agent-compiler" },
     { name = "agent-contracts" },
     { name = "agent-guardrails" },
@@ -113,6 +114,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "ag-ui-protocol", specifier = "==1.0.0" },
+    { name = "agent-audit", editable = "libs/agent-audit" },
     { name = "agent-compiler", editable = "libs/agent-compiler" },
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-guardrails", editable = "libs/agent-guardrails" },

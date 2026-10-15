@@ -83,6 +83,30 @@ class Principal:
         }
 
 
+def digest(value: Any) -> str:
+    """SHA-256 of a value's canonical JSON: the audit proves what went in and out without
+    holding the content (that is in the run store and checkpoints, encrypted)."""
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode()
+    ).hexdigest()
+
+
+def plan_summary(plan: ExecutablePlan) -> dict[str, Any]:
+    return {
+        "plan_hash": str(plan.metadata.get("plan_hash")),
+        "entry": plan.entry,
+        "nodes": [
+            {
+                "id": n.id,
+                "kind": n.kind.value,
+                **({"tools": list(n.config["tools"])} if n.config.get("tools") else {}),
+            }
+            for n in plan.nodes
+        ],
+        "edges": [[e.source, e.target, e.condition] for e in plan.edges],
+    }
+
+
 @dataclass
 class Run:
     run_id: str
@@ -166,6 +190,9 @@ class RunManager:
         self.desk = desk or ApprovalDesk(
             InMemoryApprovalGate(), RulesApprovalRouter(), assembly.audit
         )
+        # Step 31: approval events get versions and trace ids like every other event
+        if getattr(self.assembly.audit, "inner", None) is self.desk.audit:
+            self.desk.audit = self.assembly.audit
         self.tool_specs: dict[str, dict[str, ToolSpec]] = {}  # agent -> tool name -> spec
         self.reviews: dict[str, dict[str, Any]] = {}  # run id -> review-after item (Step 28)
         agent_metrics().pending_from(self.pending_approvals)  # Step 30 gauge
@@ -794,6 +821,14 @@ class RunManager:
             # model calls, tool calls and team workers, nests under it
             began = time.perf_counter()
             with agent_span(spec.name, spec.version, run.ctx, spec.description) as span:
+                # Step 31: the run and its plan in the audit trail (trace id from this span)
+                await self._audit_event(
+                    "run.started",
+                    run.ctx,
+                    {"input_digest": digest(run.inputs), "resumed": not first},
+                )
+                if first:
+                    await self._audit_event("plan", run.ctx, plan_summary(run.plan))
                 if not budgets.known(run.run_id):  # Step 26 (re-opened after a restart)
                     await budgets.open(spec, run.ctx)
                 result = await work
@@ -806,6 +841,19 @@ class RunManager:
                     result = await budgets.finish(spec, run.ctx, result, summariser)
                 usage = self.assembly.ledger.total(run.run_id)
                 end_agent(span, result.status.value, usage, result.state.stop_reason)
+                await self._audit_event(
+                    "run.ended",
+                    run.ctx,
+                    {
+                        "status": result.status.value,
+                        "stop_reason": result.state.stop_reason,
+                        "output_digest": digest(result.output),
+                        "cost_aud": round(usage.cost_aud, 6),
+                        "input_tokens": usage.input_tokens,
+                        "output_tokens": usage.output_tokens,
+                        "model_calls": self.assembly.ledger.calls(run.run_id),
+                    },
+                )
             if result.status.value != "interrupted":
                 # Step 30: runs, success, steps, cost per run and tenant, latency, budget trips
                 agent_metrics().run_finished(
@@ -862,6 +910,9 @@ class RunManager:
             await self._finish_cancelled(run)
         except Exception as exc:  # the run fails; the API keeps serving
             run.status = "failed"
+            await self._audit_event(
+                "run.ended", run.ctx, {"status": "failed", "error": type(exc).__name__}
+            )
             await self._record(
                 run,
                 RunEvent(
@@ -881,6 +932,9 @@ class RunManager:
 
     async def _finish_cancelled(self, run: Run, reason: str | None = None) -> None:
         run.status, run.interrupts = "cancelled", []
+        await self._audit_event(
+            "run.ended", run.ctx, {"status": "cancelled", "stop_reason": reason}
+        )
         data: dict[str, Any] = {"status": "cancelled"}
         if reason:
             data["stop_reason"] = reason

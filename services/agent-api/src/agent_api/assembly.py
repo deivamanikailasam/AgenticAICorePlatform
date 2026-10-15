@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from agent_audit.stamping import StampingAuditSink, agent_versions
 from agent_compiler.run import Admit, executors_for, functions_for
 from agent_contracts.interfaces import (
     AuditSink,
@@ -47,7 +48,7 @@ from agent_runtime.models.gateway import GatewayModelClient
 from agent_runtime.models.ledger import UsageLedger
 from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec
-from agent_spec.platform import PlatformConfig
+from agent_spec.platform import ROLES, PlatformConfig
 from agent_telemetry.spans import TracingModelClient, TracingToolExecutor
 from agent_tools.a2a import A2aRemoteAgentTool
 from agent_tools.assemble import grants_for, tool_names, tool_refs
@@ -172,7 +173,8 @@ class Assembly:
         self._memories: dict[str, MemoryService | None] = {}
         self.platform = platform
         self.pdp = pdp
-        self.audit = audit
+        # Step 31: every event carries the versions in force and the trace id
+        self.audit = audit if isinstance(audit, StampingAuditSink) else StampingAuditSink(audit)
         self.rag_core_url = rag_core_url
         self.exchanger = exchanger
         self.pool = McpClientPool(platform, audit=audit, exchanger=exchanger)
@@ -257,6 +259,15 @@ class Assembly:
                 raise LookupError(f"{REMEMBER} needs memory.long_term in the spec")
             await registry.register(RememberTool(memory))
         await require_approvals(plan, registry)
+        self.audit.register(
+            spec.name,
+            agent_versions(
+                spec,
+                plan,
+                {role: self.platform.alias_for(role, spec.models) for role in ROLES},
+                {t.name: t.version for t in await registry.list()},
+            ),
+        )
         guardrails = self.guardrails_for(spec)
         # Step 30: execute_tool spans around everything, refused calls included
         tools = TracingToolExecutor(

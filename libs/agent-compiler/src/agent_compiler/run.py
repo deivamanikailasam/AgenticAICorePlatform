@@ -363,6 +363,8 @@ def supervisor_executor(
     async def run_worker(worker: Worker, inputs: dict[str, Any], ctx: RunContext) -> WorkerResult:
         path = base / worker.spec
         child = load_spec(path)
+        # the worker acts as its own agent: identity, versions and audit name its spec (Step 31)
+        ctx = ctx.model_copy(update={"agent_id": child.name, "agent_version": child.version})
         child_model, child_tools = await workers(child, compile_spec(child))
         meter = Meter()
         result, _ = await run(

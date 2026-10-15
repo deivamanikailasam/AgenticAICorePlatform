@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Run API (Step 17): create, stream (AG-UI over SSE or WebSocket), state, cancel, resume, threads and approvals, behind Keycloak"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "agent-audit",
     "agent-telemetry",
     "agent-contracts",
     "agent-spec",
@@ -23,6 +24,7 @@ dependencies = [
 agent-api = "agent_api.__main__:main"
 
 [tool.uv.sources]
+agent-audit = { workspace = true }
 agent-telemetry = { workspace = true }
 agent-contracts = { workspace = true }
 agent-spec = { workspace = true }
