@@ -27,3 +27,4 @@ ADR supersedes it.
 | [0019](0019-code-sandbox-engines.md) | Code sandbox: gVisor default, Kata option, Firecracker/managed stubs | 9 |
 | [0020](0020-tool-authorisation.md) | Tool authorisation: authorising executor, rate limits, on-behalf-of, Cerbos and OpenFGA options | 10 |
 | [0021](0021-sandbox-engines-decision.md) | Sandbox engines: Firecracker and Kata implemented and verified on KVM; managed stays a stub | 9 |
+| [0022](0022-runtime-adapters.md) | Runtime adapters: LangGraph default, Agent Framework second, shared node semantics, dependency cooldown | 11 |

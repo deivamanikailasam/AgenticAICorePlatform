@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 11 · LangGraph runtime adapter (next)
+**Current step:** 12 · Deterministic workflows (next)
 
 ## Environment note (read first)
 
@@ -30,11 +30,13 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 8 Platform MCP server | done | gateway with Keycloak auth + OPA per call + audit; alice/bob/gina see only permitted docs via token exchange (stand-in + rag-core double); hardened container via `just up` | real rag-core API shape; Project 0 realm group claims, token exchange, downstream clients; OPA bundle loading |
 | 9 Sandboxed code execution | done | gVisor 20261005.0: fork bomb killed, network blocked, 10-min loop cut, OOM stopped, artefacts in/out; Firecracker v1.17.0 and Kata 4.2.0 verified on the KVM CI runner (21 passed) | gVisor inside OrbStack; Firecracker/Kata in a Lima VM with nested virtualisation |
 | 10 Tool authorisation | done | Rego 21/21 (allow, deny, approval); cross-tenant call through the live gateway denied and audited; authorising executor with Valkey rate limits; on-behalf-of MCP (server sees alice); Cerbos 0.56.0 parity with OPA on 19 cases; OpenFGA v1.22.0 relationships | Project 0 OPA loading `data.agent.config`; realm group paths; token exchange per audience |
+| 11 Runtime adapter | done | LangGraph 1.2.12 and Microsoft Agent Framework 1.19.0 each pass the same 14 runtime contract tests; one agent.yaml gives identical state on both; hello-workflow on LangGraph with its Tempo trace | — |
 
 ## Next
 
-- Step 11: LangGraph runtime adapter (default) and the alternatives listed in the spec; the
-  runtime builds tool grants from the spec and calls tools only through the authorising executor.
+- Step 12: deterministic workflows — function, LLM and tool nodes, conditional edges, parallel
+  branches, joins, sub-workflows, timeouts and saga compensation; replay takes the same path.
+  Tool nodes call tools only through the authorising executor, with grants built from the spec.
 
 ## Open issues
 
