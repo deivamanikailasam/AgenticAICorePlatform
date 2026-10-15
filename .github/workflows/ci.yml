@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_FROZEN: "1"
+
+jobs:
+  check:
+    name: lint, types, unit, policy, config, secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.11.32"
+          python-version: "3.12"
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - uses: open-policy-agent/setup-opa@b2b258e089860efaadaaf71bf6e3aecb4a3eeff1 # v2.4.0
+        with:
+          version: "1.21.2"
+      - run: uv sync --all-packages
+      - run: just check
+      - name: every commit carries a plain-English change entry
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ] || [ -z "${{ github.event.before }}" ]; then
+            range="$(git rev-list --max-parents=0 HEAD | tail -1)..HEAD"
+          else
+            range="${{ github.event.before }}..${{ github.sha }}"
+          fi
+          just change-entry "$range"
+
+  integration:
+    name: integration (Project 0 stand-in)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: check
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.11.32"
+          python-version: "3.12"
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - run: uv sync --all-packages
+      - run: just standin-up
+      - name: health, provisioning and integration tests
+        run: |
+          set -a; . tests/stack/standin.env; set +a
+          export P0_POSTGRES_DSN_INTERNAL=postgresql://agent_health:standin-only@postgres:5432/postgres
+          just health
+          just provision
+          just up
+          just test-integration
+      - if: failure()
+        run: docker compose -f tests/stack/compose.p0-standin.yaml logs --tail=200
