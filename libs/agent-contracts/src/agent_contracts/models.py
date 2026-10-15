@@ -524,6 +524,8 @@ class PlanStep(Frozen):
     description: str
     tool: str | None = None
     depends_on: tuple[str, ...] = ()
+    # ReWOO (Step 14): tool arguments may refer to earlier steps' results as "#E<n>" or "#E<n>.field"
+    arguments: dict[str, Any] = Field(default_factory=dict)
 
 
 class Plan(Frozen):

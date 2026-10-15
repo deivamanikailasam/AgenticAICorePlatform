@@ -30,6 +30,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | context_manager | summary_stub | dummy | `agent_contracts.dummies.context:SummaryStubContextManager` | Replaces dropped messages with one summary placeholder (real summaries: Step 21). |
 | context_manager | trim | dummy | `agent_contracts.dummies.context:TrimContextManager` | Drops the oldest, lowest-priority messages until the context fits. |
 | critic | length | dummy | `agent_contracts.dummies.reasoning:LengthCritic` | Passes outputs of at least ``min_words`` words. |
+| critic | llm | implemented | `agent_runtime.reasoning:LlmCritic` |  |
 | critic | overlap | dummy | `agent_contracts.dummies.reasoning:OverlapCritic` | Scores the share of task words that the output mentions. |
 | durable_executor | deferred | dummy | `agent_contracts.dummies.state:DeferredDurableExecutor` | Starts the workflow lazily, on the first signal or result request. No persistence. |
 | durable_executor | inline | dummy | `agent_contracts.dummies.state:InlineDurableExecutor` | Starts the workflow as an asyncio task immediately. No persistence. |
@@ -52,6 +53,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | pattern_builder | single | dummy | `agent_contracts.dummies.runtime:SingleNodePattern` | One function node: ``{fn: name}``. |
 | pattern_builder | state_machine | implemented | `agent_compiler.patterns.graph:StateMachinePatternBuilder` | Same translation; states are nodes and transitions are edges with outcomes. |
 | pattern_builder | workflow | implemented | `agent_compiler.patterns.graph:GraphPatternBuilder` | Translates ``graph: {entry, nodes, edges}`` one-to-one into plan nodes and edges. |
+| planner | llm | implemented | `agent_runtime.reasoning:LlmPlanner` |  |
 | planner | per_tool | dummy | `agent_contracts.dummies.reasoning:PerToolPlanner` | One step per available tool, chained in order; one step if there are no tools. |
 | planner | single_step | dummy | `agent_contracts.dummies.reasoning:SingleStepPlanner` | A plan with exactly one step: the goal itself. |
 | policy_decision_point | cerbos | implemented | `agent_tools.policy_cerbos:CerbosPolicyDecisionPoint` | Cerbos PDP over its HTTP API (``POST /api/check/resources``). |
