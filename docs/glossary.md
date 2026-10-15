@@ -132,3 +132,9 @@ Every term used in this repository, in plain English. Grows with each step.
 | Append-only | Records can be added but never changed or deleted (enforced here by database triggers) |
 | Digest | A fixed-length fingerprint (SHA-256) of some data: proves which exact data was used without storing it |
 | Run reconstruction | Rebuilding a run's story from the audit trail plus its checkpoints, and checking the two agree |
+| Agent card | A generated page saying what one agent is for, who owns it, how risky it is, what it may touch, its limits and its test results |
+| System card | The same for a whole application: the lead agent, its workers, every tool and service, and where people approve |
+| Lineage | The chain of what went into an agent: spec version, prompts, models, tools and datasets |
+| AI-use register | The organisation's list of every AI system it runs, one line each: purpose, owner, risk, oversight |
+| CODEOWNERS | A GitHub file naming who must review changes to which files |
+| Required status check | A CI result GitHub insists is green before a pull request can merge (set in the repository's branch protection) |
