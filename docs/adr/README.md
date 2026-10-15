@@ -41,3 +41,4 @@ ADR supersedes it.
 | [0033](0033-supervisor-teams.md) | Supervisor teams: workers as child runs with their own tools and grants, typed shared state, OPA on delegation, cost roll-up, circuit breakers | 22 |
 | [0034](0034-team-patterns.md) | Handoff, group chat, map-reduce and debate on one team runtime; every pattern bounded by its own end, turns, items, budget and circuits | 23 |
 | [0035](0035-a2a-gateway.md) | A2A gateway: signed Agent Cards, Keycloak + OPA on inbound calls; remote agents as allowlisted tools with pinned card keys | 24 |
+| [0036](0036-agent-registry.md) | Agent registry: Postgres default (Backstage alternative), immutable versions, draft → approved → deprecated → retired; only approved agents run or are delegated to in staging and prod | 25 |

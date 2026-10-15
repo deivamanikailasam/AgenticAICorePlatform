@@ -84,4 +84,9 @@ Every term used in this repository, in plain English. Grows with each step.
 | Agent Card | A JSON document an A2A agent publishes: what it can do, where to reach it, how to authenticate |
 | Signed Agent Card | An Agent Card carrying a digital signature, so a caller can check who published it |
 | Pinned key | A public key written into configuration ahead of time; only signatures from it are accepted |
+| Agent registry | The catalogue of every agent version: owner, risk, tools and lifecycle state |
+| Lifecycle state | Where an agent version is in its life: draft, approved, deprecated or retired |
+| Approval expiry | The date after which an approval no longer counts and the agent must be reviewed again |
+| Spec hash | A fingerprint of an agent spec's content; a changed spec needs a new version |
+| Backstage catalogue | A developer portal's list of software components, kept as YAML files in Git |
 | Push notification (A2A) | The remote agent calling back a URL you gave it when a task changes state |

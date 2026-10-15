@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 25 · Agent registry and discovery (next)
+**Current step:** 26 · Budgets and loop control (next)
 
 ## Environment note (read first)
 
@@ -44,14 +44,17 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 22 Supervisor and hierarchical teams | done | `pattern: supervisor`/`hierarchical` with typed shared state (reads/writes, JSON Schema), LLM and rules dispatchers; workers as child runs with their own tools, grants and budget (worker factory; API assembly); OPA `agent.delegate` (kill switch per agent) audited; worker output delimited and limited to its writes; team budget roll-up, circuit breaker, max_depth, stop without output; per-agent cost spans; `research-report` app (researcher, analyst, writer); 11 team tests + API test + 3 Rego tests | Cerbos delegation policy; per-worker checkpoints; research-report against Project 0 rag-core with a real model (VERIFY-ON-MAC) |
 | 23 Handoff, group chat, parallel and debate | done | `pattern: handoff`/`group_chat`/`map_reduce`/`debate` on the Step 22 team runtime (`Crew`): allowed handoff edges, round-robin or LLM speaker selection with `answer_from`, map-reduce with concurrency and max_items, debate with judge; termination by natural end, max_turns, max_items, team budget, circuits, depth; reference specs `support-handoff`, `review-chat`, `batch-summary`, `policy-debate`; `just eval-teams` 15/15 (7 tasks + 8 limit checks, stand-in agents) | real-model runs of the reference specs (VERIFY-ON-MAC) |
 | 24 A2A server and client | done | a2a-sdk 1.2.1, grpcio 1.84.0; `a2a-gateway` (127.0.0.1:8092) publishes `interop.a2a_publish` agents (`hello-workflow`) with ES256-signed Agent Cards over JSON-RPC, HTTP+JSON and gRPC, each agent in its own mount; Keycloak token (401) then OPA `a2a.inbound` (403, kill switch, audited); tasks run through agent-api as the caller (completed / input-required / failed, streaming); push only to allowlisted HTTPS hosts; `a2a://` tools only from `platform.yaml` `a2a.agents` with pinned card keys (unsigned, rogue-key, unpinned-kid and unlisted refused before any message); outbound via `tool.call` with `on_behalf_of` / client credentials / bearer; Pydantic AI ↔ Project A both ways; 10 gateway + 6 tool + 2 assembly tests, 4 rego tests | persistent A2A task store; token-by-token streaming; live check with Project 0 Keycloak (VERIFY-ON-MAC) |
+| 25 Agent registry and discovery | done | `agent_registry` contract (lifecycle draft → approved → deprecated → retired, history, immutable versions by spec hash, approval expiry); Postgres default (migration 0005, row-locked changes), Backstage catalogue alternative, SQLite/memory; sync of all 20 specs incl. workers; `just agents` list/approve/deprecate/retire; `ApprovedOnly` gate in staging/prod at run creation (403) and before every delegation, in API and Temporal worker, audited; contract on 4 implementations (Postgres 6 passed on stand-in) | who may approve (Step 28); stop in-flight runs of a version (Step 38); registry data in OPA |
 
 ## Next
 
-- Step 25: Agent registry and discovery — a Postgres catalogue of every agent with its version,
-  owner, risk tier, tools, autonomy, eval status and card; lifecycle states draft → approved →
-  deprecated → retired; supervisors can only delegate to approved agents. Done when `just agents`
-  lists all agents with status and a supervisor cannot delegate to a draft agent in staging or
-  prod.
+- Step 26: Budgets and loop control — `BudgetController` enforcing per-run and per-agent limits
+  (steps, tokens, AUD cost, wall-clock, tool calls per tool, delegation depth); hierarchical
+  budgets mapped to LiteLLM virtual keys; `LoopDetector` (repeated identical tool calls,
+  no-progress cycles, oscillating plans); circuit breakers on failing tools and models; graceful
+  stop with partial result and reason (hard stop → stop + summarise). Done when a deliberately
+  looping agent stops within its limits, the run record shows which limit tripped, and cost
+  dashboards match the gateway's accounting.
 
 ## Open issues
 
