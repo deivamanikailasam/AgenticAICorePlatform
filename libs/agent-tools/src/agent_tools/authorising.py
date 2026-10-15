@@ -49,6 +49,7 @@ from agent_contracts.models import (
 )
 
 from agent_tools.credentials import current_credential
+from agent_tools.identity import acting_agent
 from agent_tools.ratelimit import MemoryRateLimiter, RateLimiter
 
 TENANT_ARGUMENT = "tenant_id"
@@ -204,10 +205,16 @@ class AuthorisingToolExecutor(ToolExecutor):
                     started,
                 )
 
-        grant = (self.grants or {}).get(call.name)
-        if grant is not None and grant.credentials:
-            return await self._with_credential(call, ctx, grant.credentials, payload, started)
-        result = await self.inner.execute(call, ctx)
+        # downstream tokens are exchanged as this agent, not as the platform (Step 29)
+        agent = acting_agent.set(ctx.agent_id) if self.grants is not None else None
+        try:
+            grant = (self.grants or {}).get(call.name)
+            if grant is not None and grant.credentials:
+                return await self._with_credential(call, ctx, grant.credentials, payload, started)
+            result = await self.inner.execute(call, ctx)
+        finally:
+            if agent is not None:
+                acting_agent.reset(agent)
         payload |= {
             "ok": result.ok,
             "error_code": result.error_code.value if result.error_code else None,

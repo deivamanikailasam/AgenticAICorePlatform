@@ -16,7 +16,7 @@ from agent_tools.relationships import (
     OpenFgaRelationshipChecker,
     load_rules,
 )
-from agent_tools.secrets import EnvSecretResolver
+from agent_tools.secrets import default_resolver
 
 
 def build_pdp(
@@ -42,6 +42,6 @@ def build_pdp(
     if extra != "openfga":
         raise ValueError(f"policy engine {choice!r}: only +openfga can be added")
     checker = OpenFgaRelationshipChecker(
-        openfga_url, openfga_store, api_key=openfga_key, secrets=EnvSecretResolver()
+        openfga_url, openfga_store, api_key=openfga_key, secrets=default_resolver()
     )
     return CompositePolicyDecisionPoint(primary, checker, load_rules(Path(openfga_rules)))

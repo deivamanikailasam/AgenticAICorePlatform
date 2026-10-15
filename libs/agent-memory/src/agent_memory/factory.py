@@ -15,7 +15,7 @@ from agent_contracts.interfaces import AuditSink, Embedder, MemoryPolicy, Memory
 from agent_contracts.registry import registry
 from agent_runtime.checkpoints import FieldCipher
 from agent_spec.model import LongTermMemory
-from agent_tools.secrets import EnvSecretResolver
+from agent_tools.secrets import default_resolver
 
 from agent_memory.service import MemoryService
 
@@ -36,7 +36,7 @@ async def store_for(
             "url": os.environ.get("P0_QDRANT_URL", "http://127.0.0.1:6333"),
             "embedder": embedder,
             "cipher": cipher,
-            "api_key": await EnvSecretResolver().resolve(
+            "api_key": await default_resolver().resolve(
                 os.environ.get("P0_QDRANT_API_KEY", "${secret:project0/qdrant#api_key}")
             ),
         }

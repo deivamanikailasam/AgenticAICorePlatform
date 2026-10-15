@@ -24,7 +24,7 @@ from agent_contracts.interfaces import Tool
 from agent_contracts.models import DataClass, RunContext, SideEffect, ToolSpec
 from agent_spec.platform import A2aAgent
 
-from agent_tools.identity import TokenExchanger
+from agent_tools.identity import Exchanger
 from agent_tools.secrets import SecretResolver, maybe_secret
 
 CARD_TTL = 300.0  # seconds a verified card is reused before it is fetched and checked again
@@ -80,7 +80,7 @@ class A2aRemoteAgentTool(Tool):
         self,
         agent: A2aAgent,
         secrets: SecretResolver,
-        exchanger: TokenExchanger | None = None,
+        exchanger: Exchanger | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
         grpc_channel_factory: Callable[[str], Any] | None = None,
     ) -> None:

@@ -11,7 +11,8 @@ import asyncio
 import os
 from typing import Any
 
-from agent_api.assembly import Assembly
+from agent_api.assembly import Assembly, load_gateway_keys
+from agent_api.identity import identity_from_env
 from agent_api.registry import registry_gate
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
@@ -20,9 +21,8 @@ from agent_runtime.models.ledger import PostgresUsageLedger
 from agent_runtime.temporal.runtime import TemporalRuntime
 from agent_spec.platform import load_platform
 from agent_tools.artefacts import S3ArtefactStore
-from agent_tools.identity import TokenExchanger
 from agent_tools.pdp_factory import build_pdp
-from agent_tools.secrets import EnvSecretResolver
+from agent_tools.secrets import default_resolver
 
 from agent_worker.worker import serve
 
@@ -31,7 +31,7 @@ async def artefacts() -> Any:
     endpoint = os.environ.get("P0_S3_ENDPOINT")
     if not endpoint:
         return None  # values stay inline (Temporal's 2 MB payload limit applies)
-    secrets = EnvSecretResolver()
+    secrets = default_resolver()
     return S3ArtefactStore(
         endpoint,
         os.environ.get("AGENT_ARTEFACT_BUCKET", "agent-artefacts"),
@@ -42,20 +42,24 @@ async def artefacts() -> Any:
 
 async def run() -> None:
     settings = Settings()
-    exchanger = TokenExchanger(
-        settings.token_url, settings.client_id, settings.client_secret, EnvSecretResolver()
-    )
+    # Step 29: per-agent identities, secrets from OpenBao and call-time tool credentials
+    identity = identity_from_env(settings)
+    platform = load_platform()
+    gateway_keys = await load_gateway_keys(platform, identity.secrets, settings.environment)
     audit = JsonlAuditSink(
         os.environ.get("AGENT_WORKER_AUDIT_FILE", "/tmp/agent-worker-audit.jsonl")  # noqa: S108
     )
     # Step 25: teams run by the worker delegate only to approved agents in staging and prod
     gate = await registry_gate(settings.environment, audit, who="agent-worker")
     assembly = Assembly(
-        load_platform(),
+        platform,
         build_pdp(settings.pdp, opa_url=settings.opa_url, cerbos_url=settings.cerbos_url),
         audit,
         rag_core_url=settings.rag_core_url,
-        exchanger=exchanger,
+        exchanger=identity.exchanger,
+        secrets=identity.secrets,
+        broker=identity.broker,
+        gateway_keys=gateway_keys,
         admit=gate.refusal,
         ledger=PostgresUsageLedger(settings.db_dsn) if settings.db_dsn else None,
     )

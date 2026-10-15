@@ -1,10 +1,16 @@
-"""Resolve ``${secret:<path>#<key>}`` references at call time. OpenBao arrives in Step 29."""
+"""Resolve ``${secret:<path>#<key>}`` references at call time.
+
+``default_resolver()`` is what services use (Step 29): OpenBao (``agent_tools.openbao``) when the
+runtime's AppRole is configured; environment variables only in dev and CI, as a fallback after
+OpenBao. In staging and prod there is no fallback: a process without OpenBao refuses to start.
+"""
 
 from __future__ import annotations
 
 import os
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 
 SECRET_REF = re.compile(r"^\$\{secret:(?P<path>[A-Za-z0-9_./-]+)#(?P<key>[A-Za-z0-9_.-]+)\}$")
 
@@ -37,3 +43,59 @@ async def maybe_secret(value: str | None, resolver: SecretResolver) -> str | Non
     if value is not None and SECRET_REF.match(value):
         return await resolver.resolve(value)
     return value
+
+
+class ChainedSecretResolver(SecretResolver):
+    """Tries each resolver in order; the first that has the secret wins (dev and CI only)."""
+
+    def __init__(self, *resolvers: SecretResolver) -> None:
+        self.resolvers = resolvers
+
+    async def resolve(self, reference: str) -> str:
+        misses: list[str] = []
+        for resolver in self.resolvers:
+            try:
+                return await resolver.resolve(reference)
+            except KeyError as err:
+                misses.append(str(err))
+        raise KeyError("; ".join(misses) or f"no resolver for {reference[:40]!r}")
+
+
+DEV_STAGES = frozenset({"dev", "ci", "test"})
+_default: SecretResolver | None = None
+
+
+def default_resolver(env: Mapping[str, str] | None = None) -> SecretResolver:
+    """The process's resolver, built once from ``P0_OPENBAO_URL``, ``AGENT_BAO_ROLE_ID``,
+    ``AGENT_BAO_SECRET_ID`` and ``AGENT_ENV``."""
+    global _default
+    if env is None and _default is not None:
+        return _default
+    e = os.environ if env is None else env
+    stage = e.get("AGENT_ENV", "dev")
+    url, role_id, secret_id = (
+        e.get("P0_OPENBAO_URL"),
+        e.get("AGENT_BAO_ROLE_ID"),
+        e.get("AGENT_BAO_SECRET_ID"),
+    )
+    resolver: SecretResolver
+    if url and role_id and secret_id:
+        from agent_tools.openbao import AppRoleAuth, OpenBaoClient, OpenBaoSecretResolver
+
+        bao = OpenBaoSecretResolver(
+            OpenBaoClient(url, AppRoleAuth(role_id, secret_id)),
+            mount=e.get("AGENT_BAO_KV_MOUNT", "agent-platform"),
+        )
+        resolver = (
+            bao if stage not in DEV_STAGES else ChainedSecretResolver(bao, EnvSecretResolver())
+        )
+    elif stage in DEV_STAGES:
+        resolver = EnvSecretResolver()
+    else:
+        raise RuntimeError(
+            f"AGENT_ENV={stage}: secrets come only from OpenBao; set P0_OPENBAO_URL, "
+            "AGENT_BAO_ROLE_ID and AGENT_BAO_SECRET_ID"
+        )
+    if env is None:
+        _default = resolver
+    return resolver

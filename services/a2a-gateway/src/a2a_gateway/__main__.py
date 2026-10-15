@@ -13,7 +13,7 @@ from agent_spec.platform import load_platform
 from agent_tools import pdp_factory
 from agent_tools.a2a import card_signer
 from agent_tools.auth import KeycloakTokenVerifier
-from agent_tools.secrets import EnvSecretResolver, maybe_secret
+from agent_tools.secrets import default_resolver, maybe_secret
 
 from a2a_gateway.app import A2aGateway
 from a2a_gateway.inbound import Inbound
@@ -23,7 +23,7 @@ from a2a_gateway.settings import Settings
 def build(settings: Settings) -> A2aGateway:
     platform = load_platform()
     publish = platform.a2a.publish
-    key = asyncio.run(maybe_secret(publish.signing_key, EnvSecretResolver()))
+    key = asyncio.run(maybe_secret(publish.signing_key, default_resolver()))
     if not key:
         raise SystemExit("a2a.publish.signing_key did not resolve: the gateway signs every card")
     specs = {

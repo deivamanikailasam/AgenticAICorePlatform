@@ -146,3 +146,25 @@ def test_openbao_provisioning_is_idempotent(tmp_path: Path) -> None:
     assert stat.S_IMODE((tmp_path / "openbao-approle.env").stat().st_mode) == 0o600
     changed = [a for a in again if not a.endswith(("exists", "nothing to import"))]
     assert not changed, changed
+
+
+def test_agent_identities_follow_the_specs() -> None:
+    from scripts.provision.agents import agent_needs
+
+    needs = {n.name: n for n in agent_needs()}
+    assert set(needs) == {p.parent.name for p in Path("agents").glob("*/agent.yaml")}
+    assert "rag-core" in needs["invoice-triage"].audiences  # it searches rag-core for the user
+    # every audience an agent needs has a provisioned scope (else provisioning refuses)
+    known = set(keycloak.load_audiences())
+    assert all(set(n.audiences) <= known for n in needs.values())
+
+
+def test_agent_policies_grant_only_the_spec_credentials() -> None:
+    from scripts.provision import openbao
+    from scripts.provision.agents import AgentNeeds
+
+    policy = openbao.agent_policy(AgentNeeds("a", credentials=("agent-db/creds/tool-reader",)))
+    assert 'path "agent-db/creds/tool-reader" {\n  capabilities = ["read"]\n}' in policy
+    assert 'path "sys/leases/revoke/agent-db/creds/tool-reader/*"' in policy
+    assert "agent-platform/" not in policy  # never the platform's own secrets
+    assert openbao.agent_policy(AgentNeeds("b")).startswith("#")  # nothing granted

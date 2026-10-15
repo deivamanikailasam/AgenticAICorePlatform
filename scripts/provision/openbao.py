@@ -10,10 +10,16 @@ What it sets up (``infra/provision/openbao.yaml``):
   that creates a short-lived user in a read-only group role;
 * the runtime's AppRole identity with a policy that may only *read* the KV mount. A new
   secret id is written once to ``.tmp/openbao-approle.env`` (0600, git-ignored) to be moved
-  into the dev secrets; it is never printed.
+  into the dev secrets; it is never printed;
+* agent identities: the Keycloak client secrets of ``agent-platform`` and every ``agent-<name>``
+  copied into KV (``keycloak/<client>``), JWT auth trusting the realm's signing keys, and per
+  agent a role (``aud=openbao``, ``azp=agent-<name>``) and a policy that may issue only the
+  credential sources its spec grants.
 
-Needs ``P0_OPENBAO_URL``, ``OPENBAO_ADMIN_TOKEN`` (provisioning only) and
-``P0_POSTGRES_ADMIN_DSN``.
+Needs ``P0_OPENBAO_URL``, ``OPENBAO_ADMIN_TOKEN`` (provisioning only), ``P0_POSTGRES_ADMIN_DSN``
+and the Keycloak admin login (``KEYCLOAK_ADMIN_USER``, ``KEYCLOAK_ADMIN_PASSWORD``).
+``AGENT_BAO_KEYCLOAK_URL`` is Keycloak as OpenBao reaches it (default ``http://keycloak:8080``);
+``AGENT_BAO_JWT_ISSUER``, when set, is also required as the tokens' issuer.
 """
 
 from __future__ import annotations
@@ -29,6 +35,9 @@ import httpx
 import psycopg
 import yaml
 from psycopg import sql
+
+from scripts.provision import keycloak
+from scripts.provision.agents import AgentNeeds, agent_needs
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "infra" / "provision" / "openbao.yaml"
@@ -286,6 +295,83 @@ def import_litellm_keys(bao: Bao, cfg: dict[str, Any], keys_file: Path) -> list[
     return actions
 
 
+# ---------------------------------------------------------------- agent identities
+
+
+def agent_policy(agent: AgentNeeds) -> str:
+    """Issue and end leases for the agent's granted credential sources; nothing else."""
+    rules = [
+        f'path "{src}" {{\n  capabilities = ["read"]\n}}\n'
+        f'path "sys/leases/revoke/{src}/*" {{\n  capabilities = ["update"]\n}}\n'
+        for src in agent.credentials
+    ]
+    if rules:
+        rules.append('path "sys/leases/lookup" {\n  capabilities = ["update"]\n}\n')
+    return "".join(rules) or "# this agent's tools are granted no credentials\n"
+
+
+def store_client_secrets(
+    bao: Bao,
+    cfg: dict[str, Any],
+    kc: httpx.Client,
+    admin: str,
+    headers: dict[str, str],
+    clients: list[str],
+) -> list[str]:
+    actions = []
+    for client_id in clients:
+        found = kc.get(f"{admin}/clients", params={"clientId": client_id}, headers=headers).json()
+        if not found:
+            raise RuntimeError(f"Keycloak has no client {client_id}: run just provision-keycloak")
+        secret = kc.get(f"{admin}/clients/{found[0]['id']}/client-secret", headers=headers).json()[
+            "value"
+        ]
+        path = f"{cfg['kv_mount']}/data/keycloak/{client_id}"
+        current = bao.get(path)
+        if current and current["data"]["data"].get("client_secret") == secret:
+            actions.append(f"secret keycloak/{client_id}: exists")
+            continue
+        bao.write(path, {"data": {"client_secret": secret}})
+        actions.append(f"secret keycloak/{client_id}: {'updated' if current else 'stored'}")
+    return actions
+
+
+def ensure_agent_identities(
+    bao: Bao, agents: list[AgentNeeds], jwks_url: str, issuer: str | None
+) -> list[str]:
+    actions = [ensure_mount(bao, "jwt", {"type": "jwt"}, kind="auth")]
+    body: dict[str, Any] = {"jwks_url": jwks_url, "jwt_supported_algs": ["RS256"]}
+    if issuer:
+        body["bound_issuer"] = issuer
+    current = (bao.get("auth/jwt/config") or {}).get("data") or {}
+    if all(current.get(k) == v for k, v in body.items()):
+        actions.append("jwt config: exists")
+    else:
+        bao.write("auth/jwt/config", body)
+        actions.append(f"jwt config: {'updated' if current else 'created'}")
+    for agent in agents:
+        name = f"{keycloak.AGENT_PREFIX}{agent.name}"
+        actions.append(ensure_policy(bao, name, agent_policy(agent)))
+        role = {
+            "role_type": "jwt",
+            "bound_audiences": [keycloak.OPENBAO_AUDIENCE],
+            "bound_claims": {"azp": name},
+            "user_claim": "azp",
+            "token_policies": [name],
+            "token_ttl": 600,
+            "token_max_ttl": 900,
+            "token_no_default_policy": True,
+        }
+        existing = (bao.get(f"auth/jwt/role/{name}") or {}).get("data")
+        same = existing is not None and all(existing.get(k) == v for k, v in role.items())
+        if not same:
+            bao.write(f"auth/jwt/role/{name}", role)
+        actions.append(
+            f"jwt role {name}: {'exists' if same else 'created' if existing is None else 'updated'}"
+        )
+    return actions
+
+
 def provision(
     bao: Bao, admin_dsn: str, cfg: dict[str, Any], db_host: str, out_dir: Path
 ) -> list[str]:
@@ -313,8 +399,32 @@ def main() -> int:
     cfg = load()
     host = os.environ.get("AGENT_BAO_DB_HOST", cfg["database"]["host"])
     out_dir = Path(os.environ.get("AGENT_PROVISION_OUT", ROOT / ".tmp"))
+    kc_base = os.environ.get("P0_KEYCLOAK_URL", "http://127.0.0.1:8080")
+    realm = os.environ.get("P0_KEYCLOAK_REALM", "rag-platform")
+    kc_user, kc_password = (
+        os.environ.get("KEYCLOAK_ADMIN_USER"),
+        os.environ.get("KEYCLOAK_ADMIN_PASSWORD"),
+    )
+    if not kc_user or not kc_password:
+        print("set KEYCLOAK_ADMIN_USER and KEYCLOAK_ADMIN_PASSWORD (just with-secrets ...)")
+        return 2
+    bao_kc = os.environ.get("AGENT_BAO_KEYCLOAK_URL", "http://keycloak:8080")
+    jwks = f"{bao_kc}/realms/{realm}/protocol/openid-connect/certs"
+    agents = agent_needs()
     with httpx.Client(timeout=15.0) as client:
-        for line in provision(Bao(client, url, token), admin_dsn, cfg, host, out_dir):
+        bao = Bao(client, url, token)
+        lines = provision(bao, admin_dsn, cfg, host, out_dir)
+        kc_token = keycloak.admin_token(client, kc_base, kc_user, kc_password)
+        lines += store_client_secrets(
+            bao,
+            cfg,
+            client,
+            f"{kc_base}/admin/realms/{realm}",
+            {"Authorization": f"Bearer {kc_token}"},
+            [keycloak.CLIENT_ID, *(f"{keycloak.AGENT_PREFIX}{a.name}" for a in agents)],
+        )
+        lines += ensure_agent_identities(bao, agents, jwks, os.environ.get("AGENT_BAO_JWT_ISSUER"))
+        for line in lines:
             print(f"openbao: {line}")
     return 0
 

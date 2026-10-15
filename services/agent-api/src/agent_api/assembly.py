@@ -10,7 +10,7 @@ Anything else is refused when the run is created.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -53,11 +53,11 @@ from agent_tools.assemble import grants_for, tool_names
 from agent_tools.authorising import AuthorisingToolExecutor, delegation_authoriser
 from agent_tools.builtin import BUILTIN_TOOLS
 from agent_tools.executor import PlatformToolExecutor
-from agent_tools.identity import TokenExchanger
+from agent_tools.identity import Exchanger
 from agent_tools.mcp import McpClientPool
 from agent_tools.ragcore import RagCoreSearchTool
 from agent_tools.registry import InMemoryToolRegistry
-from agent_tools.secrets import EnvSecretResolver, SecretResolver
+from agent_tools.secrets import DEV_STAGES, SecretResolver, default_resolver
 from agent_tools.sql_read import SqlReadTool
 
 ModelFactory = Callable[[AgentSpec], ModelClient]
@@ -107,6 +107,23 @@ class DurableEventingNodeRunner(EventingNodeRunner, CheckpointingNodeRunner):
 RegistryFactory = Callable[[AgentSpec], Awaitable[InMemoryToolRegistry]]
 
 
+async def load_gateway_keys(
+    platform: PlatformConfig, secrets: SecretResolver, stage: str
+) -> dict[str, str] | None:
+    """The LiteLLM key of every platform role from ``${secret:litellm/<role>#api_key}``
+    (``just provision-openbao`` stores them). In dev and CI, ``None`` when OpenBao has none, so
+    the ``LITELLM_KEY_*`` variables apply; in staging and prod the keys come only from here."""
+    keys: dict[str, str] = {}
+    for role in sorted({*platform.models.roles, "default"}):
+        try:
+            keys[role] = await secrets.resolve(f"${{secret:litellm/{role}#api_key}}")
+        except KeyError:
+            continue
+    if not keys and stage in DEV_STAGES:
+        return None
+    return keys
+
+
 @dataclass
 class Assembled:
     model: ModelClient
@@ -122,7 +139,7 @@ class Assembly:
         audit: AuditSink,
         *,
         rag_core_url: str = "http://127.0.0.1:8300",
-        exchanger: TokenExchanger | None = None,
+        exchanger: Exchanger | None = None,
         model_factory: ModelFactory | None = None,
         registry_factory: RegistryFactory | None = None,
         checkpointer: Checkpointer | None = None,
@@ -133,6 +150,7 @@ class Assembly:
         budgets: RunBudgets | None = None,
         ledger: UsageLedger | None = None,
         broker: CredentialBroker | None = None,
+        gateway_keys: Mapping[str, str] | None = None,
     ) -> None:
         # Step 29: short-lived credentials for tools whose grant names a source (OpenBao)
         self.broker = broker
@@ -146,7 +164,7 @@ class Assembly:
         self.model_circuits = CircuitBreaker(failures=3, cooldown=30)
         # Step 25: which agents may run and be delegated to here (the registry gate)
         self.admit = admit
-        self.secrets = secrets or EnvSecretResolver()
+        self.secrets = secrets or default_resolver()
         self.a2a_transport = a2a_transport
         self.checkpointer = checkpointer
         self.memory_factory = memory_factory or self.memory
@@ -157,9 +175,11 @@ class Assembly:
         self.rag_core_url = rag_core_url
         self.exchanger = exchanger
         self.pool = McpClientPool(platform, audit=audit, exchanger=exchanger)
+        # Step 29: LiteLLM role keys from OpenBao (None: the LITELLM_KEY_* env vars, dev only)
+        self.gateway_keys = dict(gateway_keys) if gateway_keys is not None else None
         self.model_factory = model_factory or (
             lambda spec: GatewayModelClient(
-                self.platform, spec_models=spec.models, ledger=self.ledger
+                self.platform, spec_models=spec.models, keys=self.gateway_keys, ledger=self.ledger
             )
         )
         self.registry_factory = registry_factory or self.registry

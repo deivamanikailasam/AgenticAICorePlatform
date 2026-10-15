@@ -20,7 +20,7 @@ import yaml
 from agent_contracts.interfaces import PolicyDecisionPoint
 from agent_contracts.models import PolicyDecision, PolicyEffect, PolicyInput
 
-from agent_tools.secrets import EnvSecretResolver, SecretResolver, maybe_secret
+from agent_tools.secrets import SecretResolver, default_resolver, maybe_secret
 
 
 class RelationshipCheckError(RuntimeError):
@@ -55,7 +55,7 @@ class OpenFgaRelationshipChecker:
         self.store = store  # a store id, or a store name resolved on first use
         self.model_id = model_id
         self._key_ref = api_key
-        self._secrets = secrets or EnvSecretResolver()
+        self._secrets = secrets or default_resolver()
         self._store_id: str | None = None
         self._client = httpx.AsyncClient(
             base_url=url.rstrip("/"), timeout=timeout, transport=transport

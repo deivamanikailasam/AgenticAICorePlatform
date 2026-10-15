@@ -36,9 +36,9 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.exceptions import MCPError
 from opentelemetry import trace
 
-from agent_tools.identity import TokenExchanger, subject_token
+from agent_tools.identity import Exchanger, subject_token
 from agent_tools.mcp.auth import http_client_for
-from agent_tools.secrets import EnvSecretResolver, SecretResolver
+from agent_tools.secrets import SecretResolver, default_resolver
 
 MAX_UNTRUSTED_DESCRIPTION = 1024
 _tracer = trace.get_tracer("agent_platform.tools.mcp")
@@ -163,11 +163,11 @@ class McpClientPool:
         platform: PlatformConfig,
         audit: AuditSink | None = None,
         secrets: SecretResolver | None = None,
-        exchanger: TokenExchanger | None = None,
+        exchanger: Exchanger | None = None,
     ) -> None:
         self.platform = platform
         self.audit = audit
-        self.secrets = secrets or EnvSecretResolver()
+        self.secrets = secrets or default_resolver()
         self.exchanger = exchanger
         self._conns: dict[str, _Connection] = {}
 

@@ -67,7 +67,10 @@ services:
       AGENT_CERBOS_URL: http://cerbos:3592
       AGENT_OPENFGA_URL: http://openfga:8080
       SECRET__OPENFGA__AGENT_PLATFORM__PRESHARED_KEY: ${OPENFGA_PRESHARED_KEY_DEV:-}
-      # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
+      # Step 29: with the runtime's AppRole set, secrets come from OpenBao; without it (dev/CI),
+      # from the env var below
+      AGENT_BAO_ROLE_ID: ${AGENT_BAO_ROLE_ID:-}
+      AGENT_BAO_SECRET_ID: ${AGENT_BAO_SECRET_ID:-}
       SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
     ports: ["127.0.0.1:8090:8090"]
     mem_limit: 384m
@@ -102,7 +105,10 @@ services:
       SECRET__AGENT_PLATFORM__CHECKPOINTS__KEY: ${AGENT_CHECKPOINT_KEY_DEV:-}
       AGENT_CERBOS_URL: http://cerbos:3592
       P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
-      # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
+      # Step 29: with the runtime's AppRole set, secrets come from OpenBao and each agent acts
+      # as its own identity; without it (dev/CI), the env var below and the platform identity
+      AGENT_BAO_ROLE_ID: ${AGENT_BAO_ROLE_ID:-}
+      AGENT_BAO_SECRET_ID: ${AGENT_BAO_SECRET_ID:-}
       SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
     volumes:
       - ../../agents:/app/agents:ro
@@ -178,7 +184,10 @@ services:
       AGENT_CERBOS_URL: http://cerbos:3592
       AGENT_WORKER_AUDIT_FILE: /tmp/agent-worker-audit.jsonl
       P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
-      # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
+      # Step 29: with the runtime's AppRole set, secrets come from OpenBao and each agent acts
+      # as its own identity; without it (dev/CI), the env var below and the platform identity
+      AGENT_BAO_ROLE_ID: ${AGENT_BAO_ROLE_ID:-}
+      AGENT_BAO_SECRET_ID: ${AGENT_BAO_SECRET_ID:-}
       SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
     volumes:
       - ../../agents:/app/agents:ro

@@ -30,7 +30,7 @@ from agent_tools.mcp import McpClientPool
 from agent_tools.ragcore import RagCoreSearchTool
 from agent_tools.ratelimit import MemoryRateLimiter, RateLimiter, ValkeyRateLimiter
 from agent_tools.registry import InMemoryToolRegistry
-from agent_tools.secrets import EnvSecretResolver, SecretResolver
+from agent_tools.secrets import SecretResolver, default_resolver
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.lowlevel import Server
@@ -77,7 +77,7 @@ class Gateway:
         self.platform = platform
         self.pdp = pdp
         self.audit = audit
-        self.secrets = secrets or EnvSecretResolver()
+        self.secrets = secrets or default_resolver()
         self.registry = registry or InMemoryToolRegistry()
         if limiter is None:
             limiter = (

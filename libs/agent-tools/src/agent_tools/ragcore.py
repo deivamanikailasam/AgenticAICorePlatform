@@ -18,7 +18,7 @@ import httpx
 from agent_contracts.interfaces import Tool
 from agent_contracts.models import DataClass, RunContext, SideEffect, ToolSpec
 
-from agent_tools.identity import TokenExchanger, subject_token
+from agent_tools.identity import Exchanger, subject_token
 
 ARCHITECTURES = ["naive", "corrective", "adaptive", "graph", "sql"]
 
@@ -31,7 +31,7 @@ class RagCoreSearchTool(Tool):
     def __init__(
         self,
         base_url: str = "http://127.0.0.1:8300",
-        exchanger: TokenExchanger | None = None,
+        exchanger: Exchanger | None = None,
         audience: str = "rag-core",
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
