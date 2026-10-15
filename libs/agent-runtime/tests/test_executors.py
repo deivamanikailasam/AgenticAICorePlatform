@@ -75,7 +75,8 @@ async def test_router_only_returns_a_declared_route() -> None:
     )
     node = _node(NodeKind.ROUTER, routes=["approve", "reject"])
     router = RouterNodeExecutor(model)
-    assert await router(node, VALUES, ctx()) == {"_outcome": "approve", "route": "approve"}
+    out = await router(node, VALUES, ctx())
+    assert (out["_outcome"], out["route"]) == ("approve", "approve")
     schema = model.requests[0].response_schema
     assert schema is not None
     assert schema["properties"]["route"]["enum"] == ["approve", "reject"]

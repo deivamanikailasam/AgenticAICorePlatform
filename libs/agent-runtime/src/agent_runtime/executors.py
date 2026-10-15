@@ -10,8 +10,9 @@ free-form ``config``):
   instructions to the platform;
 * **LLM** — ``config.template`` (and optional ``config.system``) with ``config.output_schema``
   for structured output, through the platform model client (a role resolves to a gateway alias);
-* **router** — picks one of ``routes``: with ``fn`` by a function, otherwise by the model with a
-  schema that only allows the declared routes;
+* **router** — picks one of ``routes``: with ``fn`` by a function, otherwise by a ``Router``
+  component (LLM with a schema that only allows the declared routes, embedding classifier or
+  rules; Step 15), with an optional confidence floor and fallback route;
 * **tool** — through the authorising executor (policy, rate limit, audit, idempotency). The
   idempotency key is ``<run id>:<node id>``, so a retry, resume or replay of the same run can
   never repeat a side effect; ``config.args`` maps arguments to values;
@@ -26,7 +27,7 @@ import string
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
-from agent_contracts.interfaces import ModelClient, ToolExecutor
+from agent_contracts.interfaces import ModelClient, Router, ToolExecutor
 from agent_contracts.models import (
     ChatRequest,
     Message,
@@ -127,41 +128,58 @@ class LlmNodeExecutor:
         )
 
 
+RouterFactory = Callable[[PlanNode], Router]
+
+
 class RouterNodeExecutor:
-    """Returns ``{"_outcome": <route>}``; only a declared route can come back."""
+    """Returns ``{"_outcome": <route>, ...}``; only a declared route can come back.
+
+    With ``fn`` a function decides; otherwise a ``Router`` component from ``routers(node)`` (the
+    composition root picks llm, embedding or rules from ``config.router`` or ``components``), or
+    the LLM router on the node's model. ``config.min_confidence`` with ``config.fallback``
+    sends unsure decisions down the fallback route (for example to a human or a clarifying step).
+    """
 
     def __init__(
         self,
         model: ModelClient | None = None,
         functions: Mapping[str, Callable[[dict[str, Any]], Any]] | None = None,
+        routers: RouterFactory | None = None,
     ) -> None:
-        self.llm = LlmNodeExecutor(model) if model is not None else None
+        self.model = model
         self.functions = dict(functions or {})
+        self.routers = routers
+
+    def _router(self, node: PlanNode) -> Router:
+        if self.routers is not None:
+            return self.routers(node)
+        if self.model is None:
+            raise ValueError(f"router '{node.id}' needs fn, a router or a model client")
+        from agent_runtime.routing import LlmRouter
+
+        cfg = _cfg(node)
+        return LlmRouter(
+            self.model, str(node.config.get("model") or "router"), cfg.get("descriptions")
+        )
 
     async def __call__(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> Any:
         routes = [str(r) for r in node.config.get("routes", ())]
+        cfg = _cfg(node)
         if node.config.get("fn"):
             route = self.functions[str(node.config["fn"])](values)
+            extra: dict[str, Any] = {}
         else:
-            if self.llm is None:
-                raise ValueError(f"router '{node.id}' needs fn or a model client")
-            cfg = _cfg(node)
-            template = str(cfg.get("template") or "Choose one route for: $input")
-            answer = await self.llm._chat(
-                node,
-                render(template, values) + f"\n\nRoutes: {', '.join(routes)}",
-                ctx,
-                {
-                    "type": "object",
-                    "properties": {"route": {"type": "string", "enum": routes}},
-                    "required": ["route"],
-                    "additionalProperties": False,
-                },
-            )
-            route = answer.get("route") if isinstance(answer, Mapping) else None
+            text = render(str(cfg.get("template") or "$input"), values)
+            decision = await self._router(node).route(text, routes, ctx)
+            route = decision.route
+            extra = {"confidence": decision.confidence, "reason": decision.reason}
+            floor = cfg.get("min_confidence")
+            if floor is not None and decision.confidence < float(floor) and cfg.get("fallback"):
+                extra["chosen"] = route
+                route = str(cfg["fallback"])
         if route not in routes:
             raise ValueError(f"router '{node.id}' chose '{route}', not one of {routes}")
-        return {"_outcome": route, "route": route}
+        return {"_outcome": route, "route": route, **extra}
 
 
 class ToolNodeError(RuntimeError):

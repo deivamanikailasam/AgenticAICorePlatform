@@ -68,8 +68,11 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | policy_decision_point | deny_all | dummy | `agent_contracts.dummies.safety:DenyAllPolicyDecisionPoint` | Denies everything: the safe default when no policy is configured. |
 | policy_decision_point | opa | implemented | `agent_tools.policy:OpaPolicyDecisionPoint` | Evaluates ``data.<package path>`` (default ``agent/tools/decision``) over HTTP. |
 | policy_decision_point | rules | dummy | `agent_contracts.dummies.safety:RulesPolicyDecisionPoint` | In-process rules: same tenant only; irreversible needs approval. OPA: Step 10. |
+| router | embedding | implemented | `agent_runtime.routing:EmbeddingRouter` |  |
 | router | first | dummy | `agent_contracts.dummies.reasoning:FirstRouter` | Always the first route (a fixed path, useful as a baseline). |
 | router | keyword | dummy | `agent_contracts.dummies.reasoning:KeywordRouter` | Picks the route whose name appears in the text; otherwise the first, with low confidence. |
+| router | llm | implemented | `agent_runtime.routing:LlmRouter` |  |
+| router | rules | implemented | `agent_runtime.routing:RulesRouter` |  |
 | runtime_adapter | agent_framework | implemented | `agent_runtime.adapters.agent_framework:AgentFrameworkAdapter` |  |
 | runtime_adapter | crewai | stub | `agent_runtime.adapters.stubs:CrewAIAdapter` | CrewAI. STUB (catalogue): role-based crews do not map onto the platform's plan graph |
 | runtime_adapter | langgraph | implemented | `agent_runtime.adapters.langgraph:LangGraphAdapter` |  |

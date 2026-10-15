@@ -17,8 +17,10 @@ from agent_contracts.dummies.runtime import BUILTIN_FUNCTIONS
 from agent_contracts.interfaces import (
     AgentLoop,
     Critic,
+    Embedder,
     ModelClient,
     Planner,
+    Router,
     RuntimeAdapter,
     ToolExecutor,
     ToolRegistry,
@@ -26,6 +28,7 @@ from agent_contracts.interfaces import (
 from agent_contracts.models import (
     ExecutablePlan,
     NodeKind,
+    PlanNode,
     RunContext,
     RunEventType,
     RunResult,
@@ -103,7 +106,9 @@ def executors_for(
     if NodeKind.LLM in kinds and model is not None:
         executors[NodeKind.LLM] = LlmNodeExecutor(model)
     if NodeKind.ROUTER in kinds:
-        executors[NodeKind.ROUTER] = RouterNodeExecutor(model, functions)
+        executors[NodeKind.ROUTER] = RouterNodeExecutor(
+            model, functions, router_factory(spec, model, spec_path)
+        )
     if kinds & {NodeKind.TOOL, NodeKind.AGENT} and any(
         n.config.get("tools") or n.kind is NodeKind.TOOL for n in plan.nodes
     ):
@@ -158,6 +163,75 @@ def _create(slot: str, name: str, **kwargs: Any) -> Any:
         raise LookupError(f"{slot} '{name}' is not installed (installed: {installed})") from None
     except TypeError:
         return component_registry.create(slot, name)
+
+
+def load_examples(path: Path) -> dict[str, list[str]]:
+    """Labelled examples for an embedding router: JSON lines of ``{"text": ..., "route": ...}``."""
+    import json
+
+    examples: dict[str, list[str]] = {}
+    for line in path.read_text().splitlines():
+        if line.strip():
+            row = json.loads(line)
+            examples.setdefault(str(row["route"]), []).append(str(row["text"]))
+    return examples
+
+
+def router_factory(
+    spec: AgentSpec, model: ModelClient | None, spec_path: str | Path | None = None
+) -> Callable[[PlanNode], Router]:
+    """Builds (once per node) the router named by ``config.router``, else ``components.router``,
+    else ``llm``: ``embedding`` takes ``examples`` or ``examples_file`` (relative to the spec)
+    and the ``components.embedder`` (default ``gateway``); ``rules`` takes ``rules`` and
+    ``default``; other installed routers are created by name."""
+    base = Path(spec_path).parent if spec_path else Path.cwd()
+    built: dict[str, Router] = {}
+    embedders: dict[str, Embedder] = {}
+
+    def embedder() -> Embedder:
+        name = spec.components.get("embedder", "gateway")
+        if name not in embedders:
+            kwargs = {"client": model} if isinstance(model, GatewayModelClient) else {}
+            created = _create("embedder", name, **kwargs)
+            if not isinstance(created, Embedder):
+                raise LookupError(f"embedder '{name}' is not an Embedder")
+            embedders[name] = created
+        return embedders[name]
+
+    def make(node: PlanNode) -> Router:
+        cfg = dict(node.config.get("config") or {})
+        name = str(cfg.get("router") or spec.components.get("router", "llm"))
+        kwargs: dict[str, Any] = {}
+        if name == "llm":
+            if model is None:
+                raise LookupError(f"router '{node.id}' uses the LLM router: a model is needed")
+            kwargs = {
+                "model": model,
+                "role": str(node.config.get("model") or "router"),
+                "descriptions": cfg.get("descriptions"),
+            }
+        elif name == "embedding":
+            examples = cfg.get("examples") or (
+                load_examples(base / str(cfg["examples_file"]))
+                if cfg.get("examples_file")
+                else None
+            )
+            if not examples:
+                raise LookupError(f"router '{node.id}': the embedding router needs examples")
+            kwargs = {"embedder": embedder(), "examples": examples, "k": int(cfg.get("k", 3))}
+        elif name == "rules":
+            kwargs = {"rules": cfg.get("rules", ()), "default": cfg.get("default")}
+        router = _create("router", name, **kwargs)
+        if not isinstance(router, Router):
+            raise LookupError(f"router '{name}' is not a Router")
+        return router
+
+    def cached(node: PlanNode) -> Router:
+        if node.id not in built:
+            built[node.id] = make(node)
+        return built[node.id]
+
+    return cached
 
 
 def agent_dispatcher(
