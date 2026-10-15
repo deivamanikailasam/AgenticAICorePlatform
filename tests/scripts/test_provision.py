@@ -13,19 +13,24 @@ from scripts.provision import keycloak, litellm_keys
 @respx.mock
 def test_keycloak_creates_client_once() -> None:
     url = "http://kc/admin/realms/r/clients"
-    lookup = respx.get(url).mock(
-        side_effect=[httpx.Response(200, json=[]), httpx.Response(200, json=[{"id": "1"}])]
+    existing = {"id": "1", "attributes": {"standard.token.exchange.enabled": "true"}}
+    respx.get(url).mock(
+        side_effect=[httpx.Response(200, json=[])] + [httpx.Response(200, json=[existing])] * 3
     )
     create = respx.post(url).respond(201)
     with httpx.Client() as c:
-        assert keycloak.provision(c, "http://kc", "r", "t").endswith("created")
-        assert keycloak.provision(c, "http://kc", "r", "t").endswith("exists")
-    assert lookup.call_count == 2
+        assert keycloak.provision(c, "http://kc", "r", "t", audiences=[])[-1].endswith("created")
+        assert keycloak.provision(c, "http://kc", "r", "t", audiences=[])[-1].endswith("exists")
     assert create.call_count == 1
     sent = json.loads(create.calls[0].request.content)
     assert sent["serviceAccountsEnabled"] is True
     assert sent["standardFlowEnabled"] is False
     assert sent["publicClient"] is False
+    assert sent["attributes"]["standard.token.exchange.enabled"] == "true"
+
+
+def test_downstream_audiences_include_rag_core() -> None:
+    assert "rag-core" in keycloak.load_audiences()
 
 
 @respx.mock

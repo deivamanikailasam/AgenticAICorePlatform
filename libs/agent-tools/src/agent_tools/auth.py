@@ -55,6 +55,8 @@ class KeycloakTokenVerifier:
             resource=aud if isinstance(aud, str) else None,
             subject=claims.get("sub"),
             claims={
-                k: claims[k] for k in ("iss", "preferred_username", "tenant", "act") if k in claims
+                k: claims[k]
+                for k in ("iss", "preferred_username", "groups", "realm_access", "tenant", "act")
+                if k in claims
             },
         )

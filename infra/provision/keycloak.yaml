@@ -1,0 +1,5 @@
+# Downstream services the platform may call *on behalf of a user* through OAuth token exchange
+# (RFC 8693). For each, provisioning creates an optional client scope `agent-platform:<audience>`
+# carrying an audience mapper, so an exchanged token is valid for that one service only.
+downstream_audiences:
+  - rag-core            # Project 0 retrieval (Step 8 rag-core/search)

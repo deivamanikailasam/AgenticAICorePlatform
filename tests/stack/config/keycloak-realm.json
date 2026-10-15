@@ -2,6 +2,42 @@
   "realm": "rag-platform",
   "enabled": true,
   "sslRequired": "none",
-  "clients": [],
-  "users": []
+  "groups": [
+    { "name": "acme", "subGroups": [ { "name": "finance" }, { "name": "engineering" } ] },
+    { "name": "globex", "subGroups": [ { "name": "finance" } ] }
+  ],
+  "users": [
+    { "username": "alice", "enabled": true, "email": "alice@acme.test", "emailVerified": true,
+      "firstName": "Alice", "lastName": "Finance", "groups": ["/acme/finance"],
+      "credentials": [ { "type": "password", "value": "standin-only", "temporary": false } ] },
+    { "username": "bob", "enabled": true, "email": "bob@acme.test", "emailVerified": true,
+      "firstName": "Bob", "lastName": "Engineer", "groups": ["/acme/engineering"],
+      "credentials": [ { "type": "password", "value": "standin-only", "temporary": false } ] },
+    { "username": "gina", "enabled": true, "email": "gina@globex.test", "emailVerified": true,
+      "firstName": "Gina", "lastName": "Globex", "groups": ["/globex/finance"],
+      "credentials": [ { "type": "password", "value": "standin-only", "temporary": false } ] }
+  ],
+  "clients": [
+    {
+      "clientId": "mcp-inspector",
+      "name": "Stand-in user-facing MCP client (tests only: password grant)",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocolMappers": [
+        { "name": "audience agent-platform", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "agent-platform", "access.token.claim": "true", "id.token.claim": "false" } },
+        { "name": "groups", "protocol": "openid-connect", "protocolMapper": "oidc-group-membership-mapper",
+          "config": { "claim.name": "groups", "full.path": "true", "access.token.claim": "true", "id.token.claim": "false", "userinfo.token.claim": "false" } }
+      ]
+    },
+    {
+      "clientId": "rag-core",
+      "name": "Stand-in for Project 0 rag-core (resource server)",
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ]
 }
