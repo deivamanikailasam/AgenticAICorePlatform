@@ -39,6 +39,7 @@ from agent_contracts.models import (
 from agent_contracts.registry import registry as component_registry
 from agent_runtime.agent_loop import AgentLoopExecutor
 from agent_runtime.agentic_rag import AgenticRagStrategy
+from agent_runtime.budget import RunBudgets
 from agent_runtime.context import ContextWindow, ExtractiveSummariser, LlmSummariser, manager_for
 from agent_runtime.executors import (
     LlmNodeExecutor,
@@ -130,6 +131,7 @@ def executors_for(
     authorise: Authorise | None = None,
     provider: TracerProvider | None = None,
     admit: Admit | None = None,
+    budgets: RunBudgets | None = None,
 ) -> dict[NodeKind, NodeExecutor]:
     kinds = {n.kind for n in plan.nodes}
     executors: dict[NodeKind, NodeExecutor] = {}
@@ -171,7 +173,7 @@ def executors_for(
         )
     if NodeKind.SUPERVISOR in kinds:
         executors[NodeKind.SUPERVISOR] = supervisor_executor(
-            spec, model, spec_path, workers, authorise, provider, admit
+            spec, model, spec_path, workers, authorise, provider, admit, budgets
         )
     if NodeKind.SUBPLAN in kinds:
         base = Path(spec_path).parent if spec_path else Path.cwd()
@@ -345,6 +347,7 @@ def supervisor_executor(
     authorise: Authorise | None,
     provider: TracerProvider | None,
     admit: Admit | None = None,
+    budgets: RunBudgets | None = None,
 ) -> TeamExecutor:
     """Team nodes: supervisors (Step 22); handoff, group chat, map-reduce and debate (Step 23).
     Each worker is its own spec, run as a child run with the model and tools the worker factory
@@ -373,6 +376,7 @@ def supervisor_executor(
             authorise=authorise,
             meter=meter,
             admit=admit,
+            budgets=budgets,
         )
         return WorkerResult(
             ok=result.status is RunStatus.SUCCEEDED,
@@ -451,6 +455,7 @@ def adapter_for(
     authorise: Authorise | None = None,
     provider: TracerProvider | None = None,
     admit: Admit | None = None,
+    budgets: RunBudgets | None = None,
 ) -> RuntimeAdapter:
     """The spec's runtime adapter with functions and executors plugged in. Test-double adapters
     (Step 4) take functions only."""
@@ -467,6 +472,7 @@ def adapter_for(
             authorise=authorise,
             provider=provider,
             admit=admit,
+            budgets=budgets,
         )
         if spec.runtime.adapter in ("sequential", "stepwise") and not executors:
             return runtime_for(spec, functions=functions)
@@ -488,6 +494,7 @@ async def run(
     authorise: Authorise | None = None,
     meter: Meter | None = None,
     admit: Admit | None = None,
+    budgets: RunBudgets | None = None,
 ) -> tuple[RunResult, str]:
     """Execute ``spec`` and return the result and the trace id (hex).
 
@@ -506,7 +513,10 @@ async def run(
         authorise=authorise,
         provider=provider,
         admit=admit,
+        budgets=budgets,
     )
+    if budgets is not None:  # Step 26: children open under their parent's budget
+        await budgets.open(spec, ctx)
     handle = await adapter.build(plan)
     tr = tracing.tracer(provider)
     attrs = {
@@ -555,6 +565,8 @@ async def run(
         state=state,
         output=next((state.values[e] for e in reversed(plan.exits) if e in state.values), None),
     )
+    if budgets is not None:
+        result = await budgets.finish(spec, ctx, result, model)
     tracing.flush(provider)
     return result, trace_id
 

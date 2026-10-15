@@ -50,6 +50,17 @@
       "additionalProperties": false,
       "description": "Limits for one run. Safe by default: steps and wall-clock time are always required.",
       "properties": {
+        "loop": {
+          "$ref": "#/$defs/LoopSettings"
+        },
+        "max_calls_per_tool": {
+          "additionalProperties": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "title": "Max Calls Per Tool",
+          "type": "object"
+        },
         "max_cost_aud": {
           "anyOf": [
             {
@@ -114,6 +125,15 @@
           "maximum": 2592000,
           "title": "Max Wall Seconds",
           "type": "number"
+        },
+        "on_exceed": {
+          "default": "stop",
+          "enum": [
+            "stop",
+            "summarise"
+          ],
+          "title": "On Exceed",
+          "type": "string"
         }
       },
       "required": [
@@ -352,6 +372,43 @@
         }
       },
       "title": "LongTermMemory",
+      "type": "object"
+    },
+    "LoopSettings": {
+      "additionalProperties": false,
+      "description": "Runaway detection (Step 26): repeated identical calls, steps without progress, two steps\nalternating.",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "no_progress": {
+          "default": 6,
+          "minimum": 2,
+          "title": "No Progress",
+          "type": "integer"
+        },
+        "oscillation": {
+          "default": 3,
+          "minimum": 2,
+          "title": "Oscillation",
+          "type": "integer"
+        },
+        "repeat": {
+          "default": 3,
+          "minimum": 2,
+          "title": "Repeat",
+          "type": "integer"
+        },
+        "window": {
+          "default": 8,
+          "minimum": 2,
+          "title": "Window",
+          "type": "integer"
+        }
+      },
+      "title": "LoopSettings",
       "type": "object"
     },
     "Memory": {

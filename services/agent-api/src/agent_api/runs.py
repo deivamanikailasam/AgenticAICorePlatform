@@ -572,7 +572,18 @@ class RunManager:
             await self._record(
                 run, RunEvent(type=RunEventType.RUN_STARTED, run_id=run.run_id, data=started)
             )
+            budgets = self.assembly.budgets
+            spec = self.agents[run.agent]
+            if not budgets.known(run.run_id):  # Step 26 (re-opened after a restart)
+                await budgets.open(spec, run.ctx)
             result = await work
+            if result.status.value != "interrupted":  # approvals keep the budget open
+                summariser = (
+                    self.assembly.model_factory(spec)
+                    if spec.budgets.on_exceed == "summarise"
+                    else None
+                )
+                result = await budgets.finish(spec, run.ctx, result, summariser)
             run.status = result.status.value
             if run.status == "failed":
                 await self._record(
@@ -595,7 +606,10 @@ class RunManager:
                         data=json_safe(
                             {
                                 "status": run.status,
-                                "output": result.output if run.status == "succeeded" else None,
+                                # stopped runs keep their partial result and why (Step 26)
+                                "output": result.output
+                                if run.status in ("succeeded", "stopped")
+                                else None,
                                 "stop_reason": result.state.stop_reason,
                                 "interrupts": run.interrupts,
                             }

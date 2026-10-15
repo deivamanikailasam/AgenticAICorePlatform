@@ -67,6 +67,9 @@ Limits for one run. Safe by default: steps and wall-clock time are always requir
 | `max_tool_calls` | integer or null |  |  |
 | `max_delegation_depth` | integer |  | `2` |
 | `max_fanout` | integer |  | `8` |
+| `max_calls_per_tool` | object |  |  |
+| `on_exceed` | `stop` \| `summarise` |  | `stop` |
+| `loop` | LoopSettings |  |  |
 
 ### `ContextSettings`
 
@@ -130,6 +133,19 @@ One of: `memory`, `checkpoint`, `temporal`
 | `scope` | `user` \| `tenant` \| `agent` |  | `user` |
 | `policy` | string |  | `validating` |
 | `ttl_days` | integer or null |  |  |
+
+### `LoopSettings`
+
+Runaway detection (Step 26): repeated identical calls, steps without progress, two steps
+alternating.
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `enabled` | boolean |  | `True` |
+| `repeat` | integer |  | `3` |
+| `window` | integer |  | `8` |
+| `no_progress` | integer |  | `6` |
+| `oscillation` | integer |  | `3` |
 
 ### `Memory`
 

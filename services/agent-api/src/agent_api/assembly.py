@@ -28,6 +28,7 @@ from agent_contracts.models import ExecutablePlan
 from agent_memory.factory import memory_for
 from agent_memory.service import MemoryService
 from agent_memory.tools import RememberTool
+from agent_runtime.budget import BudgetedModelClient, BudgetedToolExecutor, RunBudgets
 from agent_runtime.checkpoints import PostgresCheckpointer
 from agent_runtime.durable import CheckpointingNodeRunner
 from agent_runtime.events import EventingNodeRunner, EventingToolExecutor, StreamingModelClient
@@ -82,7 +83,10 @@ class Assembly:
         secrets: SecretResolver | None = None,
         a2a_transport: httpx.AsyncBaseTransport | None = None,
         admit: Admit | None = None,
+        budgets: RunBudgets | None = None,
     ) -> None:
+        # Step 26: budgets and loop detection for every run and child run built here
+        self.budgets = budgets if budgets is not None else RunBudgets()
         # Step 25: which agents may run and be delegated to here (the registry gate)
         self.admit = admit
         self.secrets = secrets or EnvSecretResolver()
@@ -145,16 +149,19 @@ class Assembly:
             if memory is None:
                 raise LookupError(f"{REMEMBER} needs memory.long_term in the spec")
             await registry.register(RememberTool(memory))
-        tools = EventingToolExecutor(
-            AuthorisingToolExecutor(
-                PlatformToolExecutor(registry),
-                registry,
-                self.pdp,
-                self.audit,
-                grants=grants_for(plan),
-            )
+        tools = BudgetedToolExecutor(
+            EventingToolExecutor(
+                AuthorisingToolExecutor(
+                    PlatformToolExecutor(registry),
+                    registry,
+                    self.pdp,
+                    self.audit,
+                    grants=grants_for(plan),
+                )
+            ),
+            self.budgets,
         )
-        model = StreamingModelClient(self.model_factory(spec))
+        model = StreamingModelClient(BudgetedModelClient(self.model_factory(spec), self.budgets))
         functions = functions_for(plan)
         executors: dict[Any, Any] = executors_for(
             spec,
@@ -167,6 +174,7 @@ class Assembly:
             workers=self.worker,
             authorise=delegation_authoriser(self.pdp, self.audit),
             admit=self.admit,
+            budgets=self.budgets,
         )
         runner: EventingNodeRunner
         if self.checkpointer is not None:

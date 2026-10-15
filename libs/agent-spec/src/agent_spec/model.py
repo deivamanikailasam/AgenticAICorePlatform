@@ -62,6 +62,17 @@ class Runtime(_Spec):
     durability: Durability = Durability.CHECKPOINT
 
 
+class LoopSettings(_Spec):
+    """Runaway detection (Step 26): repeated identical calls, steps without progress, two steps
+    alternating."""
+
+    enabled: bool = True
+    repeat: int = Field(default=3, ge=2)
+    window: int = Field(default=8, ge=2)
+    no_progress: int = Field(default=6, ge=2)
+    oscillation: int = Field(default=3, ge=2)
+
+
 class Budgets(_Spec):
     """Limits for one run. Safe by default: steps and wall-clock time are always required."""
 
@@ -72,6 +83,12 @@ class Budgets(_Spec):
     max_tool_calls: int | None = Field(default=None, ge=1)
     max_delegation_depth: int = Field(default=2, ge=0, le=10)
     max_fanout: int = Field(default=8, ge=1, le=1000)
+    # Step 26: calls allowed per tool in one run (tool name -> calls)
+    max_calls_per_tool: dict[str, Annotated[int, Field(ge=1)]] = Field(default_factory=dict)
+    # stop: end with the partial result and the reason; summarise: also write a short summary
+    # of the partial result (one capped model call outside the exhausted budget)
+    on_exceed: Literal["stop", "summarise"] = "stop"
+    loop: LoopSettings = Field(default_factory=lambda: LoopSettings())
 
 
 class Approval(_Spec):

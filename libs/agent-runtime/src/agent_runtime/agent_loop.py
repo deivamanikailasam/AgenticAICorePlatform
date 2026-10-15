@@ -312,130 +312,141 @@ class AgentLoopExecutor(AgentLoop):
             step, repairs = 0, 0
 
         schema_retry_used = False
-        while True:
-            if step >= max_steps:
-                raise StopRun(
-                    f"max_steps ({max_steps}) reached",
-                    {"transcript": [_message_to_json(m) for m in messages], "steps": step},
+        try:
+            while True:
+                if step >= max_steps:
+                    raise StopRun(
+                        f"max_steps ({max_steps}) reached",
+                        {"transcript": [_message_to_json(m) for m in messages], "steps": step},
+                    )
+                step += 1
+                shown_tools = () if text else tuple(defs.values())
+                shown = messages
+                if self.context is not None:
+                    if not text:
+                        shown_tools = tuple(self.context.tools(defs, messages, ctx))
+                    window = self.model.capabilities(model_name).context_window
+                    budget = self.context.budget(window, shown_tools)
+                    shown = await self.context.messages(messages, ctx, budget)
+                response = await self.model.chat(
+                    ChatRequest(
+                        model=model_name,
+                        messages=tuple(shown),
+                        tools=shown_tools,
+                        temperature=cfg.get("temperature"),
+                        metadata={"run_id": ctx.run_id, "node_id": node.id, "step": str(step)},
+                    )
                 )
-            step += 1
-            shown_tools = () if text else tuple(defs.values())
-            shown = messages
-            if self.context is not None:
-                if not text:
-                    shown_tools = tuple(self.context.tools(defs, messages, ctx))
-                window = self.model.capabilities(model_name).context_window
-                budget = self.context.budget(window, shown_tools)
-                shown = await self.context.messages(messages, ctx, budget)
-            response = await self.model.chat(
-                ChatRequest(
-                    model=model_name,
-                    messages=tuple(shown),
-                    tools=shown_tools,
-                    temperature=cfg.get("temperature"),
-                    metadata={"run_id": ctx.run_id, "node_id": node.id, "step": str(step)},
-                )
-            )
-            reply = response.message
-            calls: list[ToolCall] = list(reply.tool_calls)
-            answer: str | None = None
-            problem: str | None = None
-            if text and not calls:
-                try:
-                    parsed = parse_text_react(reply.content)
-                except MalformedResponseError as exc:
-                    problem = str(exc)
-                else:
-                    if isinstance(parsed, ToolCall):
-                        calls = [parsed]
+                reply = response.message
+                calls: list[ToolCall] = list(reply.tool_calls)
+                answer: str | None = None
+                problem: str | None = None
+                if text and not calls:
+                    try:
+                        parsed = parse_text_react(reply.content)
+                    except MalformedResponseError as exc:
+                        problem = str(exc)
                     else:
-                        answer = parsed
-            elif not calls:
-                answer = reply.content
+                        if isinstance(parsed, ToolCall):
+                            calls = [parsed]
+                        else:
+                            answer = parsed
+                elif not calls:
+                    answer = reply.content
 
-            if answer is not None:
-                try:
-                    final = self._final(answer, schema)
-                    if self.memory is not None:
-                        task = next(m.content for m in messages if m.role is Role.USER)
-                        await self.memory.episode(
-                            ctx,
-                            task,
-                            answer,
-                            step,
-                            any(m.trust is Trust.UNTRUSTED for m in messages),
-                        )
-                    return {"answer": final, "steps": step}
-                except (json.JSONDecodeError, jsonschema.ValidationError) as exc:
-                    if schema_retry_used:
-                        raise ValueError(
-                            f"final answer still invalid after a repair: {exc}"
-                        ) from exc
-                    schema_retry_used = True
-                    messages += [
-                        reply,
-                        Message(
-                            role=Role.USER,
-                            content=(
-                                f"Your final answer was not valid ({str(exc).splitlines()[0]}). "
-                                f"Reply with only JSON matching this schema: {json.dumps(schema)}"
+                if answer is not None:
+                    try:
+                        final = self._final(answer, schema)
+                        if self.memory is not None:
+                            task = next(m.content for m in messages if m.role is Role.USER)
+                            await self.memory.episode(
+                                ctx,
+                                task,
+                                answer,
+                                step,
+                                any(m.trust is Trust.UNTRUSTED for m in messages),
+                            )
+                        return {"answer": final, "steps": step}
+                    except (json.JSONDecodeError, jsonschema.ValidationError) as exc:
+                        if schema_retry_used:
+                            raise ValueError(
+                                f"final answer still invalid after a repair: {exc}"
+                            ) from exc
+                        schema_retry_used = True
+                        messages += [
+                            reply,
+                            Message(
+                                role=Role.USER,
+                                content=(
+                                    f"Your final answer was not valid ({str(exc).splitlines()[0]}). "
+                                    f"Reply with only JSON matching this schema: {json.dumps(schema)}"
+                                ),
                             ),
-                        ),
-                    ]
+                        ]
+                        continue
+
+                meta = [c for c in calls if self._loads_tools(c, defs)]
+                calls = [c for c in calls if c not in meta]
+                problems = [p for p in (self._check_call(c, defs) for c in calls) if p]
+                if problem or problems:
+                    repairs += 1
+                    if repairs > max_repairs:
+                        raise ValueError(
+                            f"tool calls still malformed after {max_repairs} repairs: "
+                            + "; ".join([problem, *problems] if problem else problems)
+                        )
+                    messages.append(reply)
+                    messages += (
+                        [
+                            Message(
+                                role=Role.TOOL,
+                                name=c.name,
+                                tool_call_id=c.id,
+                                content=json.dumps({"error": p}),
+                            )
+                            for c in calls
+                            if (p := self._check_call(c, defs))
+                        ]
+                        if problems
+                        else [
+                            Message(role=Role.USER, content=f"Your reply was malformed: {problem}")
+                        ]
+                    )
                     continue
 
-            meta = [c for c in calls if self._loads_tools(c, defs)]
-            calls = [c for c in calls if c not in meta]
-            problems = [p for p in (self._check_call(c, defs) for c in calls) if p]
-            if problem or problems:
-                repairs += 1
-                if repairs > max_repairs:
-                    raise ValueError(
-                        f"tool calls still malformed after {max_repairs} repairs: "
-                        + "; ".join([problem, *problems] if problem else problems)
-                    )
                 messages.append(reply)
-                messages += (
-                    [
+                if text:  # text protocol: the call came back as plain text
+                    messages[-1] = Message(role=Role.ASSISTANT, content=reply.content)
+                if needs_approval & {c.name for c in calls}:
+                    return {
+                        "_outcome": "needs_approval",
+                        "pending": [c.model_dump(mode="json") for c in calls],
+                        "transcript": [_message_to_json(m) for m in messages],
+                        "step": step,
+                        "repairs": repairs,
+                    }
+                token = tainted.set(any(m.trust is Trust.UNTRUSTED for m in messages))
+                try:
+                    observations = await self._run_calls(node, calls, ctx, step) if calls else []
+                finally:
+                    tainted.reset(token)
+                if meta and self.context is not None:
+                    observations = [self.context.load(c, defs, ctx) for c in meta] + observations
+                if text:
+                    observations = [
                         Message(
-                            role=Role.TOOL,
-                            name=c.name,
-                            tool_call_id=c.id,
-                            content=json.dumps({"error": p}),
+                            role=Role.USER,
+                            content=f"Observation from {o.name}: {o.content}",
+                            trust=Trust.UNTRUSTED,
                         )
-                        for c in calls
-                        if (p := self._check_call(c, defs))
+                        for o in observations
                     ]
-                    if problems
-                    else [Message(role=Role.USER, content=f"Your reply was malformed: {problem}")]
-                )
-                continue
-
-            messages.append(reply)
-            if text:  # text protocol: the call came back as plain text
-                messages[-1] = Message(role=Role.ASSISTANT, content=reply.content)
-            if needs_approval & {c.name for c in calls}:
-                return {
-                    "_outcome": "needs_approval",
-                    "pending": [c.model_dump(mode="json") for c in calls],
-                    "transcript": [_message_to_json(m) for m in messages],
-                    "step": step,
-                    "repairs": repairs,
-                }
-            token = tainted.set(any(m.trust is Trust.UNTRUSTED for m in messages))
-            try:
-                observations = await self._run_calls(node, calls, ctx, step) if calls else []
-            finally:
-                tainted.reset(token)
-            if meta and self.context is not None:
-                observations = [self.context.load(c, defs, ctx) for c in meta] + observations
-            if text:
-                observations = [
-                    Message(
-                        role=Role.USER,
-                        content=f"Observation from {o.name}: {o.content}",
-                        trust=Trust.UNTRUSTED,
-                    )
-                    for o in observations
-                ]
-            messages += observations
+                messages += observations
+        except StopRun as stop:  # a budget or loop stop from the model or a tool (Step 26)
+            extra = stop.partial if isinstance(stop.partial, dict) else {}
+            if "transcript" in extra:
+                raise
+            raise StopRun(
+                stop.reason,
+                {**extra, "transcript": [_message_to_json(m) for m in messages], "steps": step},
+            ) from None
