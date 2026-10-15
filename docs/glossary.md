@@ -117,3 +117,13 @@ Every term used in this repository, in plain English. Grows with each step.
 | AppRole | An OpenBao login for machines: a role id plus a secret id; the runtime's own identity outside Kubernetes |
 | JWT auth | An OpenBao login that accepts a signed token from an identity provider; agents log in with their Keycloak token |
 | Workload identity | A machine proving what it is from where it runs (SPIFFE/SPIRE in Kubernetes) instead of holding a secret |
+| Span | One timed step in a trace (an agent run, a model call, a tool call), with attributes describing it |
+| Trace | All the spans of one piece of work, nested, sharing one trace id |
+| Semantic conventions | Agreed span and metric names and attributes (here OpenTelemetry's GenAI and MCP ones), so any tool can read them |
+| Langfuse | The tool that stores prompt and response content (redacted) for the people allowed to see it |
+| Histogram | A metric that counts values into buckets, so percentiles (p50, p95) can be computed |
+| p95 | The value 95% of cases stay under: "p95 run time 40 s" means 1 run in 20 takes longer |
+| SLO | A service level objective: a target such as "99% of runs don't fail over 28 days" |
+| Error budget | The share of failures an SLO allows (1% for 99%) |
+| Burn rate | How fast the error budget is being used; 14.4× uses a month's budget in about two days |
+| Runbook | The page an on-call person follows when an alert fires: what it means, check, fix, escalate |
