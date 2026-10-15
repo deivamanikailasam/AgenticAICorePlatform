@@ -67,7 +67,7 @@ class NoopTelemetryEmitter(TelemetryEmitter):
 
 
 def chain_hash(prev_hash: str, seq: int, event: AuditEvent) -> str:
-    body = canonical({"prev": prev_hash, "seq": seq, "event": event.model_dump(mode="json")})
+    body = canonical({"prev": prev_hash, "seq": seq, "event": event.chained()})
     return hashlib.sha256(body.encode()).hexdigest()
 
 

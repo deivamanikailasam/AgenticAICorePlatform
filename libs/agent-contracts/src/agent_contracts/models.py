@@ -609,6 +609,20 @@ class AuditEvent(Frozen):
     ctx: RunContext
     payload: dict[str, Any] = Field(default_factory=dict)
     at: datetime = Field(default_factory=utcnow)
+    #: the OpenTelemetry trace of the work (Step 31): joins audit to traces in Tempo and Langfuse
+    trace_id: str | None = None
+    #: what ran: spec version and hash, plan hash, prompt refs, model per role, tool versions
+    versions: dict[str, Any] = Field(default_factory=dict)
+
+    def chained(self) -> dict[str, Any]:
+        """What the hash chain covers. Empty Step 31 fields are left out, so chains written
+        before they existed still verify."""
+        body = self.model_dump(mode="json")
+        if body.get("trace_id") is None:
+            body.pop("trace_id", None)
+        if not body.get("versions"):
+            body.pop("versions", None)
+        return body
 
 
 class AuditRecord(Frozen):
