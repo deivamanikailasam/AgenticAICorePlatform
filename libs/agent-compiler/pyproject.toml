@@ -1,0 +1,31 @@
+[project]
+name = "agent-compiler"
+version = "0.1.0"
+description = "Pattern compiler: agent.yaml -> ExecutablePlan, plus a traced runner"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "agent-contracts",
+    "agent-spec",
+    "opentelemetry-api>=1.45.1,<2",
+    "opentelemetry-sdk>=1.45.1,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.1,<2",
+]
+
+[project.scripts]
+agent-compile = "agent_compiler.cli:main"
+
+[project.entry-points."agent_platform.components"]
+"pattern_builder.workflow" = "agent_compiler.patterns.graph:GraphPatternBuilder"
+"pattern_builder.state_machine" = "agent_compiler.patterns.graph:StateMachinePatternBuilder"
+"pattern_builder.hybrid" = "agent_compiler.patterns.graph:HybridPatternBuilder"
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+agent-spec = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_compiler"]

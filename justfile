@@ -119,3 +119,11 @@ spec-reference:
 
 spec-reference-check:
     uv run python -m scripts.spec_reference --check
+
+# Compile a spec and print its ExecutablePlan
+compile spec:
+    uv run agent-compile compile {{spec}}
+
+# Run a spec once (traced): just run agents/hello-workflow/agent.yaml '{"name":"Ada"}'
+run spec input="{}":
+    uv run agent-compile run {{spec}} --input '{{input}}'
