@@ -8,9 +8,12 @@ receivers:
       http: { endpoint: 0.0.0.0:4318 }
 exporters:
   debug: { verbosity: basic }
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls: { insecure: true }
 service:
   extensions: [health_check]
   pipelines:
-    traces: { receivers: [otlp], exporters: [debug] }
+    traces: { receivers: [otlp], exporters: [debug, otlp/tempo] }
     metrics: { receivers: [otlp], exporters: [debug] }
     logs: { receivers: [otlp], exporters: [debug] }
