@@ -109,3 +109,11 @@ Every term used in this repository, in plain English. Grows with each step.
 | Spec hash | A fingerprint of an agent spec's content; a changed spec needs a new version |
 | Backstage catalogue | A developer portal's list of software components, kept as YAML files in Git |
 | Push notification (A2A) | The remote agent calling back a URL you gave it when a task changes state |
+| Service identity | An agent's own login (a Keycloak client `agent-<name>`), separate from the user it acts for and from other agents |
+| Delegation | Passing a user's request on with a new token that still names the user; here in two hops, platform → agent → service |
+| Down-scoping | Each new token is valid for less: one audience, and only the scopes that client was given |
+| Dynamic credential | A login created on demand for one use (here a Postgres user per tool call) instead of a stored password |
+| Lease | OpenBao's record of a dynamic credential: its id and how long it lives; revoking the lease ends the credential |
+| AppRole | An OpenBao login for machines: a role id plus a secret id; the runtime's own identity outside Kubernetes |
+| JWT auth | An OpenBao login that accepts a signed token from an identity provider; agents log in with their Keycloak token |
+| Workload identity | A machine proving what it is from where it runs (SPIFFE/SPIRE in Kubernetes) instead of holding a secret |

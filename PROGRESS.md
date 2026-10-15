@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 29 · Agent identity and secrets (next)
+**Current step:** 30 · Agent telemetry, metrics and SLOs (next)
 
 ## Environment note (read first)
 
@@ -48,16 +48,12 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 26 Budgets and loop control | done | `budget_controller.platform` (budget tree; tokens, AUD, wall clock from open, tool calls total and per tool, delegation depth; named trips with numbers), `loop_detector.platform` (repeats without progress, no-progress, oscillation); model and tool wrappers in every run, children under parents, graceful `stopped` with partial transcript and reason; `on_exceed: stop \| summarise`; shared circuit breakers for tools (5) and model roles (3); LiteLLM team `agent-platform` over role keys; `agent_runtime.usage_ledger` (USD as reported, response id, paying key); `just cost-reconcile`; API loop tests (3rd identical call; AUD 1.0200 vs 1.00 after 34 calls); stand-in ledger USD 0.00015 = LiteLLM USD 0.00015 | cross-process budgets for runs split across API and worker; reconcile against Project 0 with real prices (VERIFY-ON-MAC); move pre-existing keys into the team |
 | 27 Guardrails | done | `libs/agent-guardrails`: injection rules (stricter on untrusted), classifier client (TEI `/predict`, fails closed), LLM judge; Presidio 2.2.362 PII (verified live, stand-in), cloud DLP stub; tool-arg limits, output schema and policy, topic, safety, secret leak; parallel pipeline audited without text; guarded model client (input stops, untrusted quarantined, output redacted) and tool executor (args denied, results quarantined); MCP descriptions screened at registration; baseline `prompt_injection` + `secret_leak` always on; `just eval-guardrails` 51/51 with Presidio (17/17 attacks, 23/23 benign; rules only, self-authored set) | injection classifier model deployment and measurement (open issue 11); Australian Presidio recognizers; red-team suites (Step 33) |
 | 28 Human-in-the-loop | done | approval desk in the run API: OPA routing `data.agent.approvals.route` (two-person > tool group > spec group > default; SLA 240/60/30 min; escalation group), rules router in parity with `opa eval`; inbox with action, reason, data, risk; approve / reject / edit-arguments (evidence bound to edited call) / escalate; two-person approval now satisfiable in OPA, Cerbos and rules PDP; SLA sweeper escalates once then cancels safely; irreversible tools refused without an approval step; payments need `finance-approvers`; `approval_gate.postgres` (migration 0007); review-after sampling and operator take-over; 10 HITL tests, 45 rego + 12 Cerbos tests, live Cerbos/OPA parity | leader-elected SLA sweeper (Step 37); Temporal-run approvals through the desk (API dispatch of temporal agents); durable review queue |
+| 29 Agent identity and secrets | done | OpenBao 2.7.0 (stand-in) provisioned by `just provision-openbao`: KV `agent-platform`, database engine `agent-db` (role `tool-reader`: 5-min leases, max 15, read-only group, revocation ends sessions and drops the user), runtime AppRole read-only on KV, LiteLLM keys imported (open issue 4 closed); `credential_broker` contract (2 dummies), OpenBao and Vault brokers; per-call credentials in the authorising executor (fail closed, lease audited with user and agent, revoked after, echoed credentials withheld); `local://platform/sql_read`; a Keycloak client per agent (7) logging in to OpenBao via JWT auth with a spec-derived policy; two-hop delegated exchange (live: `aud=rag-core`, `azp=agent-…`, user's groups; out-of-spec audience and direct user→agent refused); `default_resolver` (OpenBao, env only in dev/CI, refused in staging/prod); gateway keys from OpenBao; AWS/GCP/Azure brokers and resolvers and SPIFFE login as stubs (ADR 0040) | Project 0 OpenBao service name/port, KV and auth mount availability, `AGENT_BAO_DB_HOST`; `AGENT_BAO_JWT_ISSUER` once Keycloak has a fixed hostname; run-API span leak check when Step 30 adds spans; SPIFFE/cloud brokers (Step 37) |
 
 ## Next
 
-- Step 29: Agent identity and secrets — each agent has a Keycloak service identity; user
-  requests carry delegated, down-scoped tokens (OAuth token exchange); tools get short-lived
-  credentials from OpenBao/Vault at call time, never from the prompt or environment;
-  credentials never enter model context; optional workload identity (SPIFFE/SPIRE) in
-  Kubernetes (Keycloak + OpenBao → cloud IAM and secret managers). Done when a tool call's audit
-  record names user, agent and credential lease; a leaked lease expires within minutes; no
-  secret appears in any trace or prompt.
+- Step 30: Agent telemetry, metrics and SLOs. Read the Step 30 row of the spec and its "Done when" before starting.
+  Carry forward: add the "no secret in spans" check to run-API spans (Step 29 follow-up).
 
 ## Open issues
 
@@ -71,6 +67,6 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 7 | Sandbox engines decided (owner delegated, 2026-10-15): Firecracker implemented and Kata verified on KVM CI; managed service stays a stub by decision (ADR 0021) | done |
 | 8 | Approver identity and groups come from the caller of `resume` until the run API takes them from a verified token | done (Step 17) |
 | 9 | The proxy in this build container refuses tag pushes (HTTP 403); `step-NN` tags exist locally only. Create them on the Mac or rely on commit messages | owner |
-| 4 | LiteLLM key values from provisioning must be moved into OpenBao (automated in Step 29) | Step 29 |
+| 4 | LiteLLM key values from provisioning must be moved into OpenBao | done (Step 29: `just provision-openbao` imports and deletes the file) |
 | 10 | Zep and Letta memory stores are stubs: Zep Community Edition is unsupported and Letta's self-hosted server is retired; completing either needs a cloud account and a data-residency decision (ADR 0031) | owner |
 | 11 | Injection classifier model not deployed or measured: Hugging Face is blocked from the build container, and text-embeddings-inference does not list DeBERTa (common open injection classifiers). The client (TEI `/predict`, fail-closed) is in place; on the Mac choose a supported model, deploy it, set `AGENT_INJECTION_CLASSIFIER_URL` and run `just eval-guardrails` (ADR 0038) | owner (VERIFY-ON-MAC) |
