@@ -1,0 +1,97 @@
+# promtool unit tests for ../prometheus/agent-rules.yaml (`just obs-test`)
+rule_files:
+  - ../prometheus/agent-rules.yaml
+evaluation_interval: 15s
+
+tests:
+  # a spike of budget trips fires the alert, with its runbook link
+  - interval: 1m
+    input_series:
+      - series: 'agent_platform_budget_trips_total{gen_ai_agent_name="invoice-triage",limit="max_cost_aud"}'
+        values: '0 1 2 4 6 8 10 12'
+      - series: 'agent_platform_budget_trips_total{gen_ai_agent_name="review-chat",limit="loop"}'
+        values: '0 0 0 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: AgentBudgetTripSpike
+        exp_alerts: []
+      - eval_time: 7m
+        alertname: AgentBudgetTripSpike
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              team: agent-platform
+              gen_ai_agent_name: invoice-triage
+              limit: max_cost_aud
+            exp_annotations:
+              summary: "invoice-triage: 12 runs stopped by max_cost_aud in 10 minutes"
+              description: Runs of this agent keep hitting a budget or loop limit. Check recent deployments and traces before raising any limit.
+              runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/budget-trip-spike.md
+
+  # failures burning the error budget page; a healthy rate does not
+  - interval: 1m
+    input_series:
+      - series: 'agent_platform_runs_total{gen_ai_agent_name="a",agent_platform_tenant_id="t",agent_platform_run_status="succeeded"}'
+        values: '0+60x80'
+      - series: 'agent_platform_runs_total{gen_ai_agent_name="a",agent_platform_tenant_id="t",agent_platform_run_status="failed"}'
+        values: '0+0x20 0+30x60'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: AgentRunFailureBudgetBurn
+        exp_alerts: []
+      - eval_time: 80m
+        alertname: AgentRunFailureBudgetBurn
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              team: agent-platform
+            exp_annotations:
+              summary: "Run failures are burning the 99% availability SLO fast (32.96% failing)"
+              description: More than 14.4% of runs are failing. Check the gateway, tool circuits and recent deployments.
+              runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/run-failures.md
+
+  # recording rules: tool error ratio and per-tenant cost
+  - interval: 1m
+    input_series:
+      - series: 'gen_ai_execute_tool_duration_seconds_count{gen_ai_tool_name="search",error_type=""}'
+        values: '0+3x10'
+      - series: 'gen_ai_execute_tool_duration_seconds_count{gen_ai_tool_name="search",error_type="timeout"}'
+        values: '0+1x10'
+      - series: 'agent_platform_cost_total{gen_ai_agent_name="a",agent_platform_tenant_id="acme"}'
+        values: '0+0.5x70'
+    promql_expr_test:
+      - expr: agent_platform:tool_error:ratio_rate5m
+        eval_time: 10m
+        exp_samples:
+          - labels: 'agent_platform:tool_error:ratio_rate5m{gen_ai_tool_name="search"}'
+            value: 0.25
+      - expr: agent_platform:cost_aud:per_tenant_1h
+        eval_time: 70m
+        exp_samples:
+          - labels: 'agent_platform:cost_aud:per_tenant_1h{agent_platform_tenant_id="acme"}'
+            value: 30
+
+  # approvals backlog and guardrail block spike
+  - interval: 1m
+    input_series:
+      - series: 'agent_platform_approvals_pending{gen_ai_agent_name="invoice-triage"}'
+        values: '25x40'
+      - series: 'agent_platform_guardrail_hits_total{guardrail="prompt_injection.rules",stage="retrieved",action="block"}'
+        values: '0+5x10'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: AgentApprovalsBacklog
+        exp_alerts:
+          - exp_labels: { severity: ticket, team: agent-platform, gen_ai_agent_name: invoice-triage }
+            exp_annotations:
+              summary: "invoice-triage: 25 approvals waiting"
+              description: Approvals are piling up; SLAs will expire runs.
+              runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/approvals-backlog.md
+      - eval_time: 6m
+        alertname: AgentGuardrailBlockSpike
+        exp_alerts:
+          - exp_labels: { severity: page, team: agent-platform, guardrail: prompt_injection.rules, stage: retrieved }
+            exp_annotations:
+              summary: "prompt_injection.rules blocked 30 times at retrieved in 10 minutes"
+              description: A burst of blocks can be an attack (prompt injection through documents or tools) or a broken detector.
+              runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/guardrail-blocks.md

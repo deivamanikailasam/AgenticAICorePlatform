@@ -88,10 +88,12 @@ class Verifier:
 
 
 async def run_looper(
-    model: Looping, budgets: str = "", tokens: str = "1000000"
+    model: Looping, budgets: str = "", tokens: str = "1000000", name: str = "looper"
 ) -> tuple[Any, dict[str, Any]]:
     spec = load_spec_text(
-        SPEC.replace(" BUDGETS", budgets).replace("max_tokens: 1000000", f"max_tokens: {tokens}")
+        SPEC.replace(" BUDGETS", budgets)
+        .replace("max_tokens: 1000000", f"max_tokens: {tokens}")
+        .replace("name: looper", f"name: {name}")
     )
     tool_calls: list[str] = []
 
@@ -120,7 +122,7 @@ async def run_looper(
     app = build_app(manager, Verifier())
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
         resp = await c.post(
-            "/v1/agents/looper/runs",
+            f"/v1/agents/{name}/runs",
             json={"input": {"task": "go"}},
             headers={"Authorization": "Bearer t"},
         )

@@ -37,6 +37,8 @@ def points(reader: InMemoryMetricReader, name: str) -> list[Any]:
 def test_budget_limit_names_the_limit() -> None:
     assert M.budget_limit("budget: max_cost_aud: AUD 1.02 over the limit of 1.0") == "max_cost_aud"
     assert M.budget_limit("loop: repeated call: calculator") == "loop"
+    assert M.budget_limit("work: loop: repeated call: calculator") == "loop"  # node prefix
+    assert M.budget_limit("work: budget: max_tool_calls: 31 over 30") == "max_tool_calls"
     assert M.budget_limit("node x: max_steps reached") == "max_steps"
     assert M.budget_limit("approval expired") is None
     assert M.budget_limit(None) is None
@@ -57,8 +59,8 @@ def test_finished_runs_record_status_steps_cost_latency_and_trips(
         for p in points(reader, "agent_platform.runs")
     }
     assert runs == {("acme", "succeeded"): 1, ("acme", "stopped"): 1, ("globex", "failed"): 1}
-    (trip,) = points(reader, "agent_platform.budget.trips")
-    assert (trip.attributes["limit"], trip.value) == ("max_cost_aud", 1)
+    trips = {p.attributes["limit"]: p.value for p in points(reader, "agent_platform.budget.trips")}
+    assert trips == {name: (1 if name == "max_cost_aud" else 0) for name in M.LIMITS}
     cost = {
         p.attributes["agent_platform.tenant.id"]: p.value
         for p in points(reader, "agent_platform.cost")

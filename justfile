@@ -4,6 +4,7 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 
 compose := "docker compose -f infra/compose/compose.yaml"
 cerbos_image := "docker.io/cerbos/cerbos:0.56.0@sha256:540643bc67ba628011a150ad1d3370f285daa38995be5cd7a4be181da902bec1"
+prometheus_image := "docker.io/prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e"
 
 default:
     @just --list
@@ -18,7 +19,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate
+check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate
 
 lint:
     uv run ruff check .
@@ -45,6 +46,12 @@ policy-test:
     opa test policies/ --explain fails
     just policy-test-cerbos
 
+# Prometheus rules (Step 30): syntax check and promtool unit tests (needs Docker)
+obs-test:
+    docker run --rm --entrypoint promtool -v "$PWD/infra/observability:/obs:ro" -w /obs/prometheus-tests {{prometheus_image}} check rules ../prometheus/agent-rules.yaml
+    docker run --rm --entrypoint promtool -v "$PWD/infra/observability:/obs:ro" -w /obs/prometheus-tests {{prometheus_image}} test rules agent-rules.test.yaml
+    uv run python -m scripts.check_dashboards
+
 # Compile the Cerbos alternative policies and run their tests (needs Docker)
 policy-test-cerbos:
     docker run --rm -v "$PWD/policies/cerbos:/policies:ro" {{cerbos_image}} compile /policies
@@ -69,7 +76,7 @@ health:
     uv run python -m scripts.health
 
 # Create Project A's shared resources in Project 0 (idempotent)
-provision: provision-db provision-keycloak provision-litellm provision-artefacts provision-policies provision-openbao
+provision: provision-db provision-keycloak provision-litellm provision-artefacts provision-policies provision-openbao provision-grafana
 
 provision-db:
     uv run python -m scripts.provision.agent_db
@@ -87,6 +94,10 @@ provision-openfga:
 # Step 29: KV mount, dynamic database credentials, runtime AppRole; imports .tmp/litellm-keys.env
 provision-openbao:
     uv run python -m scripts.provision.openbao
+
+# Step 30: dashboards into Project 0's Grafana (folder "Agent platform")
+provision-grafana:
+    uv run python -m scripts.provision.grafana
 
 provision-artefacts:
     uv run python -m scripts.provision.artefacts

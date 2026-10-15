@@ -1,0 +1,9 @@
+# Stand-in Alertmanager (Step 30): receives Project A's alerts; tests read them from its API
+route:
+  receiver: platform
+  group_by: [alertname, gen_ai_agent_name]
+  group_wait: 1s
+  group_interval: 5s
+  repeat_interval: 1h
+receivers:
+  - name: platform

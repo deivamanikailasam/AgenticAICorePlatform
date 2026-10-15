@@ -1,0 +1,129 @@
+# Project A's Prometheus rules (Step 30): SLO recording rules and alerts, each alert linked to its
+# runbook. Thresholds and objectives are initial operating limits set by the platform team, not
+# measurements: tune them from the dashboards (docs/reference/slos.md).
+# Unit-tested with promtool: `just obs-test` (agent-rules.test.yaml).
+groups:
+  - name: agent-platform-slo
+    interval: 30s
+    rules:
+      # availability: share of finished runs that did not fail (stopped, cancelled and taken-over
+      # runs ended as designed; budget stops have their own alert)
+      - record: agent_platform:run_failure:ratio_rate5m
+        expr: |
+          sum(rate(agent_platform_runs_total{agent_platform_run_status="failed"}[5m]))
+          / sum(rate(agent_platform_runs_total[5m]))
+      - record: agent_platform:run_failure:ratio_rate1h
+        expr: |
+          sum(rate(agent_platform_runs_total{agent_platform_run_status="failed"}[1h]))
+          / sum(rate(agent_platform_runs_total[1h]))
+      - record: agent_platform:run_success:ratio_rate1h
+        expr: |
+          sum by (gen_ai_agent_name) (rate(agent_platform_runs_total{agent_platform_run_status="succeeded"}[1h]))
+          / sum by (gen_ai_agent_name) (rate(agent_platform_runs_total[1h]))
+      # latency per agent
+      - record: agent_platform:invoke_agent_duration_seconds:p50_5m
+        expr: histogram_quantile(0.50, sum by (le, gen_ai_agent_name) (rate(gen_ai_invoke_agent_duration_seconds_bucket[5m])))
+      - record: agent_platform:invoke_agent_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le, gen_ai_agent_name) (rate(gen_ai_invoke_agent_duration_seconds_bucket[5m])))
+      # tool error rate per tool
+      - record: agent_platform:tool_error:ratio_rate5m
+        expr: |
+          sum by (gen_ai_tool_name) (rate(gen_ai_execute_tool_duration_seconds_count{error_type!=""}[5m]))
+          / sum by (gen_ai_tool_name) (rate(gen_ai_execute_tool_duration_seconds_count[5m]))
+      # steps and cost
+      - record: agent_platform:run_steps:avg_1h
+        expr: |
+          sum by (gen_ai_agent_name) (rate(agent_platform_run_steps_sum[1h]))
+          / sum by (gen_ai_agent_name) (rate(agent_platform_run_steps_count[1h]))
+      - record: agent_platform:cost_aud:per_tenant_1h
+        expr: sum by (agent_platform_tenant_id) (increase(agent_platform_cost_total[1h]))
+      - record: agent_platform:cost_aud:per_run_avg_1h
+        expr: |
+          sum by (gen_ai_agent_name) (rate(agent_platform_run_cost_sum[1h]))
+          / sum by (gen_ai_agent_name) (rate(agent_platform_run_cost_count[1h]))
+
+  - name: agent-platform-alerts
+    interval: 15s
+    rules:
+      - alert: AgentBudgetTripSpike
+        # many runs of one agent stopped by a budget or loop limit: a looping agent, a bad
+        # deployment or an attack burning money
+        expr: sum by (gen_ai_agent_name, limit) (increase(agent_platform_budget_trips_total[10m])) >= 5
+        for: 30s
+        labels:
+          severity: page
+          team: agent-platform
+        annotations:
+          summary: "{{ $labels.gen_ai_agent_name }}: {{ $value | humanize }} runs stopped by {{ $labels.limit }} in 10 minutes"
+          description: Runs of this agent keep hitting a budget or loop limit. Check recent deployments and traces before raising any limit.
+          runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/budget-trip-spike.md
+
+      - alert: AgentRunFailureBudgetBurn
+        # SLO 99% of runs do not fail: page when the error budget burns 14.4x too fast on both
+        # the 1 h and 5 m windows (the standard multi-window burn-rate pattern)
+        expr: |
+          agent_platform:run_failure:ratio_rate1h > (14.4 * 0.01)
+          and agent_platform:run_failure:ratio_rate5m > (14.4 * 0.01)
+        for: 2m
+        labels:
+          severity: page
+          team: agent-platform
+        annotations:
+          summary: "Run failures are burning the 99% availability SLO fast ({{ $value | humanizePercentage }} failing)"
+          description: More than 14.4% of runs are failing. Check the gateway, tool circuits and recent deployments.
+          runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/run-failures.md
+
+      - alert: AgentLatencyHigh
+        expr: agent_platform:invoke_agent_duration_seconds:p95_5m > 120
+        for: 10m
+        labels:
+          severity: ticket
+          team: agent-platform
+        annotations:
+          summary: "{{ $labels.gen_ai_agent_name }}: p95 run time {{ $value | humanizeDuration }}"
+          description: The slowest 5% of runs of this agent take over two minutes.
+          runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/latency.md
+
+      - alert: AgentToolErrorRateHigh
+        expr: agent_platform:tool_error:ratio_rate5m > 0.2
+        for: 10m
+        labels:
+          severity: ticket
+          team: agent-platform
+        annotations:
+          summary: "Tool {{ $labels.gen_ai_tool_name }} fails {{ $value | humanizePercentage }} of calls"
+          description: A tool keeps failing (timeouts, errors, refusals). Circuit breakers may already be open.
+          runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/tool-errors.md
+
+      - alert: AgentApprovalsBacklog
+        expr: sum by (gen_ai_agent_name) (agent_platform_approvals_pending) > 20
+        for: 30m
+        labels:
+          severity: ticket
+          team: agent-platform
+        annotations:
+          summary: "{{ $labels.gen_ai_agent_name }}: {{ $value }} approvals waiting"
+          description: Approvals are piling up; SLAs will expire runs.
+          runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/approvals-backlog.md
+
+      - alert: AgentGuardrailBlockSpike
+        expr: sum by (guardrail, stage) (increase(agent_platform_guardrail_hits_total{action="block"}[10m])) >= 20
+        for: 1m
+        labels:
+          severity: page
+          team: agent-platform
+        annotations:
+          summary: "{{ $labels.guardrail }} blocked {{ $value | humanize }} times at {{ $labels.stage }} in 10 minutes"
+          description: A burst of blocks can be an attack (prompt injection through documents or tools) or a broken detector.
+          runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/guardrail-blocks.md
+
+      - alert: AgentTenantCostHigh
+        expr: agent_platform:cost_aud:per_tenant_1h > 50
+        for: 5m
+        labels:
+          severity: ticket
+          team: agent-platform
+        annotations:
+          summary: "Tenant {{ $labels.agent_platform_tenant_id }} spent AUD {{ $value | humanize }} in the last hour"
+          description: A tenant's spend is above the hourly guard limit.
+          runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/cost.md

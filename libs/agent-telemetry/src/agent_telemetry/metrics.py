@@ -48,7 +48,18 @@ AGENT_BUCKETS = [0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2, 102.4, 204
 STEP_BUCKETS = [1, 2, 3, 5, 8, 13, 21, 34, 55]
 COST_BUCKETS = [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
 
-LIMIT = re.compile(r"^budget:\s*([a-z_]+)")
+#: every limit a run can trip (``agent_runtime.budget``), plus loop detection
+LIMITS = (
+    "max_steps",
+    "max_tokens",
+    "max_cost_aud",
+    "max_tool_calls",
+    "max_calls_per_tool",
+    "max_wall_seconds",
+    "max_delegation_depth",
+    "loop",
+)
+LIMIT = re.compile(r"\bbudget:\s*([a-z_]+)")
 
 
 def budget_limit(stop_reason: str | None) -> str | None:
@@ -57,7 +68,7 @@ def budget_limit(stop_reason: str | None) -> str | None:
         return None
     if m := LIMIT.search(stop_reason):
         return m.group(1)
-    if stop_reason.startswith("loop:"):
+    if "loop:" in stop_reason:  # the runtime may prefix the node ("work: loop: ...")
         return "loop"
     if "max_steps" in stop_reason:
         return "max_steps"
@@ -160,8 +171,11 @@ class AgentMetrics:
         if status == "failed":
             duration[S.ERROR_TYPE] = "run_failed"
         self.agent_duration.record(seconds, duration)
-        if limit := budget_limit(stop_reason):
-            self.budget_trips.add(1, {S.AGENT_NAME: agent, "limit": limit})
+        limit = budget_limit(stop_reason)
+        for name in LIMITS:
+            # every agent's trip series exist from its first run, at zero: Prometheus' increase()
+            # cannot see growth on a series whose first sample already counts trips
+            self.budget_trips.add(1 if name == limit else 0, {S.AGENT_NAME: agent, "limit": name})
 
     def tool_finished(
         self, tool: str, agent: str, tool_type: str, seconds: float, error: str | None
