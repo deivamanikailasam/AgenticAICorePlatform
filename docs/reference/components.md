@@ -34,6 +34,9 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | critic | overlap | dummy | `agent_contracts.dummies.reasoning:OverlapCritic` | Scores the share of task words that the output mentions. |
 | durable_executor | deferred | dummy | `agent_contracts.dummies.state:DeferredDurableExecutor` | Starts the workflow lazily, on the first signal or result request. No persistence. |
 | durable_executor | inline | dummy | `agent_contracts.dummies.state:InlineDurableExecutor` | Starts the workflow as an asyncio task immediately. No persistence. |
+| embedder | gateway | implemented | `agent_runtime.models.embeddings:GatewayEmbedder` |  |
+| embedder | hashing | dummy | `agent_contracts.dummies.embedder:HashingEmbedder` | Feature hashing of words and character trigrams into ``dimensions`` buckets, L2-normalised. |
+| embedder | word_hashing | dummy | `agent_contracts.dummies.embedder:WordHashingEmbedder` | Words only (no character trigrams): coarser, so spelling variants do not match. |
 | evaluator | exact_match | dummy | `agent_contracts.dummies.evals:ExactMatchEvaluator` | 1.0 when the output equals ``expected['output']`` (after trimming strings). |
 | evaluator | tool_recall | dummy | `agent_contracts.dummies.evals:ToolRecallEvaluator` | Share of ``expected['tools']`` that the trajectory actually called. |
 | guardrail | keyword_injection | dummy | `agent_contracts.dummies.safety:KeywordInjectionGuardrail` | Blocks text containing well-known injection phrases. A weak baseline, not a defence. |

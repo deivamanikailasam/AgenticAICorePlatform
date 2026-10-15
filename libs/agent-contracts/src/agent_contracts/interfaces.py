@@ -405,6 +405,19 @@ class Planner(Component):
     async def plan(self, goal: str, tools: Sequence[str], ctx: RunContext) -> Plan: ...
 
 
+class Embedder(Component):
+    """Text → vectors through the platform's embedding model (Step 15: embedding routers).
+
+    Vectors for the same text are identical; every vector has the same length; similar texts are
+    closer (cosine) than unrelated ones.
+    """
+
+    slot = "embedder"
+
+    @abstractmethod
+    async def embed(self, texts: Sequence[str], ctx: RunContext) -> list[list[float]]: ...
+
+
 class Router(Component):
     slot = "router"
 
@@ -497,6 +510,7 @@ INTERFACES: dict[str, type[Component]] = {
         BudgetController,
         LoopDetector,
         Planner,
+        Embedder,
         Router,
         Critic,
         TelemetryEmitter,

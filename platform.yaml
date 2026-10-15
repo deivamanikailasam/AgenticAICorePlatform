@@ -16,6 +16,7 @@ models:
     router: local-qwen-fast
     judge: local-qwen-quality
     summariser: local-qwen-fast
+    embedder: local-embed           # Step 15: embedding routers (VERIFY-ON-MAC: Project 0's embedding alias)
   # VERIFY-ON-MAC: confirm each value against Project 0's model cards and LiteLLM config.
   capabilities:
     local-qwen-fast:    { tool_calling: true, structured_output: true, streaming: true, context_window: 32768 }

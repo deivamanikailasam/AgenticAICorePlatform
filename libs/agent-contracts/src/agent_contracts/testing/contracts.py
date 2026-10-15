@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any, ClassVar
 
@@ -704,6 +705,29 @@ class PlannerContract(_Contract):
         for s in plan.steps:
             assert set(s.depends_on) <= set(ids)
             assert s.tool in (None, "search", "write")
+
+
+class EmbedderContract(_Contract):
+    interface = I.Embedder
+
+    async def test_same_text_same_vector_and_fixed_length(self) -> None:
+        e = self.make()
+        a, b, c = await e.embed(["refund my invoice", "refund my invoice", "reset password"], ctx())
+        assert a == b
+        assert len(a) == len(c) > 0
+
+    async def test_similar_texts_are_closer(self) -> None:
+        q, near, far = await self.make().embed(
+            ["my invoice total is wrong", "the invoice amount is wrong", "the server is down"],
+            ctx(),
+        )
+        assert _cosine(q, near) > _cosine(q, far)
+
+
+def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
+    norm = (sum(x * x for x in a) ** 0.5) * (sum(y * y for y in b) ** 0.5)
+    return dot / norm if norm else 0.0
 
 
 class RouterContract(_Contract):

@@ -31,6 +31,7 @@ CONTRACTS: dict[str, type] = {
     "budget_controller": C.BudgetControllerContract,
     "loop_detector": C.LoopDetectorContract,
     "planner": C.PlannerContract,
+    "embedder": C.EmbedderContract,
     "router": C.RouterContract,
     "critic": C.CriticContract,
     "telemetry_emitter": C.TelemetryEmitterContract,

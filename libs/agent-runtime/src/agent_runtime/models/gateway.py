@@ -180,13 +180,15 @@ class GatewayModelClient(ModelClient):
             body["stream_options"] = {"include_usage": True}
         return body
 
-    async def _post(self, body: dict[str, Any], role: str) -> httpx.Response:
+    async def _post(
+        self, body: dict[str, Any], role: str, path: str = "/v1/chat/completions"
+    ) -> httpx.Response:
         headers = {"Authorization": f"Bearer {self._key(role)}"}
         attempts = self.platform.gateway.max_retries + 1
         last: str = ""
         for attempt in range(attempts):
             try:
-                resp = await self._client.post("/v1/chat/completions", json=body, headers=headers)
+                resp = await self._client.post(path, json=body, headers=headers)
             except httpx.TransportError as exc:
                 last = f"{type(exc).__name__}: {exc}"
             else:
@@ -226,6 +228,24 @@ class GatewayModelClient(ModelClient):
         return ChatResponse(
             message=message, model=doc.get("model", alias), usage=usage, finish_reason=finish
         )
+
+    async def embeddings(
+        self, texts: list[str], model: str = "embedder", run_id: str = "-"
+    ) -> list[list[float]]:
+        """``/v1/embeddings`` for a role or alias (Step 15); usage and cost go to the ledger."""
+        role, alias = self.resolve(model)
+        resp = await self._post({"model": alias, "input": texts}, role, "/v1/embeddings")
+        doc = resp.json()
+        rows = sorted(doc.get("data", []), key=lambda r: r.get("index", 0))
+        if len(rows) != len(texts):
+            raise GatewayError(f"gateway returned {len(rows)} embeddings for {len(texts)} texts")
+        self.ledger.record(
+            run_id,
+            role,
+            alias,
+            self._usage(doc.get("usage"), resp.headers.get("x-litellm-response-cost")),
+        )
+        return [[float(x) for x in r["embedding"]] for r in rows]
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         role, alias = self.resolve(request.model)
