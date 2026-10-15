@@ -60,6 +60,10 @@ explicit_package_bases = true
 module = ["boto3", "boto3.*", "botocore", "botocore.*"]
 ignore_missing_imports = true  # no inline types; calls are wrapped in agent_tools.artefacts
 
+[[tool.mypy.overrides]]
+module = ["mem0", "mem0.*"]
+ignore_missing_imports = true  # no inline types; calls are wrapped in agent_memory.mem0
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "-q -m 'not integration and not mac and not sandbox and not microvm' --strict-markers --import-mode=importlib"

@@ -52,6 +52,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | memory_policy | read_only | dummy | `agent_contracts.dummies.context:ReadOnlyMemoryPolicy` | Memory can be read but never written by agents (the 'read-only memory' option). |
 | memory_policy | validate_redact | dummy | `agent_contracts.dummies.context:ValidateRedactMemoryPolicy` | Refuses unvalidated untrusted writes; redacts e-mail addresses and phone numbers. |
 | memory_policy | validating | implemented | `agent_memory.policy:ValidatingMemoryPolicy` |  |
+| memory_store | mem0 | implemented | `agent_memory.mem0:Mem0MemoryStore` |  |
 | memory_store | memory | dummy | `agent_contracts.dummies.state:InMemoryMemoryStore` | Memory items in a dictionary; keyword-overlap search. |
 | memory_store | pgvector | implemented | `agent_memory.pgvector:PgVectorMemoryStore` |  |
 | memory_store | qdrant | implemented | `agent_memory.qdrant:QdrantMemoryStore` |  |
