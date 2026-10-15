@@ -9,6 +9,7 @@ from agent_contracts.dummies.observability import MemoryAuditSink
 from agent_contracts.interfaces import PolicyDecisionPoint
 from agent_contracts.models import PolicyDecision, PolicyEffect, PolicyInput
 from agent_spec.platform import Currency, Models, PlatformConfig
+from agent_tools.ratelimit import MemoryRateLimiter
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 from mcp.server.auth.provider import AccessToken
@@ -37,7 +38,8 @@ def platform() -> PlatformConfig:
 
 async def gateway(effect: PolicyEffect) -> tuple[Gateway, FixedPolicy, MemoryAuditSink]:
     pdp, audit = FixedPolicy(effect), MemoryAuditSink()
-    gw = Gateway(Settings(), platform(), pdp, audit)
+    # in-memory limiter: unit tests must not depend on a Valkey from .env
+    gw = Gateway(Settings(), platform(), pdp, audit, limiter=MemoryRateLimiter())
     await gw.load_tools()
     return gw, pdp, audit
 

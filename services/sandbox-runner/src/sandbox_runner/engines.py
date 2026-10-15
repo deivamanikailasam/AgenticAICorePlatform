@@ -1,6 +1,7 @@
 """Code sandbox engines.
 
-``GvisorSandbox`` (default) and ``KataSandbox`` run each request in a fresh container through
+``FirecrackerSandbox`` boots a microVM per request (below). ``GvisorSandbox`` (default) and
+``KataSandbox`` run each request in a fresh container through
 Docker with a hardened profile; they differ only in the OCI runtime (``runsc`` vs
 ``kata-runtime``), i.e. the kernel boundary: gVisor's user-space kernel or a lightweight VM.
 
@@ -17,11 +18,16 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
+import json
+import math
+import os
 import shutil
 import subprocess
 import tarfile
+import tempfile
 import time
 import uuid
+from pathlib import Path
 from typing import ClassVar
 
 from agent_contracts.interfaces import CodeSandbox
@@ -60,6 +66,13 @@ def _tar_inputs(request: SandboxRequest) -> bytes:
             info.mode = 0o644
             tar.addfile(info, io.BytesIO(data))
     return buf.getvalue()
+
+
+def _tool(name: str) -> str:
+    path = shutil.which(name)
+    if path is None:
+        raise FileNotFoundError(f"{name} not found (e2fsprogs)")
+    return path
 
 
 class _DockerSandbox(CodeSandbox):
@@ -299,23 +312,263 @@ class KataSandbox(_DockerSandbox):
 
 
 class FirecrackerSandbox(CodeSandbox):
-    """Firecracker microVMs. STUB: needs KVM, a jailer and a guest image (see ADR 0019)."""
+    """Firecracker microVMs: each run boots its own Linux kernel under KVM (ADR 0019, revised).
 
-    component_status = "stub"
+    Needs ``/dev/kvm``, the ``firecracker`` binary and two assets in ``assets_dir``
+    (``scripts/install_firecracker.sh`` and ``scripts/build_sandbox_rootfs.sh``): a pinned
+    kernel (``vmlinux``) and a read-only root filesystem built from the same pinned Python image
+    as the container engines, with ``guest_init.py`` as PID 1 (``rootfs.ext4``).
+
+    Per run: a fresh ext4 work disk carries the program and input files in and the results out
+    (written with ``mkfs.ext4 -d``, read with ``debugfs``: no mounts, no root on the host). The VM
+    has no network device. Memory is the VM size plus a cgroup inside it; the wall clock is
+    enforced inside the guest and by killing the VM from outside.
+    """
+
+    engine_name: ClassVar[str] = "firecracker"
+    OVERHEAD_MB: ClassVar[int] = 160  # guest kernel, init and page cache beyond the program's limit
+    BOOT_GRACE_SECONDS: ClassVar[float] = 20.0
+
+    def __init__(
+        self,
+        assets_dir: str | None = None,
+        firecracker: str | None = None,
+        kvm: str = "/dev/kvm",
+    ) -> None:
+        self.assets = Path(
+            assets_dir
+            or os.environ.get("AGENT_FIRECRACKER_DIR", "/var/lib/agent-platform/firecracker")
+        )
+        self.firecracker = firecracker or os.environ.get("AGENT_FIRECRACKER_BIN", "firecracker")
+        self.kvm = kvm
+
+    @property
+    def kernel(self) -> Path:
+        return self.assets / "vmlinux"
+
+    @property
+    def rootfs(self) -> Path:
+        return self.assets / "rootfs.ext4"
+
+    def missing(self) -> list[str]:
+        problems = []
+        if shutil.which(self.firecracker) is None:
+            problems.append(f"firecracker binary '{self.firecracker}' not found")
+        if not os.access(self.kvm, os.R_OK | os.W_OK):
+            problems.append(f"{self.kvm} is not available (needs KVM)")
+        for asset in (self.kernel, self.rootfs):
+            if not asset.is_file():
+                problems.append(f"{asset} is missing")
+        for tool in ("mkfs.ext4", "debugfs"):
+            if shutil.which(tool) is None:
+                problems.append(f"{tool} not found (e2fsprogs)")
+        return problems
 
     def available(self) -> bool:
-        return False
+        return not self.missing()
+
+    def vm_config(self, request: SandboxRequest, work_image: Path) -> dict[str, object]:
+        lim = request.limits
+        return {
+            "boot-source": {
+                "kernel_image_path": str(self.kernel),
+                "boot_args": "console=ttyS0 quiet loglevel=1 reboot=k panic=1 pci=off "
+                "init=/sbin/agent-init",
+            },
+            "drives": [
+                {
+                    "drive_id": "rootfs",
+                    "path_on_host": str(self.rootfs),
+                    "is_root_device": True,
+                    "is_read_only": True,
+                },
+                {
+                    "drive_id": "work",
+                    "path_on_host": str(work_image),
+                    "is_root_device": False,
+                    "is_read_only": False,
+                },
+            ],
+            "machine-config": {
+                "vcpu_count": max(1, math.ceil(lim.cpus)),
+                "mem_size_mib": lim.memory_mb + self.OVERHEAD_MB,
+            },
+            # no "network-interfaces": the VM has no network device at all
+        }
+
+    @staticmethod
+    def write_work_image(request: SandboxRequest, root: Path) -> Path:
+        work = root / "work"
+        (work / "in").mkdir(parents=True)
+        (work / "out").mkdir()
+        with tarfile.open(fileobj=io.BytesIO(_tar_inputs(request))) as tar:
+            for member in tar.getmembers():  # names were validated by _tar_inputs
+                f = tar.extractfile(member)
+                assert f is not None
+                (work / "in" / member.name).write_bytes(f.read())
+        lim = request.limits
+        (work / "limits.json").write_text(
+            json.dumps(
+                {"wall_seconds": lim.wall_seconds, "memory_mb": lim.memory_mb, "pids": lim.pids}
+            )
+        )
+        image = root / "work.ext4"
+        with open(image, "wb") as fh:
+            fh.truncate(max(lim.disk_mb, 16) * 1024 * 1024)
+        subprocess.run(  # noqa: S603 - fixed argv
+            [_tool("mkfs.ext4"), "-q", "-F", "-E", "root_owner=0:0", "-d", str(work), str(image)],
+            check=True,
+            capture_output=True,
+            timeout=60,
+        )
+        return image
+
+    @staticmethod
+    def read_work_image(image: Path, root: Path) -> dict[str, bytes]:
+        """Files the guest left on the work disk, keyed like the container engines' tar."""
+        dest = root / "result"
+        dest.mkdir()
+        found: dict[str, bytes] = {}
+        for name in ("result.json", "stdout", "stderr"):
+            subprocess.run(  # noqa: S603 - fixed argv
+                [_tool("debugfs"), "-R", f"dump /{name} {dest / name}", str(image)],
+                check=False,
+                capture_output=True,
+                timeout=60,
+            )
+            if (dest / name).is_file():
+                found[name] = (dest / name).read_bytes()
+        subprocess.run(  # noqa: S603 - fixed argv
+            [_tool("debugfs"), "-R", f"rdump /out {dest}", str(image)],
+            check=False,
+            capture_output=True,
+            timeout=60,
+        )
+        total = 0
+        for path in sorted((dest / "out").rglob("*")) if (dest / "out").is_dir() else []:
+            if path.is_file() and not path.is_symlink():
+                data = path.read_bytes()[: 16 * 1024 * 1024]
+                total += len(data)
+                if total > 64 * 1024 * 1024:
+                    break
+                found["out/" + str(path.relative_to(dest / "out"))] = data
+        return found
 
     async def run(self, request: SandboxRequest) -> SandboxResult:
+        problems = self.missing()
+        if problems:
+            return SandboxResult(
+                status=SandboxStatus.REFUSED,
+                engine=self.engine_name,
+                reasons=(f"refusing to run without a microVM: {'; '.join(problems)}",),
+            )
+        started = time.perf_counter()
+        with tempfile.TemporaryDirectory(prefix="agent-fc-") as tmp:
+            root = Path(tmp)
+            try:
+                image = await asyncio.to_thread(self.write_work_image, request, root)
+            except (ValueError, base64.binascii.Error) as exc:  # type: ignore[attr-defined]
+                return SandboxResult(
+                    status=SandboxStatus.REFUSED, reasons=(str(exc),), engine=self.engine_name
+                )
+            config = root / "vm.json"
+            config.write_text(json.dumps(self.vm_config(request, image)))
+            proc = await asyncio.create_subprocess_exec(
+                self.firecracker,
+                "--no-api",
+                "--config-file",
+                str(config),
+                "--id",
+                f"agent-sbx-{uuid.uuid4().hex[:12]}",
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            killed_outside = False
+            try:
+                console, _ = await asyncio.wait_for(
+                    proc.communicate(),
+                    request.limits.wall_seconds + GRACE_SECONDS + self.BOOT_GRACE_SECONDS,
+                )
+            except TimeoutError:
+                killed_outside = True
+                proc.kill()
+                console, _ = await proc.communicate()
+            members = await asyncio.to_thread(self.read_work_image, image, root)
+        duration = int((time.perf_counter() - started) * 1000)
+        return self._result(request, members, console or b"", killed_outside, duration)
+
+    def _result(
+        self,
+        request: SandboxRequest,
+        members: dict[str, bytes],
+        console: bytes,
+        killed_outside: bool,
+        duration: int,
+    ) -> SandboxResult:
+        engine, ms, lim = self.engine_name, duration, request.limits
+        if killed_outside:
+            return SandboxResult(
+                status=SandboxStatus.TIMEOUT,
+                reasons=("microVM killed by the runner after the wall-clock limit",),
+                engine=engine,
+                duration_ms=ms,
+            )
+        try:
+            info = json.loads(members["result.json"])
+        except (KeyError, ValueError):
+            tail = console.decode(errors="replace").strip()[-300:]
+            return SandboxResult(
+                status=SandboxStatus.KILLED,
+                reasons=(
+                    "the microVM produced no result: the code likely exhausted a resource limit "
+                    f"(processes {lim.pids}, memory {lim.memory_mb} MiB or disk {lim.disk_mb} MiB)"
+                    + (f"; console: {tail}" if tail else ""),
+                ),
+                engine=engine,
+                duration_ms=ms,
+            )
+        exit_code = int(info.get("exit", 1))
+        stdout, stderr = members.get("stdout", b""), members.get("stderr", b"")
+        files = {
+            k.removeprefix("out/"): base64.b64encode(v).decode()
+            for k, v in members.items()
+            if k.startswith("out/")
+        }
+        common = {
+            "exit_code": exit_code,
+            "stdout": stdout[: lim.output_bytes].decode(errors="replace"),
+            "stderr": stderr[: lim.output_bytes].decode(errors="replace"),
+            "truncated": max(len(stdout), len(stderr)) > lim.output_bytes,
+            "files": files,
+            "engine": engine,
+            "duration_ms": ms,
+        }
+        if info.get("oom"):
+            return SandboxResult(
+                status=SandboxStatus.OOM,
+                reasons=(f"memory limit {lim.memory_mb} MiB reached",),
+                **common,  # type: ignore[arg-type]
+            )
+        if info.get("timed_out"):
+            return SandboxResult(
+                status=SandboxStatus.TIMEOUT,
+                reasons=(f"wall-clock limit {lim.wall_seconds}s reached",),
+                **common,  # type: ignore[arg-type]
+            )
+        if exit_code == 0:
+            return SandboxResult(status=SandboxStatus.OK, **common)  # type: ignore[arg-type]
         return SandboxResult(
-            status=SandboxStatus.REFUSED,
-            engine="firecracker",
-            reasons=("firecracker engine is a documented stub (ADR 0019): no KVM on this host",),
+            status=SandboxStatus.ERROR,
+            reasons=(f"exit code {exit_code}",),
+            **common,  # type: ignore[arg-type]
         )
 
 
 class ManagedSandbox(CodeSandbox):
-    """A managed sandbox service (vendor API). STUB: needs a contract and credentials (ADR 0019)."""
+    """A managed sandbox service (vendor API). Documented STUB by decision (ADR 0021): sending
+    model-written code and tenant data to a third party needs a named vendor, a data-processing
+    agreement and Australian data residency, none of which exist yet."""
 
     component_status = "stub"
 
@@ -326,7 +579,5 @@ class ManagedSandbox(CodeSandbox):
         return SandboxResult(
             status=SandboxStatus.REFUSED,
             engine="managed",
-            reasons=(
-                "managed sandbox engine is a documented stub (ADR 0019): no vendor configured",
-            ),
+            reasons=("managed sandbox engine is a documented stub (ADR 0021): no vendor approved",),
         )

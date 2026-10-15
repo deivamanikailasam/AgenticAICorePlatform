@@ -15,10 +15,10 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | budget_controller | memory | dummy | `agent_contracts.dummies.safety:InMemoryBudgetController` | Counters per run; every charge also counts against all ancestors. |
 | checkpointer | memory | dummy | `agent_contracts.dummies.state:InMemoryCheckpointer` | Checkpoints in a dictionary keyed by (tenant, thread). |
 | checkpointer | sqlite | dummy | `agent_contracts.dummies.state:SqliteCheckpointer` | Checkpoints in SQLite (in-memory by default). The 'SQLite (tests)' catalogue option. |
-| code_sandbox | firecracker | stub | `sandbox_runner.engines:FirecrackerSandbox` | Firecracker microVMs. STUB: needs KVM, a jailer and a guest image (see ADR 0019). |
+| code_sandbox | firecracker | implemented | `sandbox_runner.engines:FirecrackerSandbox` | Firecracker microVMs: each run boots its own Linux kernel under KVM (ADR 0019, revised). |
 | code_sandbox | gvisor | implemented | `sandbox_runner.engines:GvisorSandbox` | gVisor (runsc): a user-space kernel between the code and the host kernel. Default. |
 | code_sandbox | kata | implemented | `sandbox_runner.engines:KataSandbox` | Kata Containers: each run in a lightweight VM (needs KVM on the host). |
-| code_sandbox | managed | stub | `sandbox_runner.engines:ManagedSandbox` | A managed sandbox service (vendor API). STUB: needs a contract and credentials (ADR 0019). |
+| code_sandbox | managed | stub | `sandbox_runner.engines:ManagedSandbox` | A managed sandbox service (vendor API). Documented STUB by decision (ADR 0021): sending |
 | code_sandbox | scripted | dummy | `agent_contracts.dummies.sandbox:ScriptedSandbox` | Returns a scripted result without executing anything (for testing tools and patterns). |
 | code_sandbox | unavailable | dummy | `agent_contracts.dummies.sandbox:UnavailableSandbox` | Refuses every request: the safe default when no isolation engine is installed. |
 | context_manager | summary_stub | dummy | `agent_contracts.dummies.context:SummaryStubContextManager` | Replaces dropped messages with one summary placeholder (real summaries: Step 21). |

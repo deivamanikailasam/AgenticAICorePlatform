@@ -87,3 +87,29 @@ jobs:
       - run: sudo ./scripts/install_gvisor.sh && sudo systemctl restart docker
       - run: uv sync --all-packages
       - run: just test-sandbox
+
+  microvm:
+    name: sandbox (Firecracker; KVM)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: check
+    env:
+      AGENT_FIRECRACKER_DIR: /var/lib/agent-platform/firecracker
+      AGENT_REQUIRE_ENGINES: firecracker
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.11.32"
+          python-version: "3.12"
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - name: let the runner user open /dev/kvm
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - run: sudo -E ./scripts/install_firecracker.sh
+      - run: sudo -E ./scripts/build_sandbox_rootfs.sh
+      - run: uv sync --all-packages
+      - run: just test-microvm

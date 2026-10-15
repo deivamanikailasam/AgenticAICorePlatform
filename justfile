@@ -170,3 +170,7 @@ sandbox-runner:
 # Sandbox tests (need Docker + runsc; skipped where unavailable)
 test-sandbox:
     uv run pytest -m sandbox services/sandbox-runner
+
+# Firecracker and Kata engines (needs /dev/kvm; see scripts/install_firecracker.sh, install_kata.sh)
+test-microvm:
+    uv run pytest -m microvm services/sandbox-runner -rs
