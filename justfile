@@ -80,6 +80,10 @@ provision-keycloak:
 provision-litellm:
     uv run python -m scripts.provision.litellm_keys
 
+# OpenFGA store and model (only when relationship checks are used)
+provision-openfga:
+    uv run python -m scripts.provision.openfga
+
 provision-artefacts:
     uv run python -m scripts.provision.artefacts
 
@@ -91,10 +95,10 @@ up:
 
 # Optional alternative engines (profiles): Cerbos, OpenFGA
 up-alternatives:
-    {{compose}} --profile cerbos up -d --wait cerbos
+    {{compose}} --profile cerbos --profile openfga up -d --wait cerbos openfga
 
 down:
-    {{compose}} --profile cerbos down
+    {{compose}} --profile cerbos --profile openfga down
 
 logs *svc:
     {{compose}} logs -f {{svc}}

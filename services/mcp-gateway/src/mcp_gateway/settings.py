@@ -28,6 +28,20 @@ class Settings:
     cerbos_url: str = field(
         default_factory=lambda: _env("AGENT_CERBOS_URL", "http://127.0.0.1:3592")
     )
+    openfga_url: str = field(
+        default_factory=lambda: _env("AGENT_OPENFGA_URL", "http://127.0.0.1:8085")
+    )
+    openfga_store: str = field(
+        default_factory=lambda: _env("AGENT_OPENFGA_STORE", "agent-platform")
+    )
+    openfga_key: str = field(
+        default_factory=lambda: _env(
+            "AGENT_OPENFGA_KEY", "${secret:openfga/agent-platform#preshared_key}"
+        )
+    )
+    openfga_rules: str = field(
+        default_factory=lambda: _env("AGENT_OPENFGA_RULES", "policies/openfga/relations.yaml")
+    )
     rag_core_url: str = field(
         default_factory=lambda: _env("P0_RAG_CORE_URL", "http://127.0.0.1:8300")
     )

@@ -115,3 +115,34 @@ async def test_tools_are_listed_with_side_effect_annotations() -> None:
     listed = {t.name: t for t in (await gw.list_tools(None, None)).tools}
     assert listed["rag-core__search"].annotations is not None
     assert listed["rag-core__search"].annotations.read_only_hint is True
+
+
+@pytest.mark.parametrize(
+    ("name", "kind"),
+    [
+        ("opa", "OpaPolicyDecisionPoint"),
+        ("cerbos", "CerbosPolicyDecisionPoint"),
+        ("opa+openfga", "CompositePolicyDecisionPoint"),
+        ("cerbos+openfga", "CompositePolicyDecisionPoint"),
+    ],
+)
+def test_policy_engine_is_chosen_by_configuration(
+    name: str, kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pathlib import Path
+
+    from mcp_gateway.__main__ import build_pdp
+
+    monkeypatch.setenv("MCP_GATEWAY_PDP", name)
+    root = Path(__file__).resolve().parents[3]
+    monkeypatch.setenv("AGENT_OPENFGA_RULES", str(root / "policies/openfga/relations.yaml"))
+    assert type(build_pdp(Settings())).__name__ == kind
+
+
+@pytest.mark.parametrize("name", ["openfga", "opa+cerbos", "none"])
+def test_unknown_policy_engine_refuses_to_start(name: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    from mcp_gateway.__main__ import build_pdp
+
+    monkeypatch.setenv("MCP_GATEWAY_PDP", name)
+    with pytest.raises(SystemExit):
+        build_pdp(Settings())

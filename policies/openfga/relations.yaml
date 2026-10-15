@@ -1,0 +1,7 @@
+# Which tool calls also need a relationship to the object they touch (Step 10, OpenFGA).
+# The object id is `<type>:<tenant>/<argument value>`, so ids never collide across tenants.
+# The primary policy (OPA or Cerbos) decides first; a missing relationship turns its answer
+# into a deny, never the other way round.
+rules:
+  erp__get_invoice: { object_type: invoice, argument: invoice_id, relation: viewer }
+  erp__post_payment: { object_type: invoice, argument: invoice_id, relation: payer }

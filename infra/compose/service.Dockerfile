@@ -7,6 +7,7 @@ RUN --mount=type=secret,id=extra_ca,required=false \
     pip install --no-cache-dir uv==0.11.32
 WORKDIR /app
 COPY pyproject.toml uv.lock platform.yaml ./
+COPY policies/openfga/relations.yaml ./policies/openfga/relations.yaml
 COPY libs ./libs
 COPY services ./services
 RUN --mount=type=secret,id=extra_ca,required=false \

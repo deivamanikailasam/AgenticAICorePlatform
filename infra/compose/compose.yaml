@@ -54,9 +54,12 @@ services:
       MCP_GATEWAY_ALLOWED_HOSTS: 127.0.0.1:*,localhost:*,mcp-gateway:*
       MCP_GATEWAY_AUDIT_FILE: /tmp/mcp-gateway-audit.jsonl
       P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
-      # which policy decision point decides tool calls: opa (default, Project 0's OPA) | cerbos
+      # which policy decision point decides tool calls: opa (default, Project 0's OPA) | cerbos,
+      # optionally with OpenFGA relationship checks: opa+openfga | cerbos+openfga
       MCP_GATEWAY_PDP: ${MCP_GATEWAY_PDP:-opa}
       AGENT_CERBOS_URL: http://cerbos:3592
+      AGENT_OPENFGA_URL: http://openfga:8080
+      SECRET__OPENFGA__AGENT_PLATFORM__PRESHARED_KEY: ${OPENFGA_PRESHARED_KEY_DEV:-}
       # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
       SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
     ports: ["127.0.0.1:8090:8090"]
@@ -82,6 +85,28 @@ services:
     mem_limit: 128m
     healthcheck:
       test: ["CMD", "/cerbos", "healthcheck"]
+      interval: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Relationship checks (Step 10, ADR 0020): `docker compose --profile openfga up`, then
+  # `just provision-openfga`. Memory datastore for dev/CI; production uses Postgres (see
+  # docs/setup/production.md). Every API call needs the pre-shared key.
+  openfga:
+    image: docker.io/openfga/openfga:v1.22.0@sha256:9cf9a20af32a40434cd3a788c429879439ee9ea9abf65c9c200ee17cd43f769e
+    profiles: [openfga]
+    command: ["run"]
+    environment:
+      OPENFGA_DATASTORE_ENGINE: memory
+      OPENFGA_PLAYGROUND_ENABLED: "false"
+      OPENFGA_AUTHN_METHOD: preshared
+      OPENFGA_AUTHN_PRESHARED_KEYS: ${OPENFGA_PRESHARED_KEY_DEV:-}  # empty: OpenFGA refuses to start
+      OPENFGA_LOG_FORMAT: json
+    <<: *hardening
+    ports: ["127.0.0.1:8085:8080"]
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:8081"]
       interval: 3s
       retries: 20
     restart: unless-stopped
