@@ -123,9 +123,12 @@ def revocation_statements(member_of: str) -> list[str]:
     ]
 
 
-def ensure_postgres(admin_dsn: str, db: dict[str, Any]) -> tuple[list[str], str | None]:
+def ensure_postgres(
+    admin_dsn: str, db: dict[str, Any], reset_manager: bool = False
+) -> tuple[list[str], str | None]:
     """Group roles, schemas and the manager role. Returns the manager's new password when the
-    manager role had to be created (OpenBao rotates it straight after)."""
+    manager role had to be created, or reset because OpenBao has no connection for it (OpenBao
+    lost its storage, or a restore); OpenBao rotates it straight after."""
     actions: list[str] = []
     manager = db["manager_role"]
     new_password: str | None = None
@@ -139,6 +142,14 @@ def ensure_postgres(admin_dsn: str, db: dict[str, Any]) -> tuple[list[str], str 
                 )
             )
             actions.append(f"postgres role {manager}: created")
+        elif reset_manager:
+            new_password = secrets.token_urlsafe(32)
+            conn.execute(
+                sql.SQL("alter role {} password {}").format(
+                    sql.Identifier(manager), sql.Literal(new_password)
+                )
+            )
+            actions.append(f"postgres role {manager}: password reset (OpenBao had no connection)")
         else:
             actions.append(f"postgres role {manager}: exists")
         conn.execute(
@@ -379,7 +390,9 @@ def provision(
         ensure_mount(bao, cfg["kv_mount"], {"type": "kv", "options": {"version": "2"}}),
         ensure_policy(bao, RUNTIME_POLICY, runtime_policy(cfg)),
     ]
-    pg_actions, new_password = ensure_postgres(admin_dsn, cfg["database"])
+    db = cfg["database"]
+    connected = bao.get(f"{db['mount']}/config/{db['connection']}") is not None
+    pg_actions, new_password = ensure_postgres(admin_dsn, db, reset_manager=not connected)
     actions += pg_actions
     actions += ensure_database_engine(bao, cfg["database"], db_host, new_password)
     actions += ensure_approle(bao, cfg, out_dir / "openbao-approle.env")

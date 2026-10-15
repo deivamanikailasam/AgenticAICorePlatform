@@ -168,3 +168,23 @@ def test_agent_policies_grant_only_the_spec_credentials() -> None:
     assert 'path "sys/leases/revoke/agent-db/creds/tool-reader/*"' in policy
     assert "agent-platform/" not in policy  # never the platform's own secrets
     assert openbao.agent_policy(AgentNeeds("b")).startswith("#")  # nothing granted
+
+
+@pytest.mark.integration
+def test_openbao_provisioning_recovers_when_openbao_lost_its_connection(tmp_path: Path) -> None:
+    """OpenBao restored without its storage: the manager role still exists in Postgres. The
+    password is reset, OpenBao rotates it again, and credentials can be issued."""
+    from scripts.provision import openbao
+
+    cfg = openbao.load()
+    with httpx.Client(timeout=15) as c:
+        bao = openbao.Bao(c, os.environ["P0_OPENBAO_URL"], os.environ["OPENBAO_ADMIN_TOKEN"])
+        admin = os.environ["P0_POSTGRES_ADMIN_DSN"]
+        openbao.provision(bao, admin, cfg, cfg["database"]["host"], tmp_path)
+        bao.write("agent-db/config/agent", method="DELETE")
+        actions = openbao.provision(bao, admin, cfg, cfg["database"]["host"], tmp_path)
+        cred = bao.get("agent-db/creds/tool-reader")
+        bao.write(f"sys/leases/revoke/{cred['lease_id']}", method="PUT")
+    assert any("password reset" in a for a in actions)
+    assert any("manager password rotated by OpenBao" in a for a in actions)
+    assert 0 < cred["lease_duration"] <= 900
