@@ -205,6 +205,11 @@ eval-long-dialogue *args:
     uv run python -m agent_runtime.dialogue_eval evals/golden/long-dialogue {{args}}
 
 # Team patterns (Step 23): reference specs on golden tasks, plus limit checks (stand-in agents)
+# Guardrail eval suite (Step 27): labelled attacks, look-alikes and checks; Presidio cases
+# run when P0_PRESIDIO_ANALYZER_URL is set
+eval-guardrails dataset="evals/golden/guardrails":
+    uv run python -m agent_guardrails.eval {{dataset}}
+
 eval-teams:
     uv run python -m agent_compiler.team_eval evals/golden/teams
 

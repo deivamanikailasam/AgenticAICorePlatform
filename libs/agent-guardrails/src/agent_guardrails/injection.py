@@ -87,7 +87,8 @@ RULES: list[tuple[str, re.Pattern[str], bool]] = [
     (
         "instructions_to_assistant",
         re.compile(
-            r"\b(AI|assistant|agent|model|LLM|chatbot)s?\b[^.\n]{0,40}\b(must|should|need to|are "
+            r"\b(AI|assistant|agent|model|LLM|chatbot)s?\b(?!\s+(manager|director|principal|"
+            r"coach|editor|professor|year|number|name))[^.\n]{0,40}\b(must|should|need to|are "
             r"required to|have to)\b[^.\n]{0,60}\b(call|use|invoke|run|send|email|transfer|pay|"
             r"approve|delete|ignore|reply|respond|include)\b",
             re.I,
@@ -114,7 +115,9 @@ RULES: list[tuple[str, re.Pattern[str], bool]] = [
         "exfiltration",
         re.compile(
             r"!\[[^\]]*\]\(\s*https?://|\b(send|forward|post|upload|email|exfiltrate|transmit)\b"
-            r"[^.\n]{0,50}\b(to|at)\b[^.\n]{0,20}(https?://|[\w.+-]+@[\w-]+\.[\w.]+)",
+            r"[^.\n]{0,15}\b(it|this|everything|all|the (full |entire |whole )?(conversation|chat|"
+            r"history|data|customer list|records?|credentials|passwords?|keys?|tokens?|files?|"
+            r"contents?))\b[^.\n]{0,40}\b(to|at)\b[^.\n]{0,20}(https?://|[\w.+-]+@[\w-]+\.[\w.]+)",
             re.I,
         ),
         False,
