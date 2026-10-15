@@ -28,6 +28,9 @@ x-p0-endpoints: &p0-endpoints
   P0_KEYCLOAK_REALM: ${P0_KEYCLOAK_REALM:-rag-platform}
   P0_OPA_URL: http://opa:8181
   P0_OTEL_HEALTH_URL: http://otel-collector:13133/
+  # PII guardrail (Step 27): Project 0's Presidio services. VERIFY-ON-MAC: names and ports
+  P0_PRESIDIO_ANALYZER_URL: ${P0_PRESIDIO_ANALYZER_URL_INTERNAL:-http://presidio-analyzer:3000}
+  P0_PRESIDIO_ANONYMIZER_URL: ${P0_PRESIDIO_ANONYMIZER_URL_INTERNAL:-http://presidio-anonymizer:3000}
 
 services:
   # One-shot: proves Project A can reach every Project 0 dependency from inside the network.

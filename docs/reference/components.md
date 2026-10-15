@@ -53,7 +53,19 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | evaluator | exact_match | dummy | `agent_contracts.dummies.evals:ExactMatchEvaluator` | 1.0 when the output equals ``expected['output']`` (after trimming strings). |
 | evaluator | tool_recall | dummy | `agent_contracts.dummies.evals:ToolRecallEvaluator` | Share of ``expected['tools']`` that the trajectory actually called. |
 | guardrail | keyword_injection | dummy | `agent_contracts.dummies.safety:KeywordInjectionGuardrail` | Blocks text containing well-known injection phrases. A weak baseline, not a defence. |
+| guardrail | output_schema | implemented | `agent_guardrails.checks:OutputGuardrail` | The answer against a JSON Schema (``schema``, or the spec's output schema passed in |
+| guardrail | pii_redaction | implemented | `agent_guardrails.pii:PresidioPiiGuardrail` |  |
+| guardrail | pii_redaction.cloud_dlp | implemented | `agent_guardrails.pii:CloudDlpPiiGuardrail` | Documented stub (ADR 0038): needs a cloud account and a data-residency decision. |
+| guardrail | pii_redaction.presidio | implemented | `agent_guardrails.pii:PresidioPiiGuardrail` |  |
+| guardrail | prompt_injection | implemented | `agent_guardrails.injection:PromptInjectionGuardrail` | ``prompt_injection`` in specs: the platform's detectors together (rules always). |
+| guardrail | prompt_injection.classifier | implemented | `agent_guardrails.injection:ClassifierInjectionGuardrail` |  |
+| guardrail | prompt_injection.llm_judge | implemented | `agent_guardrails.injection:LlmJudgeInjectionGuardrail` |  |
+| guardrail | prompt_injection.rules | implemented | `agent_guardrails.injection:RulesInjectionGuardrail` |  |
 | guardrail | regex_pii | dummy | `agent_contracts.dummies.safety:RegexPiiGuardrail` | Redacts e-mail addresses and phone numbers. Presidio replaces this in Step 27. |
+| guardrail | safety_filter | implemented | `agent_guardrails.checks:SafetyFilterGuardrail` | Rules for clearly harmful requests and answers (weapons, self-harm methods, malware, |
+| guardrail | secret_leak | implemented | `agent_guardrails.secrets:SecretLeakGuardrail` |  |
+| guardrail | tool_args_schema | implemented | `agent_guardrails.checks:ToolArgsGuardrail` | Tool arguments against the tool's JSON Schema and per-argument limits from the spec:: |
+| guardrail | topic_filter | implemented | `agent_guardrails.checks:TopicFilterGuardrail` | Keeps an agent to its job: ``blocked`` topics (name -> phrases or regexes) are refused in |
 | loop_detector | no_progress | dummy | `agent_contracts.dummies.safety:NoProgressLoopDetector` | Also flags ``patience`` consecutive steps that made no progress. |
 | loop_detector | platform | implemented | `agent_runtime.budget:PlatformLoopDetector` |  |
 | loop_detector | repeat | dummy | `agent_contracts.dummies.safety:RepeatLoopDetector` | Flags the same step signature seen ``threshold`` times within the last ``window`` steps. |

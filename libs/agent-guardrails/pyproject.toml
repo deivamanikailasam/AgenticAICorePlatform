@@ -1,0 +1,34 @@
+[project]
+name = "agent-guardrails"
+version = "0.1.0"
+description = "Guardrails (Step 27): injection detection, PII redaction (Presidio), tool-argument and output checks, topic and safety filters, secret-leak detection, and the parallel pipeline"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "agent-contracts",
+    "httpx>=0.28.1,<0.29",
+    "jsonschema>=4.26.0,<5",
+]
+
+[project.entry-points."agent_platform.components"]
+"guardrail.prompt_injection" = "agent_guardrails.injection:PromptInjectionGuardrail"
+"guardrail.prompt_injection.rules" = "agent_guardrails.injection:RulesInjectionGuardrail"
+"guardrail.prompt_injection.classifier" = "agent_guardrails.injection:ClassifierInjectionGuardrail"
+"guardrail.prompt_injection.llm_judge" = "agent_guardrails.injection:LlmJudgeInjectionGuardrail"
+"guardrail.pii_redaction" = "agent_guardrails.pii:PresidioPiiGuardrail"
+"guardrail.pii_redaction.presidio" = "agent_guardrails.pii:PresidioPiiGuardrail"
+"guardrail.pii_redaction.cloud_dlp" = "agent_guardrails.pii:CloudDlpPiiGuardrail"
+"guardrail.tool_args_schema" = "agent_guardrails.checks:ToolArgsGuardrail"
+"guardrail.output_schema" = "agent_guardrails.checks:OutputGuardrail"
+"guardrail.topic_filter" = "agent_guardrails.checks:TopicFilterGuardrail"
+"guardrail.safety_filter" = "agent_guardrails.checks:SafetyFilterGuardrail"
+"guardrail.secret_leak" = "agent_guardrails.secrets:SecretLeakGuardrail"
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_guardrails"]
