@@ -37,3 +37,4 @@ ADR supersedes it.
 | [0029](0029-checkpoints-and-durable-runs.md) | Checkpoints at the node runner, encrypted in Postgres; resume by journal replay; durable run API | 18 |
 | [0030](0030-temporal-for-durable-long-runs.md) | Temporal for durable long runs: plan interpreted in one workflow, nodes as activities, agent-worker; Restate and DBOS stubs | 19 |
 | [0031](0031-long-term-memory.md) | Long-term memory: pgvector default, write policy in front of every store, taint-aware remember, erasure everywhere; Zep and Letta stubs | 20 |
+| [0032](0032-context-engineering.md) | Context engineering: per-section budgets, atomic tool groups, rolling summaries capped by budget, trim and offload strategies, JIT tools, untrusted stays data | 21 |

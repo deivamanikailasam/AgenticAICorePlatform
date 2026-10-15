@@ -65,3 +65,8 @@ Every term used in this repository, in plain English. Grows with each step.
 | Memory poisoning | Getting false facts or instructions into an agent's memory so they steer later runs |
 | Taint | The mark a run gets once untrusted content is in its context; writes after that count as untrusted |
 | Right to erasure | A person's right to have the personal information an organisation holds about them deleted |
+| Context window | The most text (in tokens) a model can take in one call |
+| Rolling summary | A running summary of the oldest part of a conversation, extended as more is folded in |
+| Tool-result compaction | Shortening an old tool result to its beginning and end, with a pointer to the full text |
+| Just-in-time tools | Showing a model only the tools it likely needs, and letting it search for more |
+| Prompt caching | A provider reusing the unchanged start of a prompt from an earlier call, which is faster and cheaper |
