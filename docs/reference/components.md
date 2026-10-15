@@ -133,6 +133,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | simulator | scripted_user | dummy | `agent_contracts.dummies.evals:ScriptedUserSimulator` | Plays a fixed list of user turns, then says it is done. |
 | telemetry_emitter | memory | dummy | `agent_contracts.dummies.observability:MemoryTelemetryEmitter` | Keeps finished spans and metrics in lists, for assertions in tests. |
 | telemetry_emitter | noop | dummy | `agent_contracts.dummies.observability:NoopTelemetryEmitter` | Discards everything (telemetry switched off). |
+| telemetry_emitter | otel | implemented | `agent_telemetry.emitter:OtelTelemetryEmitter` | Spans on the global tracer provider; ``metric`` records to a histogram per name. |
 | tool | add | dummy | `agent_contracts.dummies.tools:AddTool` | Adds two numbers. |
 | tool | calculator | implemented | `agent_tools.builtin:CalculatorTool` | Evaluates an arithmetic expression safely (no code execution). |
 | tool | clock | implemented | `agent_tools.builtin:ClockTool` | Returns the current date and time in a time zone (default Australia/Melbourne). |

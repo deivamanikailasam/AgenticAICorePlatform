@@ -49,6 +49,7 @@ from agent_runtime.events import current_sink, json_safe
 from agent_runtime.executors import resolve
 from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec, load_spec
+from agent_telemetry.spans import agent_span, end_agent
 from agent_tools.approvals import RulesApprovalRouter
 from agent_tools.assemble import tool_names
 from agent_tools.authorising import Caller, current_caller
@@ -777,16 +778,25 @@ class RunManager:
             )
             budgets = self.assembly.budgets
             spec = self.agents[run.agent]
-            if not budgets.known(run.run_id):  # Step 26 (re-opened after a restart)
-                await budgets.open(spec, run.ctx)
-            result = await work
-            if result.status.value != "interrupted":  # approvals keep the budget open
-                summariser = (
-                    self.assembly.model_factory(spec)
-                    if spec.budgets.on_exceed == "summarise"
-                    else None
+            # Step 30: one invoke_agent span per run (and per resume); everything the run does,
+            # model calls, tool calls and team workers, nests under it
+            with agent_span(spec.name, spec.version, run.ctx, spec.description) as span:
+                if not budgets.known(run.run_id):  # Step 26 (re-opened after a restart)
+                    await budgets.open(spec, run.ctx)
+                result = await work
+                if result.status.value != "interrupted":  # approvals keep the budget open
+                    summariser = (
+                        self.assembly.model_factory(spec)
+                        if spec.budgets.on_exceed == "summarise"
+                        else None
+                    )
+                    result = await budgets.finish(spec, run.ctx, result, summariser)
+                end_agent(
+                    span,
+                    result.status.value,
+                    self.assembly.ledger.total(run.run_id),
+                    result.state.stop_reason,
                 )
-                result = await budgets.finish(spec, run.ctx, result, summariser)
             run.status = result.status.value
             if run.status == "succeeded":
                 await self._sample_for_review(run, result.output)

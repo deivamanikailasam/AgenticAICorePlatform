@@ -16,6 +16,7 @@ from agent_api.identity import identity_from_env
 from agent_api.registry import registry_gate
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
+from agent_api.telemetry import setup_from_env
 from agent_contracts.dummies.observability import JsonlAuditSink
 from agent_runtime.models.ledger import PostgresUsageLedger
 from agent_runtime.temporal.runtime import TemporalRuntime
@@ -44,6 +45,8 @@ async def run() -> None:
     settings = Settings()
     # Step 29: per-agent identities, secrets from OpenBao and call-time tool credentials
     identity = identity_from_env(settings)
+    # Step 30: GenAI spans to the collector (no content); to Langfuse with redacted content
+    await setup_from_env("agent-worker", identity.secrets)
     platform = load_platform()
     gateway_keys = await load_gateway_keys(platform, identity.secrets, settings.environment)
     audit = JsonlAuditSink(

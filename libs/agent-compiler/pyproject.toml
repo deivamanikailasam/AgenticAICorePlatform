@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Pattern compiler: agent.yaml -> ExecutablePlan, plus a traced runner"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "agent-telemetry",
     "agent-contracts",
     "agent-spec",
     "agent-runtime",
@@ -36,6 +37,7 @@ agent-compile = "agent_compiler.cli:main"
 "pattern_builder.evaluator_optimiser" = "agent_compiler.patterns.react:EvaluatorOptimiserPatternBuilder"
 
 [tool.uv.sources]
+agent-telemetry = { workspace = true }
 agent-contracts = { workspace = true }
 agent-spec = { workspace = true }
 agent-runtime = { workspace = true }

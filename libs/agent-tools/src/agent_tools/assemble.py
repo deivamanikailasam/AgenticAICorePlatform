@@ -49,3 +49,8 @@ def grants_for(plan: ExecutablePlan) -> dict[str, ToolGrant]:
         )
         for t in _tools(plan)
     }
+
+
+def tool_refs(plan: ExecutablePlan) -> dict[str, str]:
+    """Registry name → ref, for telemetry (``execute_tool`` spans name the tool and its source)."""
+    return {registry_name(str(t["ref"])): str(t["ref"]) for t in _tools(plan)}

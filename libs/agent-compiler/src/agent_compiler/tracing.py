@@ -1,4 +1,5 @@
-"""Minimal OpenTelemetry setup for traced runs (Step 30 replaces this with agent-telemetry).
+"""OpenTelemetry for traced runs. A process that installed the platform provider
+(``agent_telemetry.setup``, Step 30) uses it; ``just run`` falls back to its own OTLP provider.
 
 Span names and attributes follow the OpenTelemetry GenAI conventions where they exist
 (``invoke_agent <name>``, ``gen_ai.operation.name``, ``gen_ai.agent.name``, ``gen_ai.agent.id``,
@@ -26,6 +27,11 @@ def configure(endpoint: str | None = None, exporter: SpanExporter | None = None)
         private = TracerProvider(resource=Resource.create({"service.name": SERVICE}))
         private.add_span_processor(SimpleSpanProcessor(exporter))
         return private
+    current = trace.get_tracer_provider()
+    if isinstance(current, TracerProvider):
+        # a service installed the platform provider (agent_telemetry.setup): one trace, one
+        # content policy for the whole run, workers included
+        return current
     if _provider is None:
         base = endpoint or os.environ.get("P0_OTEL_OTLP_ENDPOINT", "http://127.0.0.1:4318")
         _provider = TracerProvider(resource=Resource.create({"service.name": SERVICE}))

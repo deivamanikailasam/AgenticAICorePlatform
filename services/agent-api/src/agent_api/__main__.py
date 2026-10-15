@@ -25,6 +25,7 @@ from agent_api.registry import registry_gate
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
 from agent_api.store import PostgresRunStore, RunStore
+from agent_api.telemetry import setup_from_env
 
 
 def durability(settings: Settings) -> tuple[Checkpointer | None, RunStore | None]:
@@ -45,6 +46,8 @@ def main() -> None:
     audit = JsonlAuditSink(settings.audit_file)
     # Step 29: per-agent identities, secrets from OpenBao and call-time tool credentials
     identity = identity_from_env(settings)
+    # Step 30: GenAI spans to the collector (no content); to Langfuse with redacted content
+    asyncio.run(setup_from_env("agent-api", identity.secrets))
     platform = load_platform()
     gateway_keys = asyncio.run(load_gateway_keys(platform, identity.secrets, settings.environment))
     # Step 25: every deployed spec is in the registry (new versions as draft); in staging and

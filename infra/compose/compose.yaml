@@ -28,6 +28,12 @@ x-p0-endpoints: &p0-endpoints
   P0_KEYCLOAK_REALM: ${P0_KEYCLOAK_REALM:-rag-platform}
   P0_OPA_URL: http://opa:8181
   P0_OTEL_HEALTH_URL: http://otel-collector:13133/
+  # GenAI spans (Step 30): Project 0's collector, without content
+  P0_OTEL_OTLP_ENDPOINT: ${P0_OTEL_OTLP_ENDPOINT_INTERNAL:-http://otel-collector:4318}
+  # Langfuse (Step 30): set host and public key to send redacted content there; the secret key
+  # comes from OpenBao (langfuse/agent-platform#secret_key). VERIFY-ON-MAC: Project 0's host
+  LANGFUSE_HOST: ${LANGFUSE_HOST_INTERNAL:-}
+  LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
   # secrets and tool credentials (Step 29): Project 0's OpenBao. VERIFY-ON-MAC: name and port
   P0_OPENBAO_URL: ${P0_OPENBAO_URL_INTERNAL:-http://openbao:8200}
   # PII guardrail (Step 27): Project 0's Presidio services. VERIFY-ON-MAC: names and ports

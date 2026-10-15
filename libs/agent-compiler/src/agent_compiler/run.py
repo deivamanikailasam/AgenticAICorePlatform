@@ -67,6 +67,7 @@ from agent_runtime.supervisor import (
 )
 from agent_runtime.teams import TeamExecutor
 from agent_spec import AgentSpec, load_spec
+from agent_telemetry.spans import agent_attributes
 from agent_tools.assemble import tool_names
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import Span, Status, StatusCode
@@ -520,12 +521,7 @@ async def run(
     handle = await adapter.build(plan)
     tr = tracing.tracer(provider)
     attrs = {
-        "gen_ai.operation.name": "invoke_agent",
-        "gen_ai.agent.name": spec.name,
-        "gen_ai.agent.id": f"{spec.name}@{spec.version}",
-        "gen_ai.conversation.id": ctx.thread_id,
-        "agent_platform.run.id": ctx.run_id,
-        "agent_platform.tenant.id": ctx.tenant_id,
+        **agent_attributes(spec.name, spec.version, ctx, spec.description),
         "agent_platform.risk_tier": spec.risk_tier.value,
         "agent_platform.plan.hash": str(plan.metadata["plan_hash"]),
         "agent_platform.runtime.adapter": spec.runtime.adapter,

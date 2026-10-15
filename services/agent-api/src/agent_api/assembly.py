@@ -48,8 +48,9 @@ from agent_runtime.models.ledger import UsageLedger
 from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec
 from agent_spec.platform import PlatformConfig
+from agent_telemetry.spans import TracingModelClient, TracingToolExecutor
 from agent_tools.a2a import A2aRemoteAgentTool
-from agent_tools.assemble import grants_for, tool_names
+from agent_tools.assemble import grants_for, tool_names, tool_refs
 from agent_tools.authorising import AuthorisingToolExecutor, delegation_authoriser
 from agent_tools.builtin import BUILTIN_TOOLS
 from agent_tools.executor import PlatformToolExecutor
@@ -257,29 +258,38 @@ class Assembly:
             await registry.register(RememberTool(memory))
         await require_approvals(plan, registry)
         guardrails = self.guardrails_for(spec)
-        tools = BudgetedToolExecutor(
-            EventingToolExecutor(
-                GuardedToolExecutor(
-                    CircuitBreakingToolExecutor(
-                        AuthorisingToolExecutor(
-                            PlatformToolExecutor(registry),
-                            registry,
-                            self.pdp,
-                            self.audit,
-                            grants=grants_for(plan),
-                            broker=self.broker,
+        # Step 30: execute_tool spans around everything, refused calls included
+        tools = TracingToolExecutor(
+            BudgetedToolExecutor(
+                EventingToolExecutor(
+                    GuardedToolExecutor(
+                        CircuitBreakingToolExecutor(
+                            AuthorisingToolExecutor(
+                                PlatformToolExecutor(registry),
+                                registry,
+                                self.pdp,
+                                self.audit,
+                                grants=grants_for(plan),
+                                broker=self.broker,
+                            ),
+                            self.tool_circuits,
                         ),
-                        self.tool_circuits,
-                    ),
-                    guardrails,
-                )
+                        guardrails,
+                    )
+                ),
+                self.budgets,
             ),
-            self.budgets,
+            agent=spec.name,
+            refs=tool_refs(plan),
         )
         model = StreamingModelClient(
             BudgetedModelClient(
                 GuardedModelClient(
-                    CircuitBreakingModelClient(self.model_factory(spec), self.model_circuits),
+                    CircuitBreakingModelClient(
+                        # Step 30: a chat span per call as the gateway sees it (retries included)
+                        TracingModelClient(self.model_factory(spec), agent=spec.name),
+                        self.model_circuits,
+                    ),
                     guardrails,
                 ),
                 self.budgets,

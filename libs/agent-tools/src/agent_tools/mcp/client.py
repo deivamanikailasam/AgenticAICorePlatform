@@ -12,7 +12,9 @@
 * **On behalf of the user** — for ``auth.kind: on_behalf_of`` servers each call exchanges the
   caller's token (``subject_token``) for one valid only for ``auth.audience`` and uses it on a
   connection of its own; with no user token the call is refused, never sent as the platform.
-* **Every call** is traced (``execute_tool``) and audited (arguments hashed, never stored).
+* **Every call** is traced (MCP conventions: ``tools/call {tool}``, a CLIENT span, under the
+  platform's ``execute_tool`` span when an agent calls it) and audited (arguments hashed, never
+  stored).
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ import time
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 from typing import Any
+from urllib.parse import urlparse
 
 from agent_contracts.interfaces import AuditSink, ToolRegistry
 from agent_contracts.models import AuditEvent, RunContext, SideEffect, ToolSpec
@@ -293,7 +296,7 @@ class McpClientPool:
         args_hash = hashlib.sha256(
             json.dumps(arguments, sort_keys=True, default=str).encode()
         ).hexdigest()
-        attrs = {
+        attrs: dict[str, str | int] = {
             "gen_ai.operation.name": "execute_tool",
             "gen_ai.tool.name": tool,
             "mcp.method.name": "tools/call",
@@ -303,8 +306,15 @@ class McpClientPool:
         }
         if call_id:
             attrs["gen_ai.tool.call.id"] = call_id
+        if cfg.url:
+            parsed = urlparse(cfg.url)
+            attrs["server.address"] = parsed.hostname or ""
+            if parsed.port:
+                attrs["server.port"] = parsed.port
         ok, error, version = False, None, None
-        with _tracer.start_as_current_span(f"execute_tool {tool}", attributes=attrs) as span:
+        with _tracer.start_as_current_span(
+            f"tools/call {tool}", kind=trace.SpanKind.CLIENT, attributes=attrs
+        ) as span:
             own: _Connection | None = None
             try:
                 if cfg.auth.kind == "on_behalf_of":
@@ -328,6 +338,7 @@ class McpClientPool:
                 }
             except Exception as exc:
                 error = f"{type(exc).__name__}: {exc}"[:500]
+                span.set_attribute("error.type", type(exc).__name__)
                 span.set_status(trace.Status(trace.StatusCode.ERROR, error))
                 raise
             finally:

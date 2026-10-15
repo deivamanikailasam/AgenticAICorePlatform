@@ -111,5 +111,5 @@ async def test_drafts_run_in_dev() -> None:
     assert resp.status_code == 201
     run = manager.runs[resp.json()["run_id"]]
     await manager.wait_idle(run)
-    assert run.status == "succeeded"
+    assert run.status == "succeeded", run.events[-1]
     assert "research-report-writer" in assembled

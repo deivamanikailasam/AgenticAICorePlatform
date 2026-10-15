@@ -135,7 +135,9 @@ async def suppliers() -> AsyncIterator[None]:
         await conn.execute("drop table if exists tool_data.suppliers")
 
 
-async def test_credentials_are_leased_per_call_audited_and_never_seen(suppliers: None) -> None:
+async def test_credentials_are_leased_per_call_audited_and_never_seen(
+    suppliers: None, span_exporter: InMemorySpanExporter
+) -> None:
     spec = load_spec_text(SPEC)
     model = Scripted()
     broker = Spy(BAO, TokenAuth(ADMIN))
@@ -188,8 +190,22 @@ async def test_credentials_are_leased_per_call_audited_and_never_seen(suppliers:
         ).fetchone()
     assert gone == (0,), "OpenBao dropped the database user when the lease was revoked"
 
-    # no secret anywhere: prompts, run events, run record, audit records (spans: next test)
+    # no secret anywhere: prompts, run events, run record, audit records, the run's spans
+    spans = span_exporter.get_finished_spans()
+    names = {s.name for s in spans}
+    assert {"invoke_agent supplier-check", "execute_tool sql_read"} <= names  # Step 30
     haystacks = {
+        "spans": json.dumps(
+            [
+                {
+                    "name": s.name,
+                    "attributes": dict(s.attributes or {}),
+                    "events": [dict(e.attributes or {}) for e in s.events],
+                }
+                for s in spans
+            ],
+            default=str,
+        ),
         "prompts": json.dumps([r.model_dump(mode="json") for r in model.requests]),
         "events": json.dumps(run.events, default=str),
         "run record": record,
@@ -205,8 +221,8 @@ async def test_credentials_are_leased_per_call_audited_and_never_seen(suppliers:
 
 async def test_no_secret_in_the_traces_of_a_traced_run(suppliers: None) -> None:
     """The traced runner (``just run``, Step 4) with the same authorising executor and broker:
-    every span's name, attributes and events are free of the credential's values. (The run API
-    emits spans from Step 30; this test is the template for that check.)"""
+    every span's name, attributes and events are free of the credential's values. (The run API's
+    own spans are checked in the test above.)"""
     from agent_compiler import compile_spec, tracing
     from agent_compiler.run import run as run_spec
     from agent_tools.assemble import grants_for

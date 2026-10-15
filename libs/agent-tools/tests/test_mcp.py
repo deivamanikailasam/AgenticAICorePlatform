@@ -107,10 +107,10 @@ async def test_calls_through_the_executor_are_traced_and_audited(
     assert failed.error_code is ToolErrorCode.FAILED, "an MCP isError result is a failed tool call"
 
     spans = {s.name: s for s in span_exporter.get_finished_spans()}
-    add_span = spans["execute_tool add"]
+    add_span = spans["tools/call add"]
     assert add_span.attributes is not None
     assert add_span.attributes["mcp.protocol.version"] == "2026-07-28"
-    assert spans["execute_tool echo"].attributes["mcp.protocol.version"] == "2025-11-25"  # type: ignore[index]
+    assert spans["tools/call echo"].attributes["mcp.protocol.version"] == "2025-11-25"  # type: ignore[index]
 
     records = await pool.audit.read(CTX.run_id)
     assert [(r.event.payload["tool"], r.event.payload["ok"]) for r in records] == [

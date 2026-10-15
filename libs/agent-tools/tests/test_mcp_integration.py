@@ -155,7 +155,7 @@ async def test_two_external_servers_discovered_called_traced_audited(
     assert "Ada Lovelace" in str(cust.output)
 
     names = {s.name for s in exporter.get_finished_spans()}
-    assert {"execute_tool read_text_file", "execute_tool get_customer"} <= names
+    assert {"tools/call read_text_file", "tools/call get_customer"} <= names
     assert pool.audit is not None
     audited = [
         (r.event.payload["server"], r.event.payload["ok"])

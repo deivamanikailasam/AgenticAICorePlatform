@@ -14,6 +14,7 @@ members = [
     "agent-registry",
     "agent-runtime",
     "agent-spec",
+    "agent-telemetry",
     "agent-tools",
     "agent-worker",
     "invoice-triage",
@@ -101,6 +102,7 @@ dependencies = [
     { name = "agent-registry" },
     { name = "agent-runtime" },
     { name = "agent-spec" },
+    { name = "agent-telemetry" },
     { name = "agent-tools" },
     { name = "httpx" },
     { name = "starlette" },
@@ -117,6 +119,7 @@ requires-dist = [
     { name = "agent-registry", editable = "libs/agent-registry" },
     { name = "agent-runtime", editable = "libs/agent-runtime" },
     { name = "agent-spec", editable = "libs/agent-spec" },
+    { name = "agent-telemetry", editable = "libs/agent-telemetry" },
     { name = "agent-tools", editable = "libs/agent-tools" },
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "starlette", specifier = ">=0.48" },
@@ -131,6 +134,7 @@ dependencies = [
     { name = "agent-contracts" },
     { name = "agent-runtime" },
     { name = "agent-spec" },
+    { name = "agent-telemetry" },
     { name = "agent-tools" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
@@ -142,6 +146,7 @@ requires-dist = [
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-runtime", editable = "libs/agent-runtime" },
     { name = "agent-spec", editable = "libs/agent-spec" },
+    { name = "agent-telemetry", editable = "libs/agent-telemetry" },
     { name = "agent-tools", editable = "libs/agent-tools" },
     { name = "opentelemetry-api", specifier = ">=1.45.1,<2" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45.1,<2" },
@@ -349,6 +354,25 @@ requires-dist = [
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "pydantic", specifier = ">=2.14.1,<3" },
     { name = "pyyaml", specifier = ">=6.0.3,<7" },
+]
+
+[[package]]
+name = "agent-telemetry"
+version = "0.1.0"
+source = { editable = "libs/agent-telemetry" }
+dependencies = [
+    { name = "agent-contracts" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "opentelemetry-api", specifier = ">=1.45.1,<2" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45.1,<2" },
+    { name = "opentelemetry-sdk", specifier = ">=1.45.1,<2" },
 ]
 
 [[package]]
