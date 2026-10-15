@@ -75,3 +75,8 @@ Every term used in this repository, in plain English. Grows with each step.
 | Shared state | The typed fields a team builds up together; each worker reads and writes only its own |
 | Circuit breaker | Stopping use of something that keeps failing, so one failure does not cascade |
 | Delegation | One agent handing work to another; decided by policy and audited |
+| Handoff (swarm) | One agent passing control of the conversation, with a note, to a specialist agent |
+| Group chat | Several agents taking turns on one shared conversation until a stop condition |
+| Map-reduce | Doing the same step for many items in parallel (map), then combining the results (reduce) |
+| Debate | Agents arguing different sides while a judge decides |
+| Termination condition | What makes a pattern stop, by itself or because a limit was reached |
