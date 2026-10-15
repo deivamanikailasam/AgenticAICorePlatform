@@ -12,6 +12,11 @@ dependencies = [
     "langgraph==1.2.12",
     # Microsoft Agent Framework (workflows only; no model providers): 1.19.0 released 2026-09-18
     "agent-framework-core==1.19.0",
+    # OpenAI Agents SDK as an agent-loop engine (models stay on the platform gateway): 0.22.3,
+    # released 2026-09-17
+    "openai-agents==0.22.3",
+    # Pydantic AI (slim: no provider SDKs) as an agent-loop engine: 2.52.0, released 2026-09-30
+    "pydantic-ai-slim==2.52.0",
 ]
 
 [project.entry-points."agent_platform.components"]
@@ -20,6 +25,9 @@ dependencies = [
 "runtime_adapter.agent_framework" = "agent_runtime.adapters.agent_framework:AgentFrameworkAdapter"
 "runtime_adapter.crewai" = "agent_runtime.adapters.stubs:CrewAIAdapter"
 "agent_loop.native" = "agent_runtime.agent_loop:AgentLoopExecutor"
+"agent_loop.openai_agents" = "agent_runtime.engines.openai_agents:OpenAIAgentsLoopExecutor"
+"agent_loop.pydantic_ai" = "agent_runtime.engines.pydantic_ai:PydanticAILoopExecutor"
+"agent_loop.google_adk" = "agent_runtime.engines.stubs:GoogleAdkLoopStub"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }

@@ -7,8 +7,11 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 
 | Slot | Name | Status | Implementation | Summary |
 |---|---|---|---|---|
+| agent_loop | google_adk | stub | `agent_runtime.engines.stubs:GoogleAdkLoopStub` | Google ADK. STUB in-process: every ADK release up to 2.12.0 (2026-10-13) pins |
 | agent_loop | minimal | dummy | `agent_contracts.dummies.agent_loop:MinimalReactLoop` | Model → tools (one at a time) → model until an answer; unknown tools end the loop. |
 | agent_loop | native | implemented | `agent_runtime.agent_loop:AgentLoopExecutor` | ``NodeKind.AGENT`` nodes whose config has ``loop: react``. |
+| agent_loop | openai_agents | implemented | `agent_runtime.engines.openai_agents:OpenAIAgentsLoopExecutor` |  |
+| agent_loop | pydantic_ai | implemented | `agent_runtime.engines.pydantic_ai:PydanticAILoopExecutor` |  |
 | agent_loop | single_shot | dummy | `agent_contracts.dummies.agent_loop:SingleShotToolLoop` | Same loop with a step limit of at most three model turns (a cheap, impatient agent). |
 | approval_gate | memory | dummy | `agent_contracts.dummies.safety:InMemoryApprovalGate` | Approval requests in a dictionary. |
 | approval_gate | ttl | dummy | `agent_contracts.dummies.safety:TtlApprovalGate` | Like ``memory`` but every request without an expiry gets a default one (SLA timer). |

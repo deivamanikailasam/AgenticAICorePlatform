@@ -43,7 +43,9 @@ ADAPTERS = ["langgraph", "agent_framework"]
 PROVIDER = TracerProvider()
 
 
-def react_spec(adapter: str, max_steps: int = 8, extra_tools: str = "") -> str:
+def react_spec(
+    adapter: str, max_steps: int = 8, extra_tools: str = "", engine: str = "native"
+) -> str:
     return f"""
 spec_version: 1
 name: tool-agent
@@ -55,6 +57,7 @@ autonomy: agent
 pattern: react
 models: {{ default: local-qwen-fast }}
 runtime: {{ adapter: {adapter}, durability: memory }}
+components: {{ agent_loop: {engine} }}
 budgets: {{ max_steps: {max_steps}, max_wall_seconds: 60, max_tokens: 20000, max_cost_aud: 1.0 }}
 tools:
   - ref: local://platform/calculator
@@ -90,9 +93,10 @@ class GoldenStandIn(ScriptedModelClient):
         return ChatResponse(message=reply, model=request.model)
 
 
+@pytest.mark.parametrize("engine", ["native", "openai_agents", "pydantic_ai"])
 @pytest.mark.parametrize("adapter", ADAPTERS)
-async def test_golden_tool_tasks_mechanics(adapter: str) -> None:
-    spec = load_spec_text(react_spec(adapter))
+async def test_golden_tool_tasks_mechanics(adapter: str, engine: str) -> None:
+    spec = load_spec_text(react_spec(adapter, engine=engine))
     solved = []
     for case in CASES:
         result, _ = await run(
