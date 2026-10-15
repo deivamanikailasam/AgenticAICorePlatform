@@ -25,15 +25,35 @@ def _port_ok(port: Any) -> bool:
     return len(parts) < 2 or parts[0] == "127.0.0.1"
 
 
+def _check_dockerfile(compose_path: Path, build: Any, where: str) -> list[str]:
+    """Locally built images are fine if every FROM line in their Dockerfile is digest-pinned."""
+    if isinstance(build, str):
+        build = {"context": build}
+    context = (compose_path.parent / build.get("context", ".")).resolve()
+    dockerfile = context / build.get("dockerfile", "Dockerfile")
+    if not dockerfile.exists():
+        return [f"{where}: Dockerfile {dockerfile} not found"]
+    problems = []
+    for line in dockerfile.read_text().splitlines():
+        words = line.split()
+        if words and words[0].upper() == "FROM" and "@sha256:" not in line:
+            base = words[1] if len(words) > 1 else "?"
+            problems.append(f"{where}: base image '{base}' is not pinned by digest")
+    return problems
+
+
 def check_file(path: Path) -> list[str]:
     doc = yaml.safe_load(path.read_text()) or {}
     problems: list[str] = []
     for name, svc in (doc.get("services") or {}).items():
         where = f"{path.relative_to(ROOT)}:{name}"
         image = svc.get("image")
-        if image and "@sha256:" not in str(image):
+        build = svc.get("build")
+        if build:
+            problems.extend(_check_dockerfile(path, build, where))
+        elif image and "@sha256:" not in str(image):
             problems.append(f"{where}: image '{image}' is not pinned by digest")
-        if not image and "build" not in svc:
+        if not image and not build:
             problems.append(f"{where}: has neither image nor build")
         for port in svc.get("ports") or []:
             if not _port_ok(port):

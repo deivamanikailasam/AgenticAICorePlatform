@@ -1,0 +1,9 @@
+# Stand-in gateway: role aliases answer with canned responses so no real model is needed.
+model_list:
+  - model_name: local-qwen-fast
+    litellm_params: { model: openai/fake-fast, api_key: none, mock_response: "stand-in fast" }
+  - model_name: local-qwen-quality
+    litellm_params: { model: openai/fake-quality, api_key: none, mock_response: "stand-in quality" }
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL

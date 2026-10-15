@@ -1,0 +1,7 @@
+{
+  "realm": "rag-platform",
+  "enabled": true,
+  "sslRequired": "none",
+  "clients": [],
+  "users": []
+}

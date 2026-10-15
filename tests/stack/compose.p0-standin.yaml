@@ -1,0 +1,89 @@
+# STAND-IN for Project 0's shared services — CI and cloud sessions ONLY (ADR 0011).
+# Same upstream images Project 0 uses, pinned by digest. Contains no Project 0 or Project A
+# code. Never start this on the Mac: there, Project 0 itself provides these services.
+name: p0-standin
+
+networks:
+  default:
+    name: ${P0_NETWORK:-rag-platform}
+
+volumes:
+  pgdata:
+
+services:
+  postgres:
+    image: docker.io/pgvector/pgvector:0.8.7-pg17-trixie@sha256:7a7e9f22015b67edb4bef5c59daeebcd7e74bfa570df6ce60ae01237c8648a84
+    environment:
+      POSTGRES_PASSWORD: ${STANDIN_PG_PASSWORD:-standin-only}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./config/postgres-init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    ports: ["127.0.0.1:5432:5432"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      retries: 30
+
+  valkey:
+    image: docker.io/valkey/valkey:9.0.6-alpine3.24@sha256:187679e3bd4036959631e3f03983ab2ba503ab21e6fd0454d508e909db2ee989
+    ports: ["127.0.0.1:6379:6379"]
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  keycloak:
+    image: docker.io/keycloak/keycloak:26.8.1@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244
+    command: ["start-dev", "--import-realm", "--health-enabled=true"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${STANDIN_KC_PASSWORD:-standin-only}
+    volumes:
+      - ./config/keycloak-realm.json:/opt/keycloak/data/import/rag-platform.json:ro
+    ports: ["127.0.0.1:8080:8080"]
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 5s
+      retries: 40
+
+  opa:
+    image: docker.io/openpolicyagent/opa:1.21.2-static@sha256:0843d2adce51655422e8b95a803629ab9f424803c4bd27876e7f44cce9a2b84d
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "--log-level=info"]
+    ports: ["127.0.0.1:8181:8181"]
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "/opa", "eval", "true"]
+      interval: 5s
+      retries: 10
+
+  litellm:
+    image: docker.io/litellm/litellm:v1.105.1@sha256:b7b9e2c306343721802253d0dd9436b9634a2eb4e14da7c7cf06c5c7b7530802
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${STANDIN_LITELLM_MASTER_KEY:-sk-standin-only}
+      DATABASE_URL: postgresql://postgres:${STANDIN_PG_PASSWORD:-standin-only}@postgres:5432/litellm
+      STORE_MODEL_IN_DB: "False"
+    volumes:
+      - ./config/litellm.yaml:/app/config.yaml:ro
+    ports: ["127.0.0.1:4000:4000"]
+    mem_limit: 1g
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness')\""]
+      interval: 5s
+      retries: 60
+
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.162.0@sha256:39923a8e431bd1f57be82411999d389fcfe40857492e4365456d97a4c1f74be6
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./config/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:13133:13133"
+    mem_limit: 256m

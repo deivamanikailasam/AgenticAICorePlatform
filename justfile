@@ -70,7 +70,8 @@ provision-litellm:
 
 # Start / stop Project A services on Project 0's Docker network
 up:
-    {{compose}} up -d --wait
+    {{compose}} build
+    {{compose}} run --rm agent-health
 
 down:
     {{compose}} down

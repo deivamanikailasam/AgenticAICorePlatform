@@ -1,0 +1,34 @@
+# Project A services. They join Project 0's Docker network (external) and reach its services
+# by name. Service names below are Project 0's assumed names — VERIFY-ON-MAC against
+# ~/dev/rag-platform/infra/compose. Ports bind to 127.0.0.1; images are pinned by digest.
+name: agent-platform
+
+networks:
+  default:
+    name: ${P0_NETWORK:-rag-platform}
+    external: true
+
+secrets:
+  extra_ca:
+    file: ${EXTRA_CA_BUNDLE:-/dev/null}
+
+x-p0-endpoints: &p0-endpoints
+  P0_LITELLM_URL: http://litellm:4000
+  P0_POSTGRES_DSN: ${P0_POSTGRES_DSN_INTERNAL:-postgresql://agent_health@postgres:5432/postgres}
+  P0_VALKEY_URL: redis://valkey:6379/0
+  P0_KEYCLOAK_URL: http://keycloak:8080
+  P0_KEYCLOAK_REALM: ${P0_KEYCLOAK_REALM:-rag-platform}
+  P0_OPA_URL: http://opa:8181
+  P0_OTEL_HEALTH_URL: http://otel-collector:13133/
+
+services:
+  # One-shot: proves Project A can reach every Project 0 dependency from inside the network.
+  agent-health:
+    build: { context: ../.., dockerfile: infra/compose/ops.Dockerfile, secrets: [extra_ca] }
+    image: agent-platform/ops:dev
+    environment: *p0-endpoints
+    restart: "no"
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 128m

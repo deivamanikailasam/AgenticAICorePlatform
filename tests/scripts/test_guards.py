@@ -64,3 +64,18 @@ def test_new_adr_numbers_and_fills_template(tmp_path: Path) -> None:
     path = new_adr.create("Use Valkey for queues!", tmp_path, date(2026, 10, 15))
     assert path.name == "0008-use-valkey-for-queues.md"
     assert path.read_text() == "# ADR 0008: Use Valkey for queues!\n\nDate: 2026-10-15\n"
+
+
+def test_compose_build_requires_pinned_base(compose_file, tmp_path: Path) -> None:
+    df = check_compose.ROOT / "tests" / "stack" / "_tmp.Dockerfile"
+    df.write_text("FROM python:3.12-slim\n")
+    try:
+        p = compose_file(
+            "services:\n  ops:\n    build: { context: ., dockerfile: _tmp.Dockerfile }\n"
+            "    restart: 'no'\n"
+        )
+        assert "base image 'python:3.12-slim'" in check_compose.check_file(p)[0]
+        df.write_text("FROM python:3.12-slim@sha256:" + "b" * 64 + "\n")
+        assert check_compose.check_file(p) == []
+    finally:
+        df.unlink()
