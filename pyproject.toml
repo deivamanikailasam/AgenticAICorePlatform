@@ -54,6 +54,10 @@ exclude = ["/tests/"]
 namespace_packages = true
 explicit_package_bases = true
 
+[[tool.mypy.overrides]]
+module = ["boto3", "boto3.*", "botocore", "botocore.*"]
+ignore_missing_imports = true  # no inline types; calls are wrapped in agent_tools.artefacts
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 addopts = "-q -m 'not integration and not mac' --strict-markers"

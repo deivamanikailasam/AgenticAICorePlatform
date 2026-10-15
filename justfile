@@ -17,7 +17,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test compose-check secret-scan catalogue-check spec-reference-check validate
+check: lint typecheck test policy-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate
 
 lint:
     uv run ruff check .
@@ -57,7 +57,7 @@ health:
     uv run python -m scripts.health
 
 # Create Project A's shared resources in Project 0 (idempotent)
-provision: provision-db provision-keycloak provision-litellm
+provision: provision-db provision-keycloak provision-litellm provision-artefacts
 
 provision-db:
     uv run python -m scripts.provision.agent_db
@@ -67,6 +67,9 @@ provision-keycloak:
 
 provision-litellm:
     uv run python -m scripts.provision.litellm_keys
+
+provision-artefacts:
+    uv run python -m scripts.provision.artefacts
 
 # Start / stop Project A services on Project 0's Docker network
 up:
@@ -127,3 +130,14 @@ compile spec:
 # Run a spec once (traced): just run agents/hello-workflow/agent.yaml '{"name":"Ada"}'
 run spec input="{}":
     uv run agent-compile run {{spec}} --input '{{input}}'
+
+# Apply database migrations to the agent database (idempotent)
+migrate:
+    uv run python -m scripts.migrate
+
+# Regenerate tool and agent cards from the registries
+cards:
+    uv run python -m scripts.cards
+
+cards-check:
+    uv run python -m scripts.cards --check

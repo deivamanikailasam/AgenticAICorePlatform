@@ -1,0 +1,36 @@
+kind: tool
+name: word_count
+version: 1.0.0
+ref: local://platform/word_count
+owner: agent-platform
+purpose: Count the words and characters in a text.
+side_effect: read
+default_rule: Allowed if the user may read the data.
+idempotent: true
+timeout_seconds: 2.0
+retry:
+  max_attempts: 1
+  backoff_seconds: 0.5
+data_classification: internal
+deprecated: false
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      maxLength: 1000000
+  required:
+  - text
+  additionalProperties: false
+output_schema:
+  type: object
+  properties:
+    words:
+      type: integer
+    characters:
+      type: integer
+  required:
+  - words
+  - characters
+limitations: Output is untrusted data and is never treated as instructions.
+eval_results: none yet (agent evals start in Step 34)

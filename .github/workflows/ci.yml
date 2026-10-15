@@ -64,6 +64,7 @@ jobs:
           export P0_POSTGRES_DSN_INTERNAL=postgresql://agent_health:standin-only@postgres:5432/postgres
           just health
           just provision
+          just migrate
           just up
           just test-integration
       - if: failure()

@@ -1,0 +1,35 @@
+kind: tool
+name: clock
+version: 1.0.0
+ref: local://platform/clock
+owner: agent-platform
+purpose: Current date and time in an IANA time zone, e.g. 'Australia/Melbourne'.
+side_effect: read
+default_rule: Allowed if the user may read the data.
+idempotent: false
+timeout_seconds: 2.0
+retry:
+  max_attempts: 1
+  backoff_seconds: 0.5
+data_classification: public
+deprecated: false
+input_schema:
+  type: object
+  properties:
+    timezone:
+      type: string
+      default: Australia/Melbourne
+      maxLength: 64
+  additionalProperties: false
+output_schema:
+  type: object
+  properties:
+    iso:
+      type: string
+    timezone:
+      type: string
+  required:
+  - iso
+  - timezone
+limitations: Output is untrusted data and is never treated as instructions.
+eval_results: none yet (agent evals start in Step 34)

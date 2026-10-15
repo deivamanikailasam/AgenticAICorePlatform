@@ -1,0 +1,35 @@
+kind: tool
+name: calculator
+version: 1.0.0
+ref: local://platform/calculator
+owner: agent-platform
+purpose: Evaluate an arithmetic expression such as '(2 + 3) * 4'. Numbers and + -
+  * / // % ** only.
+side_effect: read
+default_rule: Allowed if the user may read the data.
+idempotent: true
+timeout_seconds: 2.0
+retry:
+  max_attempts: 1
+  backoff_seconds: 0.5
+data_classification: public
+deprecated: false
+input_schema:
+  type: object
+  properties:
+    expression:
+      type: string
+      minLength: 1
+      maxLength: 200
+  required:
+  - expression
+  additionalProperties: false
+output_schema:
+  type: object
+  properties:
+    result:
+      type: number
+  required:
+  - result
+limitations: Output is untrusted data and is never treated as instructions.
+eval_results: none yet (agent evals start in Step 34)

@@ -52,8 +52,14 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | telemetry_emitter | memory | dummy | `agent_contracts.dummies.observability:MemoryTelemetryEmitter` | Keeps finished spans and metrics in lists, for assertions in tests. |
 | telemetry_emitter | noop | dummy | `agent_contracts.dummies.observability:NoopTelemetryEmitter` | Discards everything (telemetry switched off). |
 | tool | add | dummy | `agent_contracts.dummies.tools:AddTool` | Adds two numbers. |
+| tool | calculator | implemented | `agent_tools.builtin:CalculatorTool` | Evaluates an arithmetic expression safely (no code execution). |
+| tool | clock | implemented | `agent_tools.builtin:ClockTool` | Returns the current date and time in a time zone (default Australia/Melbourne). |
 | tool | echo | dummy | `agent_contracts.dummies.tools:EchoTool` | Returns its arguments unchanged. |
+| tool | word_count | implemented | `agent_tools.builtin:WordCountTool` | Counts words and characters in a text. |
 | tool_executor | local | dummy | `agent_contracts.dummies.tools:LocalToolExecutor` | Validates arguments, enforces timeouts and replays results for repeated idempotency keys. |
+| tool_executor | platform | implemented | `agent_tools.executor:PlatformToolExecutor` | Validates, de-duplicates, times out, retries safely and spills large outputs to S3. |
 | tool_executor | retrying | dummy | `agent_contracts.dummies.tools:RetryingToolExecutor` | Like ``local`` but honours each tool's retry policy for idempotent tools. |
+| tool_registry | in_memory | implemented | `agent_tools.registry:InMemoryToolRegistry` | Tools in a dictionary. For unit tests and single-process tools. |
 | tool_registry | indexed | dummy | `agent_contracts.dummies.tools:IndexedToolRegistry` | Keeps a per-name version index, sorted newest first. |
 | tool_registry | memory | dummy | `agent_contracts.dummies.tools:InMemoryToolRegistry` | Dictionary keyed by (name, version). |
+| tool_registry | postgres | implemented | `agent_tools.registry:PostgresToolRegistry` | Specs in ``agent_tools.tool_specs`` (Project 0 Postgres, ``agent`` DB); bindings in process. |
