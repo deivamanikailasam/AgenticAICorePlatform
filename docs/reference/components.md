@@ -54,6 +54,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | memory_policy | validating | implemented | `agent_memory.policy:ValidatingMemoryPolicy` |  |
 | memory_store | memory | dummy | `agent_contracts.dummies.state:InMemoryMemoryStore` | Memory items in a dictionary; keyword-overlap search. |
 | memory_store | pgvector | implemented | `agent_memory.pgvector:PgVectorMemoryStore` |  |
+| memory_store | qdrant | implemented | `agent_memory.qdrant:QdrantMemoryStore` |  |
 | memory_store | sqlite | dummy | `agent_contracts.dummies.state:SqliteMemoryStore` | Memory items in SQLite (in-memory by default); keyword-overlap search in Python. |
 | model_client | echo | dummy | `agent_contracts.dummies.models:EchoModelClient` | Echoes the last user message; satisfies response schemas with the smallest valid value. |
 | model_client | litellm | implemented | `agent_runtime.models.gateway:GatewayModelClient` | Chat, tools, structured output and streaming through the Project 0 LiteLLM gateway. |

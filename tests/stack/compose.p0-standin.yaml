@@ -11,6 +11,7 @@ volumes:
   pgdata:
   tempodata:
   seaweeddata:
+  qdrantdata:
 
 services:
   postgres:
@@ -112,3 +113,16 @@ services:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/ || exit 1"]
       interval: 3s
       retries: 40
+
+  qdrant:
+    image: docker.io/qdrant/qdrant:v1.19.1@sha256:12364fe851b9f17356fc88189fc06d1b521262e04659ec7345975b00c9246a10
+    environment:
+      QDRANT__SERVICE__API_KEY: ${STANDIN_QDRANT_API_KEY:-standin-only}
+    volumes:
+      - qdrantdata:/qdrant/storage
+    ports: ["127.0.0.1:6333:6333"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 2s
+      retries: 30
