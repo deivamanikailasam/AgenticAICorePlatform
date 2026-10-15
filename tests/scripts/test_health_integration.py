@@ -20,4 +20,5 @@ async def test_every_project0_dependency_is_reachable() -> None:
         "keycloak",
         "opa",
         "otel-collector",
+        "openbao",
     }

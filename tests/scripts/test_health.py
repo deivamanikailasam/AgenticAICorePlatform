@@ -14,13 +14,14 @@ def endpoints() -> Endpoints:
             "P0_KEYCLOAK_REALM": "r",
             "P0_OPA_URL": "http://opa",
             "P0_OTEL_HEALTH_URL": "http://otel/",
+            "P0_OPENBAO_URL": "http://bao",
         }
     )
 
 
 async def test_defaults_bind_to_loopback() -> None:
     ep = Endpoints.from_env({})
-    for value in (ep.litellm_url, ep.keycloak_url, ep.opa_url, ep.otel_health_url):
+    for value in (ep.litellm_url, ep.keycloak_url, ep.opa_url, ep.otel_health_url, ep.openbao_url):
         assert "127.0.0.1" in value
 
 
@@ -32,6 +33,9 @@ async def test_http_checks_pass_and_fail(endpoints: Endpoints) -> None:
     )
     respx.get("http://opa/health").respond(500)
     respx.get("http://otel/").respond(200)
+    respx.get("http://bao/v1/sys/health").respond(
+        200, json={"initialized": True, "sealed": False, "version": "2.7.0"}
+    )
     async with httpx.AsyncClient() as client:
         checks = build_checks(endpoints, client)
         http_only = {k: v for k, v in checks.items() if k not in {"postgres", "valkey"}}
@@ -41,6 +45,7 @@ async def test_http_checks_pass_and_fail(endpoints: Endpoints) -> None:
     assert not results["opa"].ok
     assert "500" in results["opa"].detail
     assert results["otel-collector"].ok
+    assert results["openbao"].detail == "unsealed, version 2.7.0"
 
 
 @respx.mock
@@ -63,3 +68,14 @@ async def test_timeout_is_reported_not_raised() -> None:
     assert not result.ok
     assert "TimeoutError" in result.detail
     assert "FAIL" in render([result])
+
+
+@respx.mock
+async def test_sealed_openbao_fails(endpoints: Endpoints) -> None:
+    # OpenBao answers 503 when sealed; a 200 that still says sealed is refused as well
+    respx.get("http://bao/v1/sys/health").respond(200, json={"initialized": True, "sealed": True})
+    async with httpx.AsyncClient() as client:
+        checks = {"openbao": build_checks(endpoints, client)["openbao"]}
+        (result,) = await run_checks(checks)
+    assert not result.ok
+    assert "sealed" in result.detail

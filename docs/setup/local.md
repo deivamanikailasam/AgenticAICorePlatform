@@ -56,8 +56,8 @@ Every later command that needs secrets runs as `just with-secrets <command>`.
 just with-secrets just health
 ```
 
-Expected: six rows, all `OK`: `litellm-gateway`, `postgres`, `valkey`, `keycloak`, `opa`,
-`otel-collector`.
+Expected: seven rows, all `OK`: `litellm-gateway`, `postgres`, `valkey`, `keycloak`, `opa`,
+`otel-collector`, `openbao`.
 
 ## 4. Provision Project A's resources
 
@@ -66,8 +66,12 @@ just with-secrets just provision
 just with-secrets just provision   # second run: every line says "exists"
 ```
 
-Move the new key values from `.tmp/litellm-keys.env` into OpenBao (automated in Step 29), then
-delete the file.
+The last provisioning step, `provision-openbao`, moves the new LiteLLM key values from
+`.tmp/litellm-keys.env` into OpenBao (`agent-platform/litellm/<role>`) and deletes the file once
+every key reads back. It also writes the runtime's AppRole to `.tmp/openbao-approle.env`: move
+`AGENT_BAO_ROLE_ID` and `AGENT_BAO_SECRET_ID` into `secrets/dev.env`, run `just secrets-init`,
+then delete the file. `P0_OPENBAO_URL` defaults to `http://127.0.0.1:8200`; if Project 0's
+OpenBao reaches Postgres under a name other than `postgres:5432`, set `AGENT_BAO_DB_HOST`.
 
 Then apply the database migrations (tables for the tool registry and, later, checkpoints,
 memory and the agent registry):

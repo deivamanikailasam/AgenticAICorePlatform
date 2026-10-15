@@ -52,6 +52,21 @@ services:
       interval: 5s
       retries: 40
 
+  openbao:
+    # Dev mode: in-memory, auto-unsealed, root token below. Stand-in only (Project 0 runs the
+    # real, sealed server on the Mac).
+    image: docker.io/openbao/openbao:2.7.0@sha256:71156a1c6623a5fa3f5e61b0c6a8ead0faf0df29a778339188443551995d1315
+    command: ["server", "-dev", "-dev-listen-address=0.0.0.0:8200"]
+    environment:
+      BAO_DEV_ROOT_TOKEN_ID: ${STANDIN_BAO_TOKEN:-standin-only}
+    cap_add: ["IPC_LOCK"]
+    ports: ["127.0.0.1:8200:8200"]
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8200/v1/sys/health | grep -q '\"sealed\":false'"]
+      interval: 2s
+      retries: 30
+
   opa:
     image: docker.io/openpolicyagent/opa:1.21.2-static@sha256:0843d2adce51655422e8b95a803629ab9f424803c4bd27876e7f44cce9a2b84d
     command: ["run", "--server", "--addr=0.0.0.0:8181", "--log-level=info"]

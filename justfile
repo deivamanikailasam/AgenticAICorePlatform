@@ -69,7 +69,7 @@ health:
     uv run python -m scripts.health
 
 # Create Project A's shared resources in Project 0 (idempotent)
-provision: provision-db provision-keycloak provision-litellm provision-artefacts provision-policies
+provision: provision-db provision-keycloak provision-litellm provision-artefacts provision-policies provision-openbao
 
 provision-db:
     uv run python -m scripts.provision.agent_db
@@ -83,6 +83,10 @@ provision-litellm:
 # OpenFGA store and model (only when relationship checks are used)
 provision-openfga:
     uv run python -m scripts.provision.openfga
+
+# Step 29: KV mount, dynamic database credentials, runtime AppRole; imports .tmp/litellm-keys.env
+provision-openbao:
+    uv run python -m scripts.provision.openbao
 
 provision-artefacts:
     uv run python -m scripts.provision.artefacts

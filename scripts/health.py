@@ -38,6 +38,7 @@ class Endpoints:
     keycloak_realm: str
     opa_url: str
     otel_health_url: str
+    openbao_url: str = "http://127.0.0.1:8200"
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Endpoints:
@@ -52,6 +53,7 @@ class Endpoints:
             keycloak_realm=e.get("P0_KEYCLOAK_REALM", "rag-platform"),
             opa_url=e.get("P0_OPA_URL", "http://127.0.0.1:8181"),
             otel_health_url=e.get("P0_OTEL_HEALTH_URL", "http://127.0.0.1:13133/"),
+            openbao_url=e.get("P0_OPENBAO_URL", "http://127.0.0.1:8200"),
         )
 
 
@@ -75,6 +77,13 @@ def _oidc(resp: httpx.Response) -> str:
     if not issuer:
         raise ValueError("no issuer in OIDC discovery document")
     return f"issuer {issuer}"
+
+
+def _openbao(resp: httpx.Response) -> str:
+    doc = resp.json()
+    if doc.get("sealed") or not doc.get("initialized"):
+        raise ValueError("OpenBao is sealed or not initialised")
+    return f"unsealed, version {doc.get('version', '?')}"
 
 
 def postgres_check(dsn: str) -> CheckFn:
@@ -119,6 +128,8 @@ def build_checks(ep: Endpoints, client: httpx.AsyncClient) -> dict[str, CheckFn]
         ),
         "opa": http_check(client, f"{ep.opa_url}/health", _status),
         "otel-collector": http_check(client, ep.otel_health_url, _status),
+        # 200 only when initialised, unsealed and active (Step 29)
+        "openbao": http_check(client, f"{ep.openbao_url}/v1/sys/health", _openbao),
     }
 
 

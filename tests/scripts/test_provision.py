@@ -110,3 +110,39 @@ def test_litellm_puts_role_keys_in_one_budgeted_team(tmp_path: Path) -> None:
     assert team["max_budget"] == 3.5  # the sum of the role caps
     assert team["models"] == ["a", "b"]
     assert {json.loads(c.request.content)["team_id"] for c in gen.calls} == {"t-1"}
+
+
+def test_openbao_tool_roles_are_short_lived() -> None:
+    from scripts.provision import openbao
+
+    cfg = openbao.load()
+    for name, role in cfg["database"]["roles"].items():
+        assert openbao.seconds(role["max_ttl"]) <= 900, name
+    assert openbao.seconds("5m") == 300
+    with pytest.raises(ValueError, match="duration"):
+        openbao.seconds("1d")
+    # the runtime identity may only read the KV mount
+    assert openbao.runtime_policy(cfg) == (
+        'path "agent-platform/data/*" {\n  capabilities = ["read"]\n}\n'
+    )
+
+
+@pytest.mark.integration
+def test_openbao_provisioning_is_idempotent(tmp_path: Path) -> None:
+    from scripts.provision import openbao
+
+    keys = tmp_path / "litellm-keys.env"
+    keys.write_text("LITELLM_KEY_PROBE=sk-test-not-a-real-key\n")  # secret-scan: allow
+    cfg = openbao.load()
+    with httpx.Client(timeout=15) as c:
+        bao = openbao.Bao(c, os.environ["P0_OPENBAO_URL"], os.environ["OPENBAO_ADMIN_TOKEN"])
+        admin = os.environ["P0_POSTGRES_ADMIN_DSN"]
+        openbao.provision(bao, admin, cfg, cfg["database"]["host"], tmp_path)
+        again = openbao.provision(bao, admin, cfg, cfg["database"]["host"], tmp_path)
+        stored = bao.get("agent-platform/data/litellm/probe")["data"]["data"]["api_key"]
+        bao.write("agent-platform/metadata/litellm/probe", method="DELETE")
+    assert stored == "sk-test-not-a-real-key"  # secret-scan: allow
+    assert not keys.exists()  # imported, then deleted
+    assert stat.S_IMODE((tmp_path / "openbao-approle.env").stat().st_mode) == 0o600
+    changed = [a for a in again if not a.endswith(("exists", "nothing to import"))]
+    assert not changed, changed

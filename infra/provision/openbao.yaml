@@ -1,0 +1,32 @@
+# Project A's paths, engines and policies in Project 0's OpenBao (Step 29). Idempotent:
+# `just provision-openbao`. Nothing here is a secret.
+
+# KV v2: the platform's own static secrets (Keycloak client secrets, LiteLLM keys).
+kv_mount: agent-platform
+
+# Dynamic Postgres credentials for tools. OpenBao creates a new database user per tool call,
+# valid for minutes, and drops it when the lease ends. Tool credentials must be short-lived:
+# the platform refuses any lease longer than 15 minutes.
+database:
+  mount: agent-db
+  connection: agent
+  database: agent
+  # Postgres as OpenBao reaches it (container network); override with AGENT_BAO_DB_HOST
+  host: postgres:5432
+  # the role OpenBao logs in as to create users; its password is rotated by OpenBao at once,
+  # so no person or file knows it
+  manager_role: agent_bao
+  roles:
+    tool-reader:
+      # group role holding the grants; issued users are members of it and nothing else
+      member_of: agent_tool_reader
+      schema: tool_data          # read-only access to this schema
+      default_ttl: 5m
+      max_ttl: 15m
+
+# The platform runtime's own identity outside Kubernetes (Kubernetes: workload identity).
+approle:
+  role: agent-platform-runtime
+  token_ttl: 15m
+  token_max_ttl: 1h
+  secret_id_ttl: 720h

@@ -41,7 +41,9 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | context_manager | trim | implemented | `agent_runtime.context:TrimContextManager` | ``context_manager.trim``: drop the oldest turns; no summary. |
 | context_manager | trim_dummy | dummy | `agent_contracts.dummies.context:TrimContextManager` | Drops the oldest, lowest-priority messages until the context fits (a test double; the |
 | credential_broker | memory | dummy | `agent_contracts.dummies.credentials:InMemoryCredentialBroker` | Issues a fresh random user name and password for each allowed source. |
+| credential_broker | openbao | implemented | `agent_tools.openbao:OpenBaoCredentialBroker` | Dynamic credentials from ``<mount>/creds/<role>``; leases revoked through |
 | credential_broker | static | dummy | `agent_contracts.dummies.credentials:StaticCredentialBroker` | Issues the same test values every time (for tests that check exact values). |
+| credential_broker | vault | implemented | `agent_tools.openbao:VaultCredentialBroker` | HashiCorp Vault: the same HTTP API. Verified against OpenBao, not against Vault |
 | critic | length | dummy | `agent_contracts.dummies.reasoning:LengthCritic` | Passes outputs of at least ``min_words`` words. |
 | critic | llm | implemented | `agent_runtime.reasoning:LlmCritic` |  |
 | critic | overlap | dummy | `agent_contracts.dummies.reasoning:OverlapCritic` | Scores the share of task words that the output mentions. |

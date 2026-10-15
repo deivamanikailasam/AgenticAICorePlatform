@@ -34,6 +34,8 @@ dependencies = [
 "tool.word_count" = "agent_tools.builtin:WordCountTool"
 "tool.rag_core_search" = "agent_tools.ragcore:RagCoreSearchTool"
 "tool.sandbox_python" = "agent_tools.sandbox_tool:SandboxPythonTool"
+"credential_broker.openbao" = "agent_tools.openbao:OpenBaoCredentialBroker"
+"credential_broker.vault" = "agent_tools.openbao:VaultCredentialBroker"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }
