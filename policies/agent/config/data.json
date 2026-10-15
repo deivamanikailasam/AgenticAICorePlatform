@@ -24,5 +24,20 @@
         "risk_tier": "high"
       }
     ]
+  },
+  "approvals": {
+    "default_group": "group:approvers",
+    "two_person_group": "group:two-person-approvers",
+    "escalate_to": "group:approval-leads",
+    "sla_minutes": {
+      "low": 240,
+      "medium": 60,
+      "high": 30
+    },
+    "tools": {
+      "erp__post_payment": {
+        "approvers": "group:finance-approvers"
+      }
+    }
   }
 }

@@ -768,3 +768,14 @@ def check_agent_transition(current: AgentStatus, target: AgentStatus, by: str) -
 def agent_version_key(version: str) -> tuple[int, ...]:
     core = version.split("-", 1)[0]
     return tuple(int(p) if p.isdigit() else 0 for p in core.split("."))
+
+
+class ApprovalRoute(Frozen):
+    """Who must approve a paused action, how long they have, and who gets it next (Step 28)."""
+
+    approvers: str
+    two_person: bool = False
+    sla_minutes: int = Field(default=60, ge=1)
+    escalate_to: str | None = None
+    reasons: tuple[str, ...] = ()
+    policy_version: str | None = None
