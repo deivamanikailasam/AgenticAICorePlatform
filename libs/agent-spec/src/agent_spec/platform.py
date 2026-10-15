@@ -47,12 +47,63 @@ class Currency(_Cfg):
     as_of: date
 
 
+class McpAuth(_Cfg):
+    """How the platform authenticates to a remote MCP server."""
+
+    kind: Literal["none", "oauth_client_credentials", "bearer"] = "none"
+    issuer: str | None = None  # OAuth: the authorization server the credentials belong to
+    client_id: str | None = None
+    client_secret: str | None = None  # a ${secret:path#key} reference, resolved at call time
+    scope: str | None = None
+    token: str | None = None  # bearer: a ${secret:path#key} reference
+
+
+class McpServer(_Cfg):
+    """One allowlisted MCP server. Servers not listed here are refused."""
+
+    name: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{0,40}$")
+    transport: Literal["http", "stdio"]
+    url: str | None = None  # http
+    command: str | None = None  # stdio
+    args: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
+    # Only these variables from the platform's own environment reach a stdio server (never the
+    # whole environment: it can hold secrets). Defaults: proxy and CA settings only.
+    env_passthrough: list[str] = Field(
+        default_factory=lambda: [
+            "HTTPS_PROXY",
+            "HTTP_PROXY",
+            "NO_PROXY",
+            "https_proxy",
+            "http_proxy",
+            "no_proxy",
+            "SSL_CERT_FILE",
+            "NODE_EXTRA_CA_CERTS",
+            "REQUESTS_CA_BUNDLE",
+        ]
+    )
+    protocol: Literal["auto", "legacy", "2026-07-28"] = "auto"
+    trusted: bool = False  # only trusted servers' tool annotations are believed
+    allowed_tools: list[str] | None = None  # None = every tool the server lists
+    side_effects: dict[str, Literal["read", "write", "irreversible"]] = Field(default_factory=dict)
+    auth: McpAuth = McpAuth()
+    timeout_seconds: float = Field(default=30, gt=0)
+
+
+class Mcp(_Cfg):
+    servers: list[McpServer] = Field(default_factory=list)
+
+    def server(self, name: str) -> McpServer | None:
+        return next((s for s in self.servers if s.name == name), None)
+
+
 class PlatformConfig(_Cfg):
     platform_version: Literal[1] = 1
     gateway: Gateway = Gateway()
     models: Models
     currency: Currency
     components: dict[str, str] = Field(default_factory=dict)  # platform defaults: slot -> name
+    mcp: Mcp = Mcp()
 
     def alias_for(self, role_or_alias: str, spec_models: Mapping[str, str] | None = None) -> str:
         """Spec role > platform role > the name itself (already an alias)."""

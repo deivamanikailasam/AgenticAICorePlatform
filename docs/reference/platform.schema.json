@@ -57,6 +57,227 @@
       "title": "Gateway",
       "type": "object"
     },
+    "Mcp": {
+      "additionalProperties": false,
+      "properties": {
+        "servers": {
+          "items": {
+            "$ref": "#/$defs/McpServer"
+          },
+          "title": "Servers",
+          "type": "array"
+        }
+      },
+      "title": "Mcp",
+      "type": "object"
+    },
+    "McpAuth": {
+      "additionalProperties": false,
+      "description": "How the platform authenticates to a remote MCP server.",
+      "properties": {
+        "client_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Client Id"
+        },
+        "client_secret": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Client Secret"
+        },
+        "issuer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issuer"
+        },
+        "kind": {
+          "default": "none",
+          "enum": [
+            "none",
+            "oauth_client_credentials",
+            "bearer"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        },
+        "token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token"
+        }
+      },
+      "title": "McpAuth",
+      "type": "object"
+    },
+    "McpServer": {
+      "additionalProperties": false,
+      "description": "One allowlisted MCP server. Servers not listed here are refused.",
+      "properties": {
+        "allowed_tools": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allowed Tools"
+        },
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Args",
+          "type": "array"
+        },
+        "auth": {
+          "$ref": "#/$defs/McpAuth",
+          "default": {
+            "client_id": null,
+            "client_secret": null,
+            "issuer": null,
+            "kind": "none",
+            "scope": null,
+            "token": null
+          }
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "object"
+        },
+        "env_passthrough": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Env Passthrough",
+          "type": "array"
+        },
+        "name": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,40}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "protocol": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "legacy",
+            "2026-07-28"
+          ],
+          "title": "Protocol",
+          "type": "string"
+        },
+        "side_effects": {
+          "additionalProperties": {
+            "enum": [
+              "read",
+              "write",
+              "irreversible"
+            ],
+            "type": "string"
+          },
+          "title": "Side Effects",
+          "type": "object"
+        },
+        "timeout_seconds": {
+          "default": 30,
+          "exclusiveMinimum": 0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        },
+        "transport": {
+          "enum": [
+            "http",
+            "stdio"
+          ],
+          "title": "Transport",
+          "type": "string"
+        },
+        "trusted": {
+          "default": false,
+          "title": "Trusted",
+          "type": "boolean"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        }
+      },
+      "required": [
+        "name",
+        "transport"
+      ],
+      "title": "McpServer",
+      "type": "object"
+    },
     "ModelCapabilities": {
       "additionalProperties": false,
       "properties": {
@@ -140,6 +361,12 @@
         "max_retries": 2,
         "timeout_seconds": 60.0,
         "url": "http://127.0.0.1:4000"
+      }
+    },
+    "mcp": {
+      "$ref": "#/$defs/Mcp",
+      "default": {
+        "servers": []
       }
     },
     "models": {

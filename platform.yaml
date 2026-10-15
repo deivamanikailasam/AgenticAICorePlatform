@@ -28,3 +28,16 @@ currency:
   as_of: 2026-10-01                 # refresh monthly; cost reports state this date
 
 components: {}                      # platform defaults per slot, e.g. { checkpointer: postgres }
+
+# Step 7: the MCP server allowlist. A spec may only use mcp://<server>/<tool> for servers here.
+# Annotations (read-only, destructive, …) from untrusted servers are ignored; side effects then
+# default to `write` unless listed under `side_effects` by the platform owner.
+mcp:
+  servers:
+    - name: filesystem
+      transport: stdio
+      command: npx
+      args: ["-y", "@modelcontextprotocol/server-filesystem@1.0.0", "${AGENT_FS_ROOT:-/tmp/agent-fs}"]
+      trusted: false
+      side_effects: { read_text_file: read, read_file: read, list_directory: read, search_files: read, get_file_info: read }
+      allowed_tools: [read_text_file, list_directory, search_files, get_file_info]
