@@ -62,6 +62,8 @@ jobs:
         run: |
           set -a; . tests/stack/standin.env; set +a
           export P0_POSTGRES_DSN_INTERNAL=postgresql://agent_health:standin-only@postgres:5432/postgres
+          # long-term memory (Step 20) of the services' agents lives in the agent database
+          export AGENT_DB_DSN_INTERNAL=postgresql://agent_app:standin-only@postgres:5432/agent
           just health
           just provision
           just migrate

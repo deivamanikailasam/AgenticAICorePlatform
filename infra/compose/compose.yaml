@@ -87,6 +87,7 @@ services:
       AGENT_API_PDP: ${AGENT_API_PDP:-opa}
       # Step 18: memory (default) | postgres (runs and encrypted checkpoints in the agent DB)
       AGENT_API_STORE: ${AGENT_API_STORE:-memory}
+      # the agent database: durable runs (Step 18) and agents' long-term memory (Step 20)
       AGENT_DB_DSN: ${AGENT_DB_DSN_INTERNAL:-}
       # dev/CI only: the checkpoint key as an env var; production resolves it from OpenBao (Step 29)
       SECRET__AGENT_PLATFORM__CHECKPOINTS__KEY: ${AGENT_CHECKPOINT_KEY_DEV:-}

@@ -14,6 +14,7 @@
 ``GET  /v1/threads``                       the caller's threads and their runs
 ``GET  /v1/threads/{id}/checkpoints``      time travel: a thread's checkpoints
 ``POST /v1/threads/{id}/fork``             time travel: continue from an earlier checkpoint
+``POST /v1/admin/erasure``                 right to erasure for one user (privacy officer)
 =========================================  ==============================================
 
 Every call needs a bearer token verified against Keycloak (issuer, signature, expiry,
@@ -176,6 +177,13 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
         run = await manager.fork(request.path_params["thread_id"], data["checkpoint_id"], who)
         return JSONResponse(run.summary(), 201)
 
+    async def erasure(request: Request, who: Principal) -> Response:
+        data = await body(request)
+        if not isinstance(data.get("user"), str) or not data["user"]:
+            raise ValueError("'user' is required")
+        tenant = str(data.get("tenant") or who.tenant)
+        return JSONResponse({"erased": await manager.erase_subject(tenant, data["user"], who)})
+
     async def socket(ws: WebSocket) -> None:
         await ws.accept()
         try:
@@ -228,6 +236,7 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
             Route("/v1/threads", guarded(threads)),
             Route("/v1/threads/{thread_id}/checkpoints", guarded(checkpoints)),
             Route("/v1/threads/{thread_id}/fork", guarded(fork), methods=["POST"]),
+            Route("/v1/admin/erasure", guarded(erasure), methods=["POST"]),
             WebSocketRoute("/v1/runs/{run_id}/ws", socket),
         ],
     )

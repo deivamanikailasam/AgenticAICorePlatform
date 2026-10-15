@@ -31,6 +31,7 @@ from typing import Any
 from agent_compiler.compiler import compile_spec, runtime_for
 from agent_contracts.interfaces import RuntimeAdapter
 from agent_contracts.models import (
+    AuditEvent,
     ExecutablePlan,
     RunContext,
     RunEvent,
@@ -431,6 +432,48 @@ class RunManager:
             with contextlib.suppress(KeyError, ConflictError):
                 await run.live().cancel(run.run_id)
             await self._finish_cancelled(run)
+
+    # ------------------------------------------------------------ right to erasure
+
+    PRIVACY_ROLE = "privacy-officer"
+
+    async def erase_subject(self, tenant: str, user: str, who: Principal) -> dict[str, int]:
+        """Remove everything the platform holds about one person in one tenant: their runs
+        (stopped first), event logs, checkpoint threads, and every agent's long-term memory
+        about them. Only a privacy officer of that tenant may ask. The erasure itself is
+        audited (who asked, counts), since the audit log must show it happened."""
+        if self.PRIVACY_ROLE not in who.roles or who.tenant != tenant:
+            raise PermissionError("erasure needs the privacy-officer role in the same tenant")
+        theirs = [r for r in self.runs.values() if (r.owner.tenant, r.owner.user) == (tenant, user)]
+        for run in theirs:
+            if run.task is not None and not run.task.done():
+                run.task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await run.task
+        threads = {r.thread_id for r in theirs}
+        if self.assembly.checkpointer is not None:
+            for thread in threads:
+                await self.assembly.checkpointer.delete_thread(tenant, thread)
+        runs = await self.store.erase(tenant, user)
+        memories = 0
+        for spec in self.agents.values():
+            memory = await self.assembly.memory_factory(spec)
+            if memory is not None:
+                memories += await memory.erase_subject(tenant, user)
+        for run in theirs:
+            self.runs.pop(run.run_id, None)
+        self.idempotency = {
+            k: v for k, v in self.idempotency.items() if (k[0], k[1]) != (tenant, user)
+        }
+        counts = {"runs": runs, "threads": len(threads), "memories": memories}
+        await self.assembly.audit.append(
+            AuditEvent(
+                type="subject.erased",
+                ctx=RunContext(tenant_id=tenant, user_id=who.user, agent_id="agent-api"),
+                payload={"subject": user, "requested_by": who.user, **counts},
+            )
+        )
+        return counts
 
     # ------------------------------------------------------------ execution
 

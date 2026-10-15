@@ -32,6 +32,10 @@ class RunStore(ABC):
     @abstractmethod
     async def events(self, run_id: str) -> list[dict[str, Any]]: ...
 
+    @abstractmethod
+    async def erase(self, tenant: str, user: str) -> int:
+        """Right to erasure: delete the user's runs and their events; returns the run count."""
+
 
 class MemoryRunStore(RunStore):
     def __init__(self) -> None:
@@ -51,6 +55,13 @@ class MemoryRunStore(RunStore):
 
     async def events(self, run_id: str) -> list[dict[str, Any]]:
         return list(self._events.get(run_id, []))
+
+    async def erase(self, tenant: str, user: str) -> int:
+        doomed = [k for k, r in self._runs.items() if (r["tenant"], r["user"]) == (tenant, user)]
+        for k in doomed:
+            del self._runs[k]
+            self._events.pop(k, None)
+        return len(doomed)
 
 
 class PostgresRunStore(RunStore):
@@ -117,3 +128,16 @@ class PostgresRunStore(RunStore):
                 )
             ).fetchall()
         return [dict(self.cipher.open_value(e, f"run|{run_id}|event|{i}")) for i, e in rows]
+
+    async def erase(self, tenant: str, user: str) -> int:
+        async with await self._conn() as conn, conn.transaction():
+            await conn.execute(
+                "delete from agent_runtime.run_events where run_id in (select run_id from"
+                " agent_runtime.runs where tenant_id = %s and user_id = %s)",
+                (tenant, user),
+            )
+            cur = await conn.execute(
+                "delete from agent_runtime.runs where tenant_id = %s and user_id = %s",
+                (tenant, user),
+            )
+        return cur.rowcount
