@@ -1,0 +1,6 @@
+# SOPS encrypts dev secrets with age. The recipient is Project 0's age public key, supplied by
+# the environment so no key material lives in git:
+#   export SOPS_AGE_RECIPIENTS="$(age-keygen -y ~/.config/sops/age/keys.txt)"
+# See docs/setup/local.md, "Dev secrets".
+creation_rules:
+  - path_regex: secrets/.*\.enc\.(env|yaml|json)$

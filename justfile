@@ -92,3 +92,7 @@ adr title:
 # Decrypt dev secrets into the environment of a command: just with-secrets env
 with-secrets *cmd:
     sops exec-env secrets/dev.enc.env '{{cmd}}'
+
+# Encrypt secrets/dev.env into secrets/dev.enc.env with Project 0's age key
+secrets-init:
+    ./scripts/secrets_init.sh
