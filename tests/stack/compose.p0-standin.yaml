@@ -12,6 +12,7 @@ volumes:
   tempodata:
   seaweeddata:
   qdrantdata:
+  clickhousedata:
 
 services:
   postgres:
@@ -181,7 +182,7 @@ services:
 
   seaweedfs:
     image: docker.io/chrislusf/seaweedfs:4.09@sha256:353c69c8ddd7e13c85c1290dca9d1690bf3d066237b7ede7920b8fd2864858e7
-    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-master.volumeSizeLimitMB=64", "-volume.max=8"]
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-master.volumeSizeLimitMB=64", "-volume.max=32"]
     volumes:
       - seaweeddata:/data
     ports: ["127.0.0.1:8333:8333"]
@@ -190,6 +191,92 @@ services:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/ || exit 1"]
       interval: 3s
       retries: 40
+
+  # Langfuse (Step 30): prompt and response content, redacted, for project members only. Same
+  # images Project 0 runs; ClickHouse, the bucket and the database are its stand-in parts.
+  langfuse-bucket:
+    image: docker.io/chrislusf/seaweedfs:4.09@sha256:353c69c8ddd7e13c85c1290dca9d1690bf3d066237b7ede7920b8fd2864858e7
+    entrypoint: ["sh", "-c", "echo 's3.bucket.create -name langfuse' | weed shell -master=seaweedfs:9333"]
+    depends_on:
+      seaweedfs: { condition: service_healthy }
+    restart: "no"
+
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:25.12.11@sha256:8a790dd3468db22b1d4e7b18a176f378ff5ff6053b9c48dd4ea1fa71a24c5ba6
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${STANDIN_CLICKHOUSE_PASSWORD:-standin-only}
+    volumes:
+      - clickhousedata:/var/lib/clickhouse
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 3s
+      retries: 40
+
+  langfuse-worker:
+    image: docker.io/langfuse/langfuse-worker:4.48.0@sha256:9349b003a453326b3d2e2033eb94fe5ca9ee12ee237779c10984b9d3dfe0f8ed
+    depends_on: &langfuse-deps
+      postgres: { condition: service_healthy }
+      valkey: { condition: service_healthy }
+      clickhouse: { condition: service_healthy }
+      langfuse-bucket: { condition: service_completed_successfully }
+    environment: &langfuse-env
+      DATABASE_URL: postgresql://postgres:${STANDIN_PG_PASSWORD:-standin-only}@postgres:5432/langfuse
+      SALT: standin-only-salt
+      ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      TELEMETRY_ENABLED: "false"
+      NEXTAUTH_URL: http://127.0.0.1:3100
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${STANDIN_CLICKHOUSE_PASSWORD:-standin-only}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: standin
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: standin-only
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://seaweedfs:8333
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: standin
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: standin-only
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://seaweedfs:8333
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      REDIS_HOST: valkey
+      REDIS_PORT: "6379"
+      REDIS_TLS_ENABLED: "false"
+    mem_limit: 1g
+
+  langfuse-web:
+    image: docker.io/langfuse/langfuse:4.48.0@sha256:8c1b80ed7735be587974d603af0f6e0247b33d3b56c7d5ab9d2337aec313efa0
+    depends_on: *langfuse-deps
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: standin-only-nextauth
+      HOSTNAME: 0.0.0.0
+      # headless set-up: one organisation and project with fixed API keys (stand-in only)
+      LANGFUSE_INIT_ORG_ID: agent-platform
+      LANGFUSE_INIT_ORG_NAME: Agent platform
+      LANGFUSE_INIT_PROJECT_ID: agent-platform
+      LANGFUSE_INIT_PROJECT_NAME: agent-platform
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-standin
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: standin-only-langfuse-secret
+      LANGFUSE_INIT_USER_EMAIL: admin@example.com
+      LANGFUSE_INIT_USER_NAME: admin
+      LANGFUSE_INIT_USER_PASSWORD: standin-only
+      NODE_OPTIONS: --max-old-space-size=1536
+    ports: ["127.0.0.1:3100:3000"]
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/public/health | grep -q OK"]
+      interval: 5s
+      retries: 60
 
   qdrant:
     image: docker.io/qdrant/qdrant:v1.19.1@sha256:12364fe851b9f17356fc88189fc06d1b521262e04659ec7345975b00c9246a10
