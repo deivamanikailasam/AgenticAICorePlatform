@@ -34,8 +34,11 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | critic | length | dummy | `agent_contracts.dummies.reasoning:LengthCritic` | Passes outputs of at least ``min_words`` words. |
 | critic | llm | implemented | `agent_runtime.reasoning:LlmCritic` |  |
 | critic | overlap | dummy | `agent_contracts.dummies.reasoning:OverlapCritic` | Scores the share of task words that the output mentions. |
+| durable_executor | dbos | stub | `agent_runtime.temporal.stubs:DbosDurableExecutor` | DBOS. STUB: durable steps in Postgres from a library; finish when Temporal's operational |
 | durable_executor | deferred | dummy | `agent_contracts.dummies.state:DeferredDurableExecutor` | Starts the workflow lazily, on the first signal or result request. No persistence. |
 | durable_executor | inline | dummy | `agent_contracts.dummies.state:InlineDurableExecutor` | Starts the workflow as an asyncio task immediately. No persistence. |
+| durable_executor | restate | stub | `agent_runtime.temporal.stubs:RestateDurableExecutor` | Restate. STUB: needs the Restate server and its SDK's handler model; finish when a team |
+| durable_executor | temporal | implemented | `agent_runtime.temporal.runtime:TemporalDurableExecutor` | ``durable_executor.temporal``: registered async functions as Temporal workflows. |
 | embedder | gateway | implemented | `agent_runtime.models.embeddings:GatewayEmbedder` |  |
 | embedder | hashing | dummy | `agent_contracts.dummies.embedder:HashingEmbedder` | Feature hashing of words and character trigrams into ``dimensions`` buckets, L2-normalised. |
 | embedder | word_hashing | dummy | `agent_contracts.dummies.embedder:WordHashingEmbedder` | Words only (no character trigrams): coarser, so spelling variants do not match. |
@@ -83,6 +86,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | runtime_adapter | langgraph | implemented | `agent_runtime.adapters.langgraph:LangGraphAdapter` |  |
 | runtime_adapter | sequential | dummy | `agent_contracts.dummies.runtime:SequentialRuntimeAdapter` | Runs one node at a time in queue order. The Step 4 stub adapter. |
 | runtime_adapter | stepwise | dummy | `agent_contracts.dummies.runtime:StepwiseRuntimeAdapter` | Runs every ready node in a 'superstep' before moving on (breadth-first). |
+| runtime_adapter | temporal | implemented | `agent_runtime.temporal.runtime:TemporalRuntime` |  |
 | simulator | patient_user | dummy | `agent_contracts.dummies.evals:PatientUserSimulator` | Repeats one goal until an assistant reply contains ``success_word`` or patience runs out. |
 | simulator | scripted_user | dummy | `agent_contracts.dummies.evals:ScriptedUserSimulator` | Plays a fixed list of user turns, then says it is done. |
 | telemetry_emitter | memory | dummy | `agent_contracts.dummies.observability:MemoryTelemetryEmitter` | Keeps finished spans and metrics in lists, for assertions in tests. |

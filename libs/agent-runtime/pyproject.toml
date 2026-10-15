@@ -21,6 +21,8 @@ dependencies = [
     "psycopg[binary]>=3.3.6,<4",
     "redis>=8.1.0,<9",
     "cryptography>=50.0.2,<51",
+    # durable long runs (Step 19): Temporal Python SDK 1.34.0, released 2026-09-30 (cooldown, ADR 0022)
+    "temporalio==1.34.0",
 ]
 
 [project.entry-points."agent_platform.components"]
@@ -33,6 +35,10 @@ dependencies = [
 "router.llm" = "agent_runtime.routing:LlmRouter"
 "router.embedding" = "agent_runtime.routing:EmbeddingRouter"
 "router.rules" = "agent_runtime.routing:RulesRouter"
+"runtime_adapter.temporal" = "agent_runtime.temporal.runtime:TemporalRuntime"
+"durable_executor.temporal" = "agent_runtime.temporal.runtime:TemporalDurableExecutor"
+"durable_executor.restate" = "agent_runtime.temporal.stubs:RestateDurableExecutor"
+"durable_executor.dbos" = "agent_runtime.temporal.stubs:DbosDurableExecutor"
 "checkpointer.postgres" = "agent_runtime.checkpoints:PostgresCheckpointer"
 "checkpointer.valkey" = "agent_runtime.checkpoints:ValkeyCheckpointer"
 "planner.llm" = "agent_runtime.reasoning:LlmPlanner"

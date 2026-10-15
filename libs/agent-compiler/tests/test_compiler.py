@@ -205,3 +205,12 @@ def test_unlisted_mcp_servers_are_refused_at_compile_time() -> None:
         }
     )
     check_tool_sources(spec, listed)
+
+
+def test_durability_temporal_selects_the_temporal_runtime() -> None:
+    from agent_runtime.temporal.runtime import TemporalRuntime
+
+    text = HELLO.read_text().replace("durability: memory", "durability: temporal")
+    assert isinstance(runtime_for(load_spec_text(text)), TemporalRuntime)
+    pinned = text.replace("runtime: {", "components: { runtime_adapter: langgraph }\nruntime: {")
+    assert not isinstance(runtime_for(load_spec_text(pinned)), TemporalRuntime)

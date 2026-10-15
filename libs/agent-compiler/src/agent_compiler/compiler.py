@@ -231,6 +231,8 @@ def compile_spec(
 def runtime_for(spec: AgentSpec, reg: Registry | None = None, **config: Any) -> RuntimeAdapter:
     reg = reg or default_registry
     name = spec.components.get("runtime_adapter", spec.runtime.adapter)
+    if spec.runtime.durability.value == "temporal" and "runtime_adapter" not in spec.components:
+        name = "temporal"  # Step 19: the plan runs as a Temporal workflow
     try:
         adapter = reg.create("runtime_adapter", name, **config)
     except KeyError:
