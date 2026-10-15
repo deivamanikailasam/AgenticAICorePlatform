@@ -24,9 +24,6 @@ from agent_spec.platform import Currency, Mcp, McpAuth, McpServer, Models, Platf
 from agent_tools.executor import PlatformToolExecutor
 from agent_tools.mcp import McpClientPool, McpServerRefusedError
 from agent_tools.registry import InMemoryToolRegistry
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 pytestmark = pytest.mark.integration
@@ -121,11 +118,10 @@ async def pool(
     await p.aclose()
 
 
-async def test_two_external_servers_discovered_called_traced_audited(pool: McpClientPool) -> None:
-    exporter = InMemorySpanExporter()
-    provider = TracerProvider()
-    provider.add_span_processor(SimpleSpanProcessor(exporter))
-    trace.set_tracer_provider(provider)
+async def test_two_external_servers_discovered_called_traced_audited(
+    pool: McpClientPool, span_exporter: InMemorySpanExporter
+) -> None:
+    exporter = span_exporter
 
     reg = InMemoryToolRegistry()
     fs = await pool.register_all(reg, "filesystem")

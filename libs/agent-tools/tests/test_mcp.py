@@ -13,17 +13,10 @@ from agent_tools.executor import PlatformToolExecutor
 from agent_tools.mcp import McpClientPool, McpServerRefusedError
 from agent_tools.mcp.client import model_name
 from agent_tools.registry import InMemoryToolRegistry
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 SERVERS = Path(__file__).parent / "mcp_servers"
 CTX = RunContext(tenant_id="t1", user_id="u1", agent_id="a1")
-EXPORTER = InMemorySpanExporter()
-_provider = TracerProvider()
-_provider.add_span_processor(SimpleSpanProcessor(EXPORTER))
-trace.set_tracer_provider(_provider)
 
 
 def platform(*servers: McpServer) -> PlatformConfig:
@@ -95,13 +88,14 @@ async def test_allowed_tools_and_side_effect_overrides() -> None:
         await p.aclose()
 
 
-async def test_calls_through_the_executor_are_traced_and_audited(pool: McpClientPool) -> None:
+async def test_calls_through_the_executor_are_traced_and_audited(
+    pool: McpClientPool, span_exporter: InMemorySpanExporter
+) -> None:
     assert pool.audit is not None
     reg = InMemoryToolRegistry()
     await pool.register_all(reg, "math")
     await pool.register_all(reg, "legacy")
     ex = PlatformToolExecutor(reg)
-    EXPORTER.clear()
     added = await ex.execute(ToolCall(name="math__add", arguments={"a": 2, "b": 3}), CTX)
     assert added.ok
     assert added.output == {"result": 5.0}
@@ -112,7 +106,7 @@ async def test_calls_through_the_executor_are_traced_and_audited(pool: McpClient
     failed = await ex.execute(ToolCall(name="math__broken", idempotency_key="b1"), CTX)
     assert failed.error_code is ToolErrorCode.FAILED, "an MCP isError result is a failed tool call"
 
-    spans = {s.name: s for s in EXPORTER.get_finished_spans()}
+    spans = {s.name: s for s in span_exporter.get_finished_spans()}
     add_span = spans["execute_tool add"]
     assert add_span.attributes is not None
     assert add_span.attributes["mcp.protocol.version"] == "2026-07-28"
