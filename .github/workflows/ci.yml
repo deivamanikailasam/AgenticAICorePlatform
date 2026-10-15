@@ -89,13 +89,13 @@ jobs:
       - run: just test-sandbox
 
   microvm:
-    name: sandbox (Firecracker; KVM)
+    name: sandbox (Firecracker, Kata; KVM)
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     needs: check
     env:
       AGENT_FIRECRACKER_DIR: /var/lib/agent-platform/firecracker
-      AGENT_REQUIRE_ENGINES: firecracker
+      AGENT_REQUIRE_ENGINES: firecracker,kata
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
@@ -111,5 +111,6 @@ jobs:
           ls -l /dev/kvm
       - run: sudo -E ./scripts/install_firecracker.sh
       - run: sudo -E ./scripts/build_sandbox_rootfs.sh
+      - run: sudo ./scripts/install_kata.sh && sudo systemctl restart docker
       - run: uv sync --all-packages
       - run: just test-microvm
