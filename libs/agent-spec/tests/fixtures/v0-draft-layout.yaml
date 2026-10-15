@@ -1,0 +1,13 @@
+# spec_version 0: the draft layout (graph as a list, top-level edges, tools as strings)
+name: legacy-flow
+version: 1.0.0
+owner: team-a
+risk_tier: low
+autonomy: workflow
+pattern: workflow
+budgets: { max_steps: 3, max_wall_seconds: 5 }
+tools: ["local://clock"]
+graph:
+  - { id: start, type: function, fn: hello }
+  - { id: tick, type: tool, tool: clock }
+edges: ["start -> tick"]

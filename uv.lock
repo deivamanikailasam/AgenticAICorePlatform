@@ -6,6 +6,7 @@ requires-python = "==3.12.*"
 members = [
     "agent-contracts",
     "agent-platform",
+    "agent-spec",
 ]
 
 [[package]]
@@ -73,6 +74,23 @@ dev = [
     { name = "ruff", specifier = "==0.17.0" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
     { name = "types-pyyaml", specifier = ">=6.0.12" },
+]
+
+[[package]]
+name = "agent-spec"
+version = "0.1.0"
+source = { editable = "libs/agent-spec" }
+dependencies = [
+    { name = "agent-contracts" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "pydantic", specifier = ">=2.14.1,<3" },
+    { name = "pyyaml", specifier = ">=6.0.3,<7" },
 ]
 
 [[package]]

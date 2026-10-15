@@ -17,7 +17,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test compose-check secret-scan catalogue-check
+check: lint typecheck test policy-test compose-check secret-scan catalogue-check validate
 
 lint:
     uv run ruff check .
@@ -108,3 +108,8 @@ catalogue:
 
 catalogue-check:
     uv run python -m scripts.catalogue --check
+
+# Validate agent.yaml specs (files or directories); --strict treats warnings as errors
+validate *paths="agents/":
+    uv run agent-spec validate {{paths}}
+

@@ -1,0 +1,14 @@
+# The smallest useful spec: a one-node deterministic workflow (Step 4 runs it end to end).
+spec_version: 1
+name: hello-workflow
+version: 0.1.0
+owner: agent-platform
+description: Greets the caller. Proves spec -> compiler -> runtime -> trace.
+risk_tier: low
+autonomy: workflow
+pattern: workflow
+runtime: { adapter: sequential, durability: memory }
+budgets: { max_steps: 5, max_wall_seconds: 10 }
+graph:
+  nodes:
+    - { id: greet, type: function, fn: hello }

@@ -1,0 +1,32 @@
+# The spec's example, in the exact v1 layout. Deterministic validation, an agentic node for
+# exceptions, and an irreversible payment behind a human approval.
+spec_version: 1
+name: invoice-triage
+version: 0.3.0
+owner: finance-platform
+description: Validates invoices, resolves exceptions with an agent, pays after approval.
+risk_tier: medium
+autonomy: hybrid
+pattern: hybrid
+models:
+  default: local-qwen-fast
+  planner: local-qwen-quality
+runtime: { adapter: langgraph, durability: checkpoint }
+budgets: { max_steps: 25, max_tokens: 60000, max_cost_aud: 0.50, max_wall_seconds: 300 }
+tools:
+  - ref: mcp://erp/get_invoice          # read
+  - ref: mcp://erp/post_payment         # irreversible -> approval required
+    approval: { required: true, approvers: "group:finance-approvers" }
+  - ref: mcp://rag-core/search          # Project 0 retrieval as a tool
+memory: { short_term: checkpoint, long_term: { store: pgvector, scope: tenant } }
+guardrails: [prompt_injection, pii_redaction, tool_args_schema, output_schema]
+graph:
+  nodes:
+    - { id: validate, type: function, fn: invoice.validate }
+    - { id: resolve_exceptions, type: agent, pattern: react, model: planner, tools: [get_invoice, search] }
+    - { id: pay, type: tool, tool: post_payment }
+  edges:
+    - "validate -> resolve_exceptions: on_error"
+    - "validate -> pay: on_ok"
+    - "resolve_exceptions -> pay"
+evals: { suite: evals/invoice-triage, gates: default }

@@ -1,0 +1,22 @@
+spec_version: 1
+name: semantic-bad
+version: 1.0.0
+owner: team-a
+risk_tier: high
+autonomy: hybrid
+pattern: hybrid
+budgets: { max_steps: 10, max_wall_seconds: 60 }
+tools:
+  - ref: mcp://erp/get_invoice
+    config: { token: "${secret:erp/api#token}" }
+guardrails: [prompt_injection, mind_reading]
+components: { checkpointer: cassandra, teleporter: x }
+description: "uses ${secret:erp/api#token} in a prompt"
+graph:
+  entry: a
+  nodes:
+    - { id: a, type: function, fn: hello }
+    - { id: b, type: agent, pattern: react, model: genius, tools: [get_invoice, send_money] }
+    - { id: c, type: function, fn: hello }
+    - { id: orphan, type: function, fn: hello }
+  edges: ["a -> b", "b -> c", "c -> b", "b -> ghost"]

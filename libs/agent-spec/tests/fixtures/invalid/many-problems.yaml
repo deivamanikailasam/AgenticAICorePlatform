@@ -1,0 +1,12 @@
+spec_version: 1
+name: Bad_Name
+version: one
+owner: team-a
+risk_tier: extreme
+autonomy: workflow
+pattern: workflow
+budgets: { max_steps: 0, max_wall_seconds: 5 }
+colour: blue
+graph:
+  nodes:
+    - { id: a, type: function }
