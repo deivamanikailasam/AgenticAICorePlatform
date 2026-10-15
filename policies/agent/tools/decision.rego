@@ -1,6 +1,7 @@
-# Tool-call authorisation (Step 10) and delegation between agents (Step 22, action
-# "agent.delegate": tool = the worker, allowed_tools = the team). One decision per call; deny
-# unless a rule allows.
+# Tool-call authorisation (Step 10), delegation between agents (Step 22, action
+# "agent.delegate": tool = the worker, allowed_tools = the team) and inbound A2A calls (Step 24,
+# action "a2a.inbound": tool = the published agent, allowed_tools = the published agents,
+# subject = the remote caller's verified token). One decision per call; deny unless a rule allows.
 #
 # Input (agent_contracts.models.PolicyInput):
 #   ctx                  {tenant_id, user_id, agent_id, risk_tier, run_id, ...}
@@ -21,7 +22,7 @@ package agent.tools
 
 import rego.v1
 
-version := "2026-10-15.3"
+version := "2026-10-15.4"
 
 cfg := data.agent.config
 
@@ -38,7 +39,7 @@ deny contains "tool execution is disabled for this agent (kill switch)" if {
 }
 
 deny contains sprintf("agent %s is disabled (kill switch)", [input.tool]) if {
-	input.action == "agent.delegate"
+	input.action in {"agent.delegate", "a2a.inbound"}
 	cfg.kill_switch.agents[input.tool] == true
 }
 
@@ -106,7 +107,7 @@ approval_satisfied if {
 
 # ------------------------------------------------------------------ decision
 
-default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.3"}
+default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.4"}
 
 decision := {"effect": "deny", "reasons": sort(deny), "version": version} if count(deny) > 0
 

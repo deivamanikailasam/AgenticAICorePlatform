@@ -105,6 +105,37 @@ services:
       retries: 20
     restart: unless-stopped
 
+  # The A2A gateway (Step 24, ADR 0035): agents whose spec sets interop.a2a_publish, as A2A v1.x
+  # agents with signed Agent Cards. Tasks run through agent-api as the calling user.
+  a2a-gateway:
+    build: { context: ../.., dockerfile: infra/compose/service.Dockerfile, args: { PACKAGE: a2a-gateway }, secrets: [extra_ca] }
+    image: agent-platform/a2a-gateway:dev
+    command: ["a2a-gateway"]
+    <<: *hardening
+    environment:
+      <<: *p0-endpoints
+      A2A_GATEWAY_HOST: 0.0.0.0
+      A2A_GATEWAY_PORT: "8092"
+      A2A_PUBLIC_URL: ${A2A_PUBLIC_URL:-http://127.0.0.1:8092}
+      A2A_GATEWAY_AGENTS_DIR: /app/agents
+      A2A_GATEWAY_AUDIT_FILE: /tmp/a2a-gateway-audit.jsonl
+      A2A_GATEWAY_PDP: ${A2A_GATEWAY_PDP:-opa}
+      AGENT_API_URL: http://agent-api:8091
+      AGENT_CERBOS_URL: http://cerbos:3592
+      # dev/CI only: the card-signing key (ES256 PEM) as an env var; production resolves it from
+      # OpenBao (Step 29)
+      SECRET__AGENT_PLATFORM__A2A__SIGNING_KEY: ${A2A_SIGNING_KEY_DEV:-}
+    volumes:
+      - ../../agents:/app/agents:ro
+    ports: ["127.0.0.1:8092:8092"]
+    mem_limit: 384m
+    depends_on: [agent-api]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8092/healthz')"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
   # Durable long runs (Step 19, ADR 0030): started by `just up` (or alone: `just up-temporal`). Development server with its state in
   # a SQLite file on a volume, so runs survive a server restart. Production: Temporal with
   # Postgres or Temporal Cloud (docs/setup/production.md). Project 0 does not run Temporal.

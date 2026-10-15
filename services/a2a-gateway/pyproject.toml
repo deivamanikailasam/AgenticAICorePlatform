@@ -1,0 +1,31 @@
+[project]
+name = "a2a-gateway"
+version = "0.1.0"
+description = "A2A gateway (Step 24): publishes chosen agents as A2A v1.x agents with signed Agent Cards"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "agent-contracts",
+    "agent-spec",
+    "agent-tools",
+    "a2a-sdk[http-server,signing]==1.2.1",
+    # the gRPC binding: grpcio 1.84.0 released 2026-09-14 (cooldown, ADR 0022)
+    "grpcio==1.84.0",
+    "httpx>=0.28.1,<0.29",
+    "starlette>=0.48",
+    "uvicorn>=0.54.0,<1",
+]
+
+[project.scripts]
+a2a-gateway = "a2a_gateway.__main__:main"
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+agent-spec = { workspace = true }
+agent-tools = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/a2a_gateway"]

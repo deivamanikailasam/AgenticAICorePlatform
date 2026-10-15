@@ -221,3 +221,37 @@ test_delegation_to_a_switched_off_worker_denied if {
 	d.effect == "deny"
 	"agent analyst is disabled (kill switch)" in d.reasons
 }
+
+# ---------------------------------------------------------------- inbound A2A (Step 24)
+
+inbound := with_input({
+	"action": "a2a.inbound",
+	"ctx": {"tenant_id": "acme", "user_id": "alice", "agent_id": "a2a-client:partner-app", "risk_tier": "low"},
+	"tool": "capital-desk",
+	"tool_ref": "agent://capital-desk",
+	"tool_tags": ["a2a"],
+	"side_effect": "read",
+	"data_classification": null,
+	"subject": {"authenticated": true, "user": "alice", "client_id": "partner-app", "groups": ["/acme/support"], "roles": []},
+	"allowed_tools": ["capital-desk"],
+})
+
+test_inbound_call_to_a_published_agent_allowed if tools.decision.effect == "allow" with input as inbound
+
+test_inbound_call_to_an_unpublished_agent_denied if {
+	d := tools.decision with input as object.union(inbound, {"tool": "invoice-triage"})
+	d.effect == "deny"
+	"tool invoice-triage is not granted to agent a2a-client:partner-app" in d.reasons
+}
+
+test_inbound_call_without_a_verified_caller_denied if {
+	d := tools.decision with input as object.union(inbound, {"subject": {"authenticated": false}})
+	d.effect == "deny"
+	"not authenticated" in d.reasons
+}
+
+test_inbound_call_to_a_switched_off_agent_denied if {
+	d := tools.decision with input as inbound with data.agent.config.kill_switch.agents as {"capital-desk": true}
+	d.effect == "deny"
+	"agent capital-desk is disabled (kill switch)" in d.reasons
+}
