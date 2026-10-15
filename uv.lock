@@ -6,6 +6,7 @@ requires-python = "==3.12.*"
 members = [
     "a2a-gateway",
     "agent-api",
+    "agent-audit",
     "agent-compiler",
     "agent-contracts",
     "agent-guardrails",
@@ -124,6 +125,25 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "starlette", specifier = ">=0.48" },
     { name = "uvicorn", specifier = ">=0.54.0,<1" },
+]
+
+[[package]]
+name = "agent-audit"
+version = "0.1.0"
+source = { editable = "libs/agent-audit" }
+dependencies = [
+    { name = "agent-contracts" },
+    { name = "agent-guardrails" },
+    { name = "opentelemetry-api" },
+    { name = "psycopg", extra = ["binary"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-guardrails", editable = "libs/agent-guardrails" },
+    { name = "opentelemetry-api", specifier = ">=1.45.1,<2" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6,<4" },
 ]
 
 [[package]]

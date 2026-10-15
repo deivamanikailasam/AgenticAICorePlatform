@@ -22,6 +22,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | approval_gate | ttl | dummy | `agent_contracts.dummies.safety:TtlApprovalGate` | Like ``memory`` but every request without an expiry gets a default one (SLA timer). |
 | audit_sink | jsonl | dummy | `agent_contracts.dummies.observability:JsonlAuditSink` | Hash-chained records appended to a JSON Lines file (a temp file by default). |
 | audit_sink | memory | dummy | `agent_contracts.dummies.observability:MemoryAuditSink` | Hash-chained records in a list. |
+| audit_sink | postgres | implemented | `agent_audit.postgres:PostgresAuditSink` |  |
 | budget_controller | ledger | dummy | `agent_contracts.dummies.safety:LedgerBudgetController` | Keeps every charge in a ledger (for audit) on top of the in-memory counters. |
 | budget_controller | memory | dummy | `agent_contracts.dummies.safety:InMemoryBudgetController` | Counters per run; every charge also counts against all ancestors. |
 | budget_controller | platform | implemented | `agent_runtime.budget:PlatformBudgetController` |  |
