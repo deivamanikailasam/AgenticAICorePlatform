@@ -24,6 +24,10 @@ class Settings:
     )
     audience: str = field(default_factory=lambda: _env("MCP_GATEWAY_AUDIENCE", "agent-platform"))
     opa_url: str = field(default_factory=lambda: _env("P0_OPA_URL", "http://127.0.0.1:8181"))
+    pdp: str = field(default_factory=lambda: _env("MCP_GATEWAY_PDP", "opa"))
+    cerbos_url: str = field(
+        default_factory=lambda: _env("AGENT_CERBOS_URL", "http://127.0.0.1:3592")
+    )
     rag_core_url: str = field(
         default_factory=lambda: _env("P0_RAG_CORE_URL", "http://127.0.0.1:8300")
     )

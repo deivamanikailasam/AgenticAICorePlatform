@@ -1,0 +1,75 @@
+# `cerbos compile` runs these (just policy-test). Parity with the Rego policy is checked live by
+# tests/scripts/test_cerbos_parity.py.
+name: ToolCallDecisions
+principals:
+  alice:
+    id: alice
+    roles: [user]
+    attr: { authenticated: true, groups: ["/acme/finance"], roles: [] }
+  anonymous:
+    id: anonymous
+    roles: [user]
+    attr: { authenticated: false, groups: [], roles: [] }
+resources:
+  search:
+    kind: tool
+    id: rag-core__search
+    attr: &base
+      tenant_id: acme
+      agent_id: a1
+      risk_tier: low
+      side_effect: read
+      data_classification: internal
+      resource_tenant_id: null
+      allowed_tools: null
+      tool_tags: []
+      arguments: {}
+  search_other_tenant:
+    kind: tool
+    id: rag-core__search
+    attr: { <<: *base, resource_tenant_id: globex }
+  payment:
+    kind: tool
+    id: erp__post_payment
+    attr: { <<: *base, risk_tier: medium, side_effect: irreversible, arguments: { amount_aud: 500 } }
+  payment_over_limit:
+    kind: tool
+    id: erp__post_payment
+    attr: { <<: *base, risk_tier: medium, side_effect: irreversible, arguments: { amount_aud: 20000 } }
+  restricted:
+    kind: tool
+    id: hr__salaries
+    attr: { <<: *base, data_classification: restricted }
+  not_granted:
+    kind: tool
+    id: erp__post_payment
+    attr: { <<: *base, allowed_tools: ["rag-core__search"] }
+tests:
+  - name: authenticated read is allowed
+    input: { principals: [alice], resources: [search], actions: [call, call_without_approval] }
+    expected:
+      - { principal: alice, resource: search, actions: { call: EFFECT_ALLOW, call_without_approval: EFFECT_ALLOW } }
+  - name: anonymous is denied
+    input: { principals: [anonymous], resources: [search], actions: [call] }
+    expected:
+      - { principal: anonymous, resource: search, actions: { call: EFFECT_DENY } }
+  - name: other tenant's data is denied
+    input: { principals: [alice], resources: [search_other_tenant], actions: [call] }
+    expected:
+      - { principal: alice, resource: search_other_tenant, actions: { call: EFFECT_DENY } }
+  - name: irreversible needs approval
+    input: { principals: [alice], resources: [payment], actions: [call, call_without_approval] }
+    expected:
+      - { principal: alice, resource: payment, actions: { call: EFFECT_ALLOW, call_without_approval: EFFECT_DENY } }
+  - name: argument above the tier limit is denied
+    input: { principals: [alice], resources: [payment_over_limit], actions: [call] }
+    expected:
+      - { principal: alice, resource: payment_over_limit, actions: { call: EFFECT_DENY } }
+  - name: restricted data needs clearance
+    input: { principals: [alice], resources: [restricted], actions: [call] }
+    expected:
+      - { principal: alice, resource: restricted, actions: { call: EFFECT_DENY } }
+  - name: tool not granted to the agent is denied
+    input: { principals: [alice], resources: [not_granted], actions: [call] }
+    expected:
+      - { principal: alice, resource: not_granted, actions: { call: EFFECT_DENY } }

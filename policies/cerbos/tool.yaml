@@ -1,0 +1,175 @@
+# Cerbos equivalent of policies/agent/tools/decision.rego (Step 10 alternative,
+# policy_decision_point.cerbos). Same rules, same reasons. Cerbos answers allow/deny per action,
+# so the three-way decision is two actions:
+#   call                    denied  -> deny
+#   call_without_approval   denied  -> require_approval (when "call" is allowed)
+#   both allowed            -> allow
+# Reasons and approvers come back as rule outputs. The client sends every attribute on every
+# request (nulls included) so that no rule can be skipped by an absent attribute.
+# The constants mirror policies/agent/config/data.json; tests/scripts/test_cerbos_parity.py
+# fails if they drift.
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: default
+  resource: tool
+  constants:
+    local:
+      kill_tenants: []
+      kill_agents: []
+      clearance:
+        public: []
+        internal: []
+        confidential: []
+        restricted: ["restricted-readers"]
+      constraints:
+        erp__post_payment:
+          - { argument: amount_aud, max: 10000, risk_tier: medium }
+          - { argument: amount_aud, max: 50000, risk_tier: high }
+  variables:
+    local:
+      required_groups: >-
+        R.attr.data_classification in C.clearance ? C.clearance[R.attr.data_classification] : []
+      cleared: >-
+        V.required_groups.exists(r,
+          P.attr.groups.exists(g, g.endsWith("/" + r)) || r in P.attr.roles)
+      over_limit: >-
+        R.id in C.constraints ? C.constraints[R.id].filter(c,
+          c.risk_tier == R.attr.risk_tier && c.argument in R.attr.arguments &&
+          R.attr.arguments[c.argument] != null &&
+          double(R.attr.arguments[c.argument]) > double(c.max)) : []
+  rules:
+    - name: authenticated
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_ALLOW
+      roles: ["*"]
+      condition:
+        match:
+          expr: P.attr.authenticated == true
+      output:
+        when:
+          ruleActivated: '{"reason": R.attr.side_effect + " tool allowed"}'
+
+    - name: not_authenticated
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: P.attr.authenticated != true
+      output:
+        when:
+          ruleActivated: '{"deny": "not authenticated"}'
+
+    - name: kill_switch_tenant
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: R.attr.tenant_id in C.kill_tenants
+      output:
+        when:
+          ruleActivated: '{"deny": "tool execution is disabled for this tenant (kill switch)"}'
+
+    - name: kill_switch_agent
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: R.attr.agent_id in C.kill_agents
+      output:
+        when:
+          ruleActivated: '{"deny": "tool execution is disabled for this agent (kill switch)"}'
+
+    - name: cross_tenant
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: R.attr.resource_tenant_id != null && R.attr.resource_tenant_id != R.attr.tenant_id
+      output:
+        when:
+          ruleActivated: '{"deny": "cross-tenant access"}'
+
+    - name: not_granted
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: R.attr.allowed_tools != null && !(R.id in R.attr.allowed_tools)
+      output:
+        when:
+          ruleActivated: '{"deny": "tool " + R.id + " is not granted to agent " + R.attr.agent_id}'
+
+    - name: clearance
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: size(V.required_groups) > 0 && !V.cleared
+      output:
+        when:
+          ruleActivated: '{"deny": R.attr.data_classification + " data needs one of the groups " + V.required_groups.join(", ")}'
+
+    - name: unknown_side_effect
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: '!(R.attr.side_effect in ["read", "write", "irreversible"])'
+      output:
+        when:
+          ruleActivated: '{"deny": "unknown side effect " + R.attr.side_effect}'
+
+    - name: argument_limit
+      actions: ["call", "call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: size(V.over_limit) > 0
+      output:
+        when:
+          ruleActivated: >-
+            {"deny": "argument " + V.over_limit[0].argument + " exceeds the limit " +
+              string(V.over_limit[0].max) + " for risk tier " + R.attr.risk_tier}
+
+    - name: approval_irreversible
+      actions: ["call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: R.attr.side_effect == "irreversible"
+      output:
+        when:
+          ruleActivated: >-
+            {"approval": "irreversible action", "approvers":
+              R.attr.risk_tier == "high" ? "group:two-person-approvers" : "group:approvers"}
+
+    - name: approval_external_write_medium
+      actions: ["call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: R.attr.side_effect == "write" && "external" in R.attr.tool_tags && R.attr.risk_tier == "medium"
+      output:
+        when:
+          ruleActivated: '{"approval": "external-facing write in a medium-risk agent", "approvers": "group:approvers"}'
+
+    - name: approval_write_high
+      actions: ["call_without_approval"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: R.attr.side_effect == "write" && R.attr.risk_tier == "high"
+      output:
+        when:
+          ruleActivated: '{"approval": "write in a high-risk agent", "approvers": "group:approvers"}'

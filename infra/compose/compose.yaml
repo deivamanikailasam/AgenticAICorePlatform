@@ -54,6 +54,9 @@ services:
       MCP_GATEWAY_ALLOWED_HOSTS: 127.0.0.1:*,localhost:*,mcp-gateway:*
       MCP_GATEWAY_AUDIT_FILE: /tmp/mcp-gateway-audit.jsonl
       P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
+      # which policy decision point decides tool calls: opa (default, Project 0's OPA) | cerbos
+      MCP_GATEWAY_PDP: ${MCP_GATEWAY_PDP:-opa}
+      AGENT_CERBOS_URL: http://cerbos:3592
       # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
       SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
     ports: ["127.0.0.1:8090:8090"]
@@ -61,5 +64,24 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8090/healthz')"]
       interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # Alternative policy decision point (Step 10, ADR 0020): `docker compose --profile cerbos up`
+  # and MCP_GATEWAY_PDP=cerbos. Project 0 does not run Cerbos, so Project A owns it.
+  cerbos:
+    image: docker.io/cerbos/cerbos:0.56.0@sha256:540643bc67ba628011a150ad1d3370f285daa38995be5cd7a4be181da902bec1
+    profiles: [cerbos]
+    command: ["server", "--set=storage.driver=disk", "--set=storage.disk.directory=/policies", "--set=storage.disk.watchForChanges=false"]
+    environment:
+      CERBOS_NO_TELEMETRY: "1"
+    volumes:
+      - ../../policies/cerbos:/policies:ro
+    <<: *hardening
+    ports: ["127.0.0.1:3592:3592"]
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "/cerbos", "healthcheck"]
+      interval: 3s
       retries: 20
     restart: unless-stopped

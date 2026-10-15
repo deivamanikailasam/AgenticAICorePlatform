@@ -66,6 +66,7 @@ jobs:
           just provision
           just migrate
           just up
+          just up-alternatives
           just test-integration
       - if: failure()
         run: docker compose -f tests/stack/compose.p0-standin.yaml logs --tail=200

@@ -22,6 +22,7 @@ dependencies = [
 "tool_executor.platform" = "agent_tools.executor:PlatformToolExecutor"
 "tool_executor.authorising" = "agent_tools.authorising:AuthorisingToolExecutor"
 "policy_decision_point.opa" = "agent_tools.policy:OpaPolicyDecisionPoint"
+"policy_decision_point.cerbos" = "agent_tools.policy_cerbos:CerbosPolicyDecisionPoint"
 "tool.calculator" = "agent_tools.builtin:CalculatorTool"
 "tool.clock" = "agent_tools.builtin:ClockTool"
 "tool.word_count" = "agent_tools.builtin:WordCountTool"

@@ -3,6 +3,7 @@ set dotenv-load := true
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 compose := "docker compose -f infra/compose/compose.yaml"
+cerbos_image := "docker.io/cerbos/cerbos:0.56.0@sha256:540643bc67ba628011a150ad1d3370f285daa38995be5cd7a4be181da902bec1"
 
 default:
     @just --list
@@ -42,6 +43,11 @@ policy-test:
     opa fmt --fail --list policies/ || (echo "policy-test: run 'opa fmt -w policies/'" && exit 1)
     opa check --strict policies/
     opa test policies/ --explain fails
+    just policy-test-cerbos
+
+# Compile the Cerbos alternative policies and run their tests (needs Docker)
+policy-test-cerbos:
+    docker run --rm -v "$PWD/policies/cerbos:/policies:ro" {{cerbos_image}} compile /policies
 
 # Load Project A's Rego policies into OPA (dev/CI; production uses bundles, Step 38)
 provision-policies:
@@ -83,8 +89,12 @@ up:
     {{compose}} run --rm agent-health
     {{compose}} up -d --wait --remove-orphans mcp-gateway
 
+# Optional alternative engines (profiles): Cerbos, OpenFGA
+up-alternatives:
+    {{compose}} --profile cerbos up -d --wait cerbos
+
 down:
-    {{compose}} down
+    {{compose}} --profile cerbos down
 
 logs *svc:
     {{compose}} logs -f {{svc}}
