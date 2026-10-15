@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import tempfile
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
@@ -30,21 +31,27 @@ from agent_contracts.models import MemoryItem, MemoryScope, Provenance
 
 from agent_memory.common import embed_ctx
 
-os.environ["MEM0_TELEMETRY"] = "False"  # before mem0 is imported: never phone home
-
-from mem0 import AsyncMemory
-from mem0.configs.base import MemoryConfig
-from mem0.embeddings.base import EmbeddingBase
-
 NEVER = 32503680000.0
 
 
-class PlatformEmbedding(EmbeddingBase):  # type: ignore[misc]
-    """Mem0's embedding interface over the platform's ``embedder`` slot. Mem0 calls it from a
-    worker thread, so each call runs the async embedder on that thread's own event loop."""
+def _mem0() -> Any:
+    """Import Mem0 only when this store is used: importing it writes a settings directory, so
+    point that at a temporary folder (services run on read-only file systems) and switch its
+    telemetry off first."""
+    os.environ["MEM0_TELEMETRY"] = "False"  # never phone home
+    os.environ.setdefault("MEM0_DIR", os.path.join(tempfile.gettempdir(), "mem0"))
+    import mem0
+    import mem0.configs.base
+
+    return mem0
+
+
+class _PlatformEmbedding:
+    """Mem0's embedding interface over the platform's ``embedder`` slot (duck-typed: ``embed``
+    and ``embed_batch``). Mem0 calls it from a worker thread, so each call runs the async
+    embedder on that thread's own event loop."""
 
     def __init__(self, embedder: Embedder) -> None:
-        super().__init__()
         self.embedder = embedder
         self.scope = MemoryScope(tenant_id="memory")
 
@@ -70,7 +77,8 @@ class Mem0MemoryStore(MemoryStore):
             from agent_runtime.models.embeddings import GatewayEmbedder
 
             embedder = GatewayEmbedder()
-        config = MemoryConfig.model_validate(
+        mem0 = _mem0()
+        config = mem0.configs.base.MemoryConfig.model_validate(
             {
                 "vector_store": {
                     "provider": "pgvector",
@@ -90,8 +98,8 @@ class Mem0MemoryStore(MemoryStore):
                 "history_db_path": ":memory:",
             }
         )
-        self.memory = AsyncMemory(config)
-        self.memory.embedding_model = PlatformEmbedding(embedder)
+        self.memory = mem0.AsyncMemory(config)
+        self.memory.embedding_model = _PlatformEmbedding(embedder)
 
     @staticmethod
     def _meta(item: MemoryItem) -> dict[str, Any]:
