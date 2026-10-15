@@ -1,46 +1,112 @@
-# Tool-call decisions for the platform (Step 8 baseline; Step 10 adds tenant, data class,
-# risk tier, rate limits and on-behalf-of rules).
+# Tool-call authorisation (Step 10). One decision per call; deny unless a rule allows.
 #
-# Input (see agent_contracts.models.PolicyInput):
-#   input.action                 "tool.call"
-#   input.ctx                    {tenant_id, user_id, agent_id, risk_tier, ...}
-#   input.tool                   tool name, e.g. "rag-core__search"
-#   input.side_effect            "read" | "write" | "irreversible"
-#   input.data_classification    "public" | "internal" | "confidential" | "restricted"
-#   input.resource_tenant_id     tenant that owns the data, if known
-#   input.subject                {authenticated, groups, roles} (set by the gateway)
+# Input (agent_contracts.models.PolicyInput):
+#   ctx                  {tenant_id, user_id, agent_id, risk_tier, run_id, ...}
+#   tool, tool_ref       model-facing name and source ref (mcp://server/tool, local://...)
+#   tool_tags            e.g. ["external"]
+#   side_effect          "read" | "write" | "irreversible"
+#   data_classification  "public" | "internal" | "confidential" | "restricted"
+#   resource_tenant_id   tenant that owns the data, when the caller knows it
+#   arguments            the call's arguments
+#   subject              {authenticated, user, groups, roles, client_id}
+#   allowed_tools        tools granted by the agent's spec (null when a person calls directly)
 #
-# Output: data.agent.tools.decision = {"effect": ..., "reasons": [...], "approvers": ...}
+# Policy data (data.agent.config, policies/agent/config/data.json): kill switch, clearances,
+# argument constraints.
+#
+# Output: data.agent.tools.decision = {effect, reasons, approvers?, version}
 package agent.tools
 
 import rego.v1
 
-default decision := {"effect": "deny", "reasons": ["no rule allows this call"]}
+version := "2026-10-15.1"
 
-decision := {"effect": "deny", "reasons": ["not authenticated"]} if not authenticated
+cfg := data.agent.config
 
-decision := {"effect": "deny", "reasons": ["cross-tenant access"]} if {
-	authenticated
-	cross_tenant
+# ------------------------------------------------------------------ hard denials (any one wins)
+
+deny contains "not authenticated" if not input.subject.authenticated
+
+deny contains "tool execution is disabled for this tenant (kill switch)" if {
+	cfg.kill_switch.tenants[input.ctx.tenant_id] == true
 }
 
-decision := {"effect": "allow", "reasons": ["read tool, same tenant"]} if {
-	authenticated
-	not cross_tenant
-	input.side_effect == "read"
+deny contains "tool execution is disabled for this agent (kill switch)" if {
+	cfg.kill_switch.agents[input.ctx.agent_id] == true
 }
 
-decision := {"effect": "require_approval", "reasons": [sprintf("%s tool needs a human approval", [input.side_effect])], "approvers": "group:approvers"} if {
-	authenticated
-	not cross_tenant
-	input.side_effect in {"write", "irreversible"}
-}
-
-authenticated if input.subject.authenticated == true
-
-# null means "the caller does not know which tenant owns the data": only a known, different
-# tenant is cross-tenant (Rego treats null as a value, not as false).
-cross_tenant if {
+deny contains "cross-tenant access" if {
 	input.resource_tenant_id != null
 	input.resource_tenant_id != input.ctx.tenant_id
+}
+
+deny contains sprintf("tool %s is not granted to agent %s", [input.tool, input.ctx.agent_id]) if {
+	input.allowed_tools != null
+	not input.tool in input.allowed_tools
+}
+
+deny contains sprintf("%s data needs one of the groups %v", [input.data_classification, required]) if {
+	required := cfg.clearance[input.data_classification]
+	count(required) > 0
+	not has_any_group(required)
+}
+
+deny contains sprintf("unknown side effect %q", [input.side_effect]) if {
+	not input.side_effect in {"read", "write", "irreversible"}
+}
+
+deny contains msg if {
+	some constraint in cfg.constraints[input.tool]
+	value := object.get(input.arguments, constraint.argument, null)
+	value != null
+	value > constraint.max
+	msg := sprintf("argument %s=%v exceeds the limit %v for risk tier %s", [constraint.argument, value, constraint.max, input.ctx.risk_tier])
+	constraint.risk_tier == input.ctx.risk_tier
+}
+
+# ------------------------------------------------------------------ approvals
+
+approval contains "irreversible action" if input.side_effect == "irreversible"
+
+approval contains "external-facing write in a medium-risk agent" if {
+	input.side_effect == "write"
+	"external" in input.tool_tags
+	input.ctx.risk_tier == "medium"
+}
+
+approval contains "write in a high-risk agent" if {
+	input.side_effect == "write"
+	input.ctx.risk_tier == "high"
+}
+
+approvers := "group:two-person-approvers" if {
+	input.ctx.risk_tier == "high"
+	input.side_effect == "irreversible"
+} else := "group:approvers"
+
+# ------------------------------------------------------------------ decision
+
+default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.1"}
+
+decision := {"effect": "deny", "reasons": sort(deny), "version": version} if count(deny) > 0
+
+decision := {"effect": "require_approval", "reasons": sort(approval), "approvers": approvers, "version": version} if {
+	count(deny) == 0
+	count(approval) > 0
+}
+
+decision := {"effect": "allow", "reasons": [sprintf("%s tool allowed", [input.side_effect])], "version": version} if {
+	count(deny) == 0
+	count(approval) == 0
+}
+
+has_any_group(required) if {
+	some g in input.subject.groups
+	some r in required
+	endswith(g, sprintf("/%s", [r]))
+}
+
+has_any_group(required) if {
+	some role in input.subject.roles
+	role in required
 }

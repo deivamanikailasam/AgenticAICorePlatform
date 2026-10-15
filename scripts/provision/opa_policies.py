@@ -1,4 +1,4 @@
-"""Load every non-test ``policies/**/*.rego`` into OPA via its REST API. Idempotent (PUT).
+"""Load every non-test ``policies/**/*.rego`` and ``policies/**/data.json`` into OPA. Idempotent (PUT).
 
 For local development and CI. In staging and production OPA pulls signed bundles (Step 38).
 """
@@ -31,6 +31,17 @@ def main() -> int:
                 print(f"opa: {pid}: HTTP {resp.status_code} {resp.text[:200]}")
                 return 1
             print(f"opa: policy {pid}: loaded")
+        for f in sorted((ROOT / "policies").rglob("data.json")):
+            path = str(f.parent.relative_to(ROOT / "policies"))
+            resp = client.put(
+                f"{url}/v1/data/{path}",
+                content=f.read_bytes(),
+                headers={"Content-Type": "application/json"},
+            )
+            if resp.status_code >= 300:
+                print(f"opa: data {path}: HTTP {resp.status_code} {resp.text[:200]}")
+                return 1
+            print(f"opa: data {path}: loaded")
     return 0
 
 

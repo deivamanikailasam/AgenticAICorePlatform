@@ -1,0 +1,28 @@
+{
+  "kill_switch": {
+    "tenants": {},
+    "agents": {}
+  },
+  "clearance": {
+    "public": [],
+    "internal": [],
+    "confidential": [],
+    "restricted": [
+      "restricted-readers"
+    ]
+  },
+  "constraints": {
+    "erp__post_payment": [
+      {
+        "argument": "amount_aud",
+        "max": 10000,
+        "risk_tier": "medium"
+      },
+      {
+        "argument": "amount_aud",
+        "max": 50000,
+        "risk_tier": "high"
+      }
+    ]
+  }
+}

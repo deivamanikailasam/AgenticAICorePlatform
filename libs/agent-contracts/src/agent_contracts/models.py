@@ -178,6 +178,7 @@ class ToolSpec(Frozen):
     data_classification: DataClass = DataClass.INTERNAL
     owner: str = "unknown"
     deprecated: bool = False
+    tags: tuple[str, ...] = ()  # e.g. "external" (reaches people or systems outside the company)
 
     def definition(self) -> ToolDefinition:
         return ToolDefinition(
@@ -420,6 +421,10 @@ class PolicyInput(Frozen):
     arguments: dict[str, Any] = Field(default_factory=dict)
     # who is asking, as established by the caller's verified token: authenticated, groups, roles
     subject: dict[str, Any] = Field(default_factory=dict)
+    tool_ref: str | None = None
+    tool_tags: tuple[str, ...] = ()
+    # the tools the calling agent's spec grants (None = not called by an agent, e.g. a person via the gateway)
+    allowed_tools: tuple[str, ...] | None = None
 
 
 class PolicyDecision(Frozen):
