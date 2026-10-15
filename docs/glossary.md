@@ -84,6 +84,12 @@ Every term used in this repository, in plain English. Grows with each step.
 | Agent Card | A JSON document an A2A agent publishes: what it can do, where to reach it, how to authenticate |
 | Signed Agent Card | An Agent Card carrying a digital signature, so a caller can check who published it |
 | Pinned key | A public key written into configuration ahead of time; only signatures from it are accepted |
+| Budget tree | Budgets nested like the runs: a worker's spending also counts against its team's budget |
+| Trip | A limit being reached; the run stops and names the limit |
+| Loop detection | Noticing an agent repeating itself, making no progress, or alternating between two steps |
+| Circuit breaker | A switch that stops calling a dependency after repeated failures, then tries again after a pause |
+| Half-open | A circuit breaker's trial state: one call is let through to see if the dependency recovered |
+| Cost reconciliation | Checking the platform's cost records against the gateway's own accounting |
 | Agent registry | The catalogue of every agent version: owner, risk, tools and lifecycle state |
 | Lifecycle state | Where an agent version is in its life: draft, approved, deprecated or retired |
 | Approval expiry | The date after which an approval no longer counts and the agent must be reviewed again |

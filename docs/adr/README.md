@@ -42,3 +42,4 @@ ADR supersedes it.
 | [0034](0034-team-patterns.md) | Handoff, group chat, map-reduce and debate on one team runtime; every pattern bounded by its own end, turns, items, budget and circuits | 23 |
 | [0035](0035-a2a-gateway.md) | A2A gateway: signed Agent Cards, Keycloak + OPA on inbound calls; remote agents as allowlisted tools with pinned card keys | 24 |
 | [0036](0036-agent-registry.md) | Agent registry: Postgres default (Backstage alternative), immutable versions, draft → approved → deprecated → retired; only approved agents run or are delegated to in staging and prod | 25 |
+| [0037](0037-budgets-loops-and-circuits.md) | Budgets (tree, per tool, wall clock, depth), loop detection by progress, shared circuit breakers, graceful stop or summarise; LiteLLM team budget as the ceiling; ledger reconciled with the gateway | 26 |
