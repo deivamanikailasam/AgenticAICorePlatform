@@ -101,3 +101,9 @@ class EvaluatorOptimiserPatternBuilder(ReactPatternBuilder):
     """Optimiser drafts, separate evaluator scores, keep the best; bounded rounds."""
 
     loop = "evaluator_optimiser"
+
+
+class AgenticRagPatternBuilder(ReactPatternBuilder):
+    """``pattern: agentic_rag`` (Step 16): plan hops, retrieve through rag-core, cite, self-check."""
+
+    loop = "agentic_rag"

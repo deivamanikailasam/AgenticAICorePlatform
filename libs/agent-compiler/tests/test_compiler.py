@@ -61,9 +61,9 @@ def _invoice(pattern: str) -> Any:
 def test_missing_inner_pattern_names_the_step() -> None:
     with pytest.raises(
         CompileError,
-        match=r"no pattern builder installed for 'agentic_rag' \(it arrives in Step 16\)",
+        match=r"no pattern builder installed for 'supervisor' \(it arrives in Step 22\)",
     ):
-        compile_spec(_invoice("agentic_rag"))
+        compile_spec(_invoice("supervisor"))
 
 
 def test_react_agent_node_becomes_a_loop_with_an_approval_gate() -> None:
@@ -95,8 +95,8 @@ class _TwoStepAgent(PatternBuilder):
 def test_agent_nodes_expand_and_irreversible_tools_get_approval() -> None:
     reg = Registry()
     reg.discover()
-    reg.add("pattern_builder", "agentic_rag", _TwoStepAgent)
-    plan = compile_spec(_invoice("agentic_rag"), reg)
+    reg.add("pattern_builder", "supervisor", _TwoStepAgent)
+    plan = compile_spec(_invoice("supervisor"), reg)
     ids = [n.id for n in plan.nodes]
     assert "resolve_exceptions.think" in ids
     assert "resolve_exceptions" not in ids

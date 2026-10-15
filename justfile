@@ -179,6 +179,10 @@ compare-patterns cases="evals/reference/planning-tasks/cases.jsonl":
 eval-routing dataset="evals/labelled/routing" routers="llm,embedding,rules":
     uv run python -m agent_compiler.route_eval {{dataset}} {{routers}}
 
+# Agentic RAG vs Project 0's naive RAG on the multi-hop golden set (Mac; VERIFY-ON-MAC)
+eval-agentic-rag dataset="evals/golden/agentic-rag":
+    uv run python -m agent_compiler.rag_eval {{dataset}}
+
 # The hybrid reference app against Project 0 (Mac; VERIFY-ON-MAC): just demo-invoice-triage INV-1002 j.smith
 demo-invoice-triage invoice="INV-1002" approver="":
     uv run python -m invoice_triage.demo {{invoice}} {{ if approver != "" { "--approver " + approver } else { "" } }}

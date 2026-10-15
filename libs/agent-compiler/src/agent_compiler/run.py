@@ -36,6 +36,7 @@ from agent_contracts.models import (
 )
 from agent_contracts.registry import registry as component_registry
 from agent_runtime.agent_loop import AgentLoopExecutor
+from agent_runtime.agentic_rag import AgenticRagStrategy
 from agent_runtime.executors import (
     LlmNodeExecutor,
     RouterNodeExecutor,
@@ -289,6 +290,7 @@ def agent_dispatcher(
             "evaluator_optimiser": EvaluatorOptimiserStrategy(
                 **common, critic=critic, react=native
             ),
+            "agentic_rag": AgenticRagStrategy(**common),
         }
     )
 

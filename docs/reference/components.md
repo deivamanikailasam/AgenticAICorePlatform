@@ -50,6 +50,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | model_client | echo | dummy | `agent_contracts.dummies.models:EchoModelClient` | Echoes the last user message; satisfies response schemas with the smallest valid value. |
 | model_client | litellm | implemented | `agent_runtime.models.gateway:GatewayModelClient` | Chat, tools, structured output and streaming through the Project 0 LiteLLM gateway. |
 | model_client | scripted | dummy | `agent_contracts.dummies.models:ScriptedModelClient` | Replays a script of assistant turns (text or tool calls), then falls back to echo. |
+| pattern_builder | agentic_rag | implemented | `agent_compiler.patterns.react:AgenticRagPatternBuilder` | ``pattern: agentic_rag`` (Step 16): plan hops, retrieve through rag-core, cite, self-check. |
 | pattern_builder | chain | dummy | `agent_contracts.dummies.runtime:ChainPattern` | A straight chain of function nodes: ``{steps: [fn, fn, ...]}``. |
 | pattern_builder | evaluator_optimiser | implemented | `agent_compiler.patterns.react:EvaluatorOptimiserPatternBuilder` | Optimiser drafts, separate evaluator scores, keep the best; bounded rounds. |
 | pattern_builder | hybrid | implemented | `agent_compiler.patterns.graph:HybridPatternBuilder` | Workflow nodes and agent nodes mixed freely; agent nodes are expanded by the compiler. |

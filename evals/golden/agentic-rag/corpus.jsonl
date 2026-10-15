@@ -1,0 +1,10 @@
+{"id": "pol-travel", "title": "Travel policy", "text": "Domestic flights costing more than AUD 600 must be approved by the director of the traveller's department.", "groups": ["/acme/staff"]}
+{"id": "org-chart", "title": "Organisation chart", "text": "Engineering director: Priya Raman. Finance director: Tom Nguyen. Sales director: Ana Costa.", "groups": ["/acme/staff"]}
+{"id": "office-sites", "title": "Office locations", "text": "The engineering team works from the Melbourne office. The sales team works from the Sydney office.", "groups": ["/acme/staff"]}
+{"id": "pol-meals", "title": "Meal allowance", "text": "Daily meal allowance: AUD 85 in Melbourne and AUD 95 in Sydney.", "groups": ["/acme/staff"]}
+{"id": "prod-r7", "title": "Model R7 specification", "text": "The R7 delivery robot uses the BP-200 battery pack and is built at the Geelong plant.", "groups": ["/acme/staff"]}
+{"id": "parts-bp200", "title": "BP-200 battery pack", "text": "The BP-200 battery pack carries a 3-year warranty and is supplied by VoltCell Pty Ltd.", "groups": ["/acme/staff"]}
+{"id": "plant-geelong", "title": "Geelong plant", "text": "The Geelong plant's safety officer is Mei Lin. The plant runs two shifts.", "groups": ["/acme/staff"]}
+{"id": "supplier-voltcell", "title": "Supplier terms: VoltCell", "text": "VoltCell Pty Ltd is paid on 45-day terms.", "groups": ["/acme/finance"]}
+{"id": "pol-leave", "title": "Leave policy", "text": "Staff accrue 20 days of annual leave a year. Unused leave above 30 days must be approved by the department director.", "groups": ["/acme/staff"]}
+{"id": "hr-bands", "title": "Salary bands", "text": "Engineer L3 salary band: AUD 140,000 to 165,000.", "groups": ["/acme/hr"]}
