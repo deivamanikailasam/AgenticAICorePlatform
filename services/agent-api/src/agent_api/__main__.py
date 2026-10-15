@@ -8,6 +8,7 @@ import uvicorn
 from agent_contracts.dummies.observability import JsonlAuditSink
 from agent_contracts.interfaces import Checkpointer
 from agent_runtime.checkpoints import FieldCipher, PostgresCheckpointer
+from agent_runtime.models.ledger import PostgresUsageLedger
 from agent_spec.platform import load_platform
 from agent_tools.auth import KeycloakTokenVerifier
 from agent_tools.identity import TokenExchanger
@@ -53,6 +54,7 @@ def main() -> None:
         exchanger=exchanger,
         checkpointer=checkpointer,
         admit=gate.refusal,
+        ledger=PostgresUsageLedger(settings.db_dsn) if settings.db_dsn else None,
     )
     manager = RunManager(agents, assembly, store)
     verifier = KeycloakTokenVerifier(

@@ -115,16 +115,27 @@ class GatewayModelClient(ModelClient):
         return role, self.platform.alias_for(role_or_alias, self.spec_models)
 
     def _key(self, role: str) -> str:
+        return self._named_key(role)[1]
+
+    def key_name(self, role: str) -> str:
+        """Whose key a call for ``role`` uses (the role's own, or a fallback): the ledger records
+        it so costs reconcile against the gateway's spend for that key (Step 26)."""
+        return self._named_key(role)[0]
+
+    def _named_key(self, role: str) -> tuple[str, str]:
         """Per-role virtual key: explicit ``keys`` (tests) or ``LITELLM_KEY_<ROLE>`` env vars."""
         if self._keys is not None:
             for name in (role, "default"):
                 if self._keys.get(name):
-                    return self._keys[name]
+                    return name, self._keys[name]
         else:
             prefix = self.platform.gateway.key_env_prefix
             for name in (f"{prefix}{role.upper()}", f"{prefix}DEFAULT", "LITELLM_API_KEY"):
                 if os.environ.get(name):
-                    return os.environ[name]
+                    key_role = (
+                        name.removeprefix(prefix).lower() if name.startswith(prefix) else "api"
+                    )
+                    return key_role, os.environ[name]
         raise GatewayError(
             f"no gateway key for role '{role}' (set {self.platform.gateway.key_env_prefix}{role.upper()})"
         )
@@ -222,8 +233,18 @@ class GatewayModelClient(ModelClient):
             content=msg.get("content") or "",
             tool_calls=_parse_tool_calls(msg.get("tool_calls")),
         )
-        usage = self._usage(doc.get("usage"), resp.headers.get("x-litellm-response-cost"))
-        self.ledger.record(request.metadata.get("run_id", "-"), role, alias, usage)
+        cost = resp.headers.get("x-litellm-response-cost")
+        usage = self._usage(doc.get("usage"), cost)
+        self.ledger.record(
+            request.metadata.get("run_id", "-"),
+            role,
+            alias,
+            usage,
+            _usd(cost),
+            doc.get("id"),
+            self.key_name(role),
+        )
+        await self.ledger.flush()
         finish = FINISH.get(choice.get("finish_reason") or "stop", "stop")
         return ChatResponse(
             message=message, model=doc.get("model", alias), usage=usage, finish_reason=finish
@@ -239,12 +260,17 @@ class GatewayModelClient(ModelClient):
         rows = sorted(doc.get("data", []), key=lambda r: r.get("index", 0))
         if len(rows) != len(texts):
             raise GatewayError(f"gateway returned {len(rows)} embeddings for {len(texts)} texts")
+        cost = resp.headers.get("x-litellm-response-cost")
         self.ledger.record(
             run_id,
             role,
             alias,
-            self._usage(doc.get("usage"), resp.headers.get("x-litellm-response-cost")),
+            self._usage(doc.get("usage"), cost),
+            _usd(cost),
+            doc.get("id"),
+            self.key_name(role),
         )
+        await self.ledger.flush()
         return [[float(x) for x in r["embedding"]] for r in rows]
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
@@ -305,6 +331,7 @@ class GatewayModelClient(ModelClient):
                     resp.status_code,
                 )
             cost = resp.headers.get("x-litellm-response-cost")
+            call_id: str | None = None
             async for line in resp.aiter_lines():
                 if not line.startswith("data:"):
                     continue
@@ -312,6 +339,7 @@ class GatewayModelClient(ModelClient):
                 if data == "[DONE]":
                     break
                 doc = json.loads(data)
+                call_id = call_id or doc.get("id")
                 if doc.get("usage"):
                     usage = self._usage(doc["usage"], cost)
                 for choice in doc.get("choices", []):
@@ -330,7 +358,16 @@ class GatewayModelClient(ModelClient):
                     if choice.get("finish_reason"):
                         finish = FINISH.get(choice["finish_reason"], "stop")
         final_usage = usage or Usage()
-        self.ledger.record(request.metadata.get("run_id", "-"), role, alias, final_usage)
+        self.ledger.record(
+            request.metadata.get("run_id", "-"),
+            role,
+            alias,
+            final_usage,
+            _usd(cost),
+            call_id,
+            self.key_name(role),
+        )
+        await self.ledger.flush()
         yield ChatChunk(
             tool_calls=_parse_tool_calls(list(partial.values())),
             finish_reason=finish or "stop",
@@ -339,3 +376,7 @@ class GatewayModelClient(ModelClient):
 
     async def aclose(self) -> None:
         await self._client.aclose()
+
+
+def _usd(header: str | None) -> float:
+    return float(header) if header else 0.0

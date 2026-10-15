@@ -39,6 +39,7 @@ from agent_runtime.durable import CheckpointingNodeRunner
 from agent_runtime.events import EventingNodeRunner, EventingToolExecutor, StreamingModelClient
 from agent_runtime.models.embeddings import GatewayEmbedder
 from agent_runtime.models.gateway import GatewayModelClient
+from agent_runtime.models.ledger import UsageLedger
 from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec
 from agent_spec.platform import PlatformConfig
@@ -89,7 +90,11 @@ class Assembly:
         a2a_transport: httpx.AsyncBaseTransport | None = None,
         admit: Admit | None = None,
         budgets: RunBudgets | None = None,
+        ledger: UsageLedger | None = None,
     ) -> None:
+        # every model call's tokens and cost (Postgres in deployments: cost dashboards and
+        # reconciliation with the gateway, Step 26)
+        self.ledger = ledger or UsageLedger()
         # Step 26: budgets and loop detection for every run and child run built here
         self.budgets = budgets if budgets is not None else RunBudgets()
         # circuit breakers shared by every run of this process (Step 26)
@@ -109,7 +114,9 @@ class Assembly:
         self.exchanger = exchanger
         self.pool = McpClientPool(platform, audit=audit, exchanger=exchanger)
         self.model_factory = model_factory or (
-            lambda spec: GatewayModelClient(self.platform, spec_models=spec.models)
+            lambda spec: GatewayModelClient(
+                self.platform, spec_models=spec.models, ledger=self.ledger
+            )
         )
         self.registry_factory = registry_factory or self.registry
 
@@ -215,7 +222,9 @@ class Assembly:
         if config is None:
             return None
         if spec.name not in self._memories:
-            embedder = GatewayEmbedder(GatewayModelClient(self.platform, spec_models=spec.models))
+            embedder = GatewayEmbedder(
+                GatewayModelClient(self.platform, spec_models=spec.models, ledger=self.ledger)
+            )
             cipher = (
                 self.checkpointer.cipher
                 if isinstance(self.checkpointer, PostgresCheckpointer)

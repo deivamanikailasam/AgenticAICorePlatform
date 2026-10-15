@@ -165,6 +165,10 @@ migrate:
 agents *args:
     uv run python -m agent_registry {{args}}
 
+# Compare the platform's cost ledger with LiteLLM's spend per role key (Step 26)
+cost-reconcile *args:
+    uv run python -m scripts.cost_reconcile {{args}}
+
 # Regenerate tool and agent cards from the registries
 cards:
     uv run python -m scripts.cards

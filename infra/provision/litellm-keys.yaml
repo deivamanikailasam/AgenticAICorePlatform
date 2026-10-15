@@ -1,7 +1,11 @@
-# One LiteLLM virtual key per agent role. Budgets are *initial guard limits*, not measurements:
-# tune them from the cost dashboards (Step 26). LiteLLM accounts cost in USD; AUD limits are
-# converted at the rate recorded in platform.yaml when Step 26 lands.
+# One LiteLLM virtual key per agent role, all in one LiteLLM team (Step 26): the team budget caps
+# the platform as a whole, each key caps its role, and per-run and per-agent limits are enforced
+# by the platform (budget controller). Budgets are *initial guard limits*, not measurements:
+# tune them from the cost dashboards and `just cost-reconcile`. LiteLLM accounts cost in USD.
 budget_duration: 30d
+team:
+  alias: agent-platform
+  # the team cap is the sum of the role caps unless set here (max_budget_usd)
 roles:
   planner:    { models: [local-qwen-quality], max_budget_usd: 20 }
   executor:   { models: [local-qwen-fast, local-qwen-quality], max_budget_usd: 20 }

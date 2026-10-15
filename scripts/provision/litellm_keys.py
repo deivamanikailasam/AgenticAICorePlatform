@@ -1,6 +1,9 @@
-"""Create one LiteLLM virtual key per agent role, with model allowlists and budgets. Idempotent.
+"""Create the platform's LiteLLM team and one virtual key per agent role in it, with model
+allowlists and budgets. Idempotent.
 
-Keys are identified by alias ``agent-platform-<role>``. New key values are written once to a
+Budgets are hierarchical (Step 26): the team's ``max_budget`` caps all roles together and each
+key caps its role; LiteLLM applies the team budget to every key in the team. Keys are
+identified by alias ``agent-platform-<role>``; the team by its alias. New key values are written once to a
 0600 file (default ``.tmp/litellm-keys.env``, git-ignored) to be moved into OpenBao; they are
 never printed.
 """
@@ -25,6 +28,46 @@ def load_roles(path: Path = CONFIG) -> tuple[dict[str, dict[str, Any]], str]:
     return doc["roles"], doc.get("budget_duration", "30d")
 
 
+def load_team(path: Path = CONFIG) -> dict[str, Any] | None:
+    doc = yaml.safe_load(path.read_text())
+    team = doc.get("team")
+    if not team:
+        return None
+    roles = doc["roles"]
+    return {
+        "alias": str(team.get("alias") or "agent-platform"),
+        "max_budget_usd": float(
+            team.get("max_budget_usd") or sum(float(r["max_budget_usd"]) for r in roles.values())
+        ),
+        "models": sorted({m for r in roles.values() for m in r["models"]}),
+    }
+
+
+def ensure_team(
+    client: httpx.Client, base: str, master_key: str, team: dict[str, Any], duration: str
+) -> tuple[str, str]:
+    """The team id for ``team["alias"]``, creating the team if it does not exist."""
+    auth = {"Authorization": f"Bearer {master_key}"}
+    resp = client.get(f"{base}/team/list", headers=auth)
+    resp.raise_for_status()
+    for t in resp.json():
+        if isinstance(t, dict) and t.get("team_alias") == team["alias"]:
+            return str(t["team_id"]), f"team {team['alias']}: exists"
+    resp = client.post(
+        f"{base}/team/new",
+        headers=auth,
+        json={
+            "team_alias": team["alias"],
+            "max_budget": team["max_budget_usd"],
+            "budget_duration": duration,
+            "models": team["models"],
+            "metadata": {"owner": "agent-platform"},
+        },
+    )
+    resp.raise_for_status()
+    return str(resp.json()["team_id"]), f"team {team['alias']}: created"
+
+
 def existing_aliases(client: httpx.Client, base: str, master_key: str) -> set[str]:
     resp = client.get(
         f"{base}/key/list",
@@ -42,6 +85,11 @@ def provision(
     roles, duration = load_roles(config)
     have = existing_aliases(client, base, master_key)
     actions: list[str] = []
+    team_id = None
+    team = load_team(config)
+    if team is not None:
+        team_id, action = ensure_team(client, base, master_key, team, duration)
+        actions.append(action)
     new_lines: list[str] = []
     for role, spec in roles.items():
         alias = f"{ALIAS_PREFIX}{role}"
@@ -57,6 +105,7 @@ def provision(
                 "max_budget": spec["max_budget_usd"],
                 "budget_duration": duration,
                 "metadata": {"owner": "agent-platform", "role": role},
+                **({"team_id": team_id} if team_id else {}),
             },
         )
         resp.raise_for_status()

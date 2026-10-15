@@ -80,3 +80,33 @@ def test_provisioning_is_idempotent_against_live_services(tmp_path: Path) -> Non
         litellm_keys.provision(c, base, master, tmp_path / "k.env")
         again = litellm_keys.provision(c, base, master, tmp_path / "k2.env")
     assert all(a.endswith("exists") for a in again), again
+
+
+@respx.mock
+def test_litellm_puts_role_keys_in_one_budgeted_team(tmp_path: Path) -> None:
+    cfg = tmp_path / "keys.yaml"
+    cfg.write_text(
+        "team: {alias: agent-platform}\n"
+        "roles:\n"
+        "  planner: {models: [a], max_budget_usd: 1}\n"
+        "  router: {models: [b], max_budget_usd: 2.5}\n"
+    )
+    respx.get("http://gw/key/list").respond(200, json={"keys": []})
+    respx.get("http://gw/team/list").mock(
+        side_effect=[
+            httpx.Response(200, json=[]),
+            httpx.Response(200, json=[{"team_alias": "agent-platform", "team_id": "t-1"}]),
+        ]
+    )
+    new_team = respx.post("http://gw/team/new").respond(200, json={"team_id": "t-1"})
+    gen = respx.post("http://gw/key/generate").respond(200, json={"key": "sk-x"})
+    with httpx.Client() as c:
+        first = litellm_keys.provision(c, "http://gw", "mk", tmp_path / "a.env", cfg)
+        second = litellm_keys.provision(c, "http://gw", "mk", tmp_path / "b.env", cfg)
+    assert "team agent-platform: created" in first
+    assert "team agent-platform: exists" in second
+    assert new_team.call_count == 1
+    team = json.loads(new_team.calls[0].request.content)
+    assert team["max_budget"] == 3.5  # the sum of the role caps
+    assert team["models"] == ["a", "b"]
+    assert {json.loads(c.request.content)["team_id"] for c in gen.calls} == {"t-1"}

@@ -16,6 +16,7 @@ from agent_api.registry import registry_gate
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
 from agent_contracts.dummies.observability import JsonlAuditSink
+from agent_runtime.models.ledger import PostgresUsageLedger
 from agent_runtime.temporal.runtime import TemporalRuntime
 from agent_spec.platform import load_platform
 from agent_tools.artefacts import S3ArtefactStore
@@ -56,6 +57,7 @@ async def run() -> None:
         rag_core_url=settings.rag_core_url,
         exchanger=exchanger,
         admit=gate.refusal,
+        ledger=PostgresUsageLedger(settings.db_dsn) if settings.db_dsn else None,
     )
     runtime = TemporalRuntime(artefacts=await artefacts())
     handles = await serve(runtime, assembly, RunManager.load_agents(settings.agents_dir))

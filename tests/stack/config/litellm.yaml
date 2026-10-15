@@ -1,7 +1,8 @@
 # Stand-in gateway: role aliases answer with canned responses so no real model is needed.
 model_list:
   - model_name: local-qwen-fast
-    litellm_params: { model: openai/fake-fast, api_key: none, mock_response: "stand-in fast" }
+    # stand-in prices (USD per token) so cost accounting and reconciliation are exercised (Step 26)
+    litellm_params: { model: openai/fake-fast, api_key: none, mock_response: "stand-in fast", input_cost_per_token: 0.000001, output_cost_per_token: 0.000002 }
   - model_name: local-qwen-quality
     litellm_params: { model: openai/fake-quality, api_key: none, mock_response: "stand-in quality" }
   - model_name: local-qwen-json
