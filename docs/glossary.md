@@ -70,3 +70,8 @@ Every term used in this repository, in plain English. Grows with each step.
 | Tool-result compaction | Shortening an old tool result to its beginning and end, with a pointer to the full text |
 | Just-in-time tools | Showing a model only the tools it likely needs, and letting it search for more |
 | Prompt caching | A provider reusing the unchanged start of a prompt from an earlier call, which is faster and cheaper |
+| Supervisor | An agent that hands parts of a task to worker agents and decides when the task is done |
+| Worker | An agent in a team with its own tools, permissions and budget |
+| Shared state | The typed fields a team builds up together; each worker reads and writes only its own |
+| Circuit breaker | Stopping use of something that keeps failing, so one failure does not cascade |
+| Delegation | One agent handing work to another; decided by policy and audited |

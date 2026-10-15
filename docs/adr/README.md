@@ -38,3 +38,4 @@ ADR supersedes it.
 | [0030](0030-temporal-for-durable-long-runs.md) | Temporal for durable long runs: plan interpreted in one workflow, nodes as activities, agent-worker; Restate and DBOS stubs | 19 |
 | [0031](0031-long-term-memory.md) | Long-term memory: pgvector default, write policy in front of every store, taint-aware remember, erasure everywhere; Zep and Letta stubs | 20 |
 | [0032](0032-context-engineering.md) | Context engineering: per-section budgets, atomic tool groups, rolling summaries capped by budget, trim and offload strategies, JIT tools, untrusted stays data | 21 |
+| [0033](0033-supervisor-teams.md) | Supervisor teams: workers as child runs with their own tools and grants, typed shared state, OPA on delegation, cost roll-up, circuit breakers | 22 |
