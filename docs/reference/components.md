@@ -15,6 +15,8 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | budget_controller | memory | dummy | `agent_contracts.dummies.safety:InMemoryBudgetController` | Counters per run; every charge also counts against all ancestors. |
 | checkpointer | memory | dummy | `agent_contracts.dummies.state:InMemoryCheckpointer` | Checkpoints in a dictionary keyed by (tenant, thread). |
 | checkpointer | sqlite | dummy | `agent_contracts.dummies.state:SqliteCheckpointer` | Checkpoints in SQLite (in-memory by default). The 'SQLite (tests)' catalogue option. |
+| code_sandbox | scripted | dummy | `agent_contracts.dummies.sandbox:ScriptedSandbox` | Returns a scripted result without executing anything (for testing tools and patterns). |
+| code_sandbox | unavailable | dummy | `agent_contracts.dummies.sandbox:UnavailableSandbox` | Refuses every request: the safe default when no isolation engine is installed. |
 | context_manager | summary_stub | dummy | `agent_contracts.dummies.context:SummaryStubContextManager` | Replaces dropped messages with one summary placeholder (real summaries: Step 21). |
 | context_manager | trim | dummy | `agent_contracts.dummies.context:TrimContextManager` | Drops the oldest, lowest-priority messages until the context fits. |
 | critic | length | dummy | `agent_contracts.dummies.reasoning:LengthCritic` | Passes outputs of at least ``min_words`` words. |

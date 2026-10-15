@@ -15,6 +15,7 @@ CONTRACTS: dict[str, type] = {
     "tool": C.ToolContract,
     "tool_registry": C.ToolRegistryContract,
     "tool_executor": C.ToolExecutorContract,
+    "code_sandbox": C.CodeSandboxContract,
     "pattern_builder": C.PatternBuilderContract,
     "runtime_adapter": C.RuntimeAdapterContract,
     "checkpointer": C.CheckpointerContract,

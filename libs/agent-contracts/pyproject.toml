@@ -61,6 +61,8 @@ agent-components = "agent_contracts.registry:main"
 "evaluator.tool_recall" = "agent_contracts.dummies.evals:ToolRecallEvaluator"
 "simulator.scripted_user" = "agent_contracts.dummies.evals:ScriptedUserSimulator"
 "simulator.patient_user" = "agent_contracts.dummies.evals:PatientUserSimulator"
+"code_sandbox.unavailable" = "agent_contracts.dummies.sandbox:UnavailableSandbox"
+"code_sandbox.scripted" = "agent_contracts.dummies.sandbox:ScriptedSandbox"
 
 [build-system]
 requires = ["hatchling==1.32.4"]

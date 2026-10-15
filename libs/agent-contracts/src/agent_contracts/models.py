@@ -592,3 +592,46 @@ class SimTurn(Frozen):
     message: Message | None = None
     done: bool = False
     reason: str = ""
+
+
+# ---------------------------------------------------------------- code sandbox (Step 9)
+
+
+class SandboxLimits(Frozen):
+    wall_seconds: float = Field(default=10.0, gt=0, le=600)
+    memory_mb: int = Field(default=256, ge=16, le=4096)
+    cpus: float = Field(default=0.5, gt=0, le=4)
+    pids: int = Field(default=64, ge=4, le=1024)
+    output_bytes: int = Field(default=64 * 1024, ge=1024, le=16 * 1024 * 1024)
+    disk_mb: int = Field(default=64, ge=1, le=1024)
+
+
+class SandboxStatus(StrEnum):
+    OK = "ok"  # exit code 0
+    ERROR = "error"  # non-zero exit code
+    TIMEOUT = "timeout"  # wall-clock limit reached; process killed
+    OOM = "oom"  # memory limit reached; process killed
+    KILLED = "killed"  # killed for another resource limit (e.g. pids)
+    REFUSED = "refused"  # the sandbox would not run this request
+
+
+class SandboxRequest(Frozen):
+    language: Literal["python"] = "python"
+    code: str = Field(max_length=200_000)
+    files: dict[str, str] = Field(default_factory=dict)  # name -> base64 content (inputs)
+    limits: SandboxLimits = SandboxLimits()
+    network: Literal["none"] = "none"  # model-written code never gets a network
+
+
+class SandboxResult(Frozen):
+    status: SandboxStatus
+    exit_code: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    truncated: bool = False
+    duration_ms: int = 0
+    files: dict[str, str] = Field(
+        default_factory=dict
+    )  # name -> base64 content (outputs in /work/out)
+    reasons: tuple[str, ...] = ()
+    engine: str = ""

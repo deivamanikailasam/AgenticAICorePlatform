@@ -38,6 +38,9 @@ from agent_contracts.models import (
     RunEventType,
     RunStatus,
     RunTrace,
+    SandboxLimits,
+    SandboxRequest,
+    SandboxStatus,
     SideEffect,
     StepObservation,
     ToolCall,
@@ -53,6 +56,7 @@ __all__ = [
     "AuditSinkContract",
     "BudgetControllerContract",
     "CheckpointerContract",
+    "CodeSandboxContract",
     "ContextManagerContract",
     "CriticContract",
     "DurableExecutorContract",
@@ -804,3 +808,77 @@ class SimulatorContract(_Contract):
             history += [turn.message, Message(role=Role.ASSISTANT, content="working on it")]
         else:
             pytest.fail("simulator never finished")
+
+
+# ---------------------------------------------------------------- code sandbox
+
+
+class CodeSandboxContract(_Contract):
+    """Every engine must contain hostile code. Kernel-isolated engines run all checks; test
+    doubles (isolation "none") must never execute the code they are given."""
+
+    interface = I.CodeSandbox
+
+    def _real(self) -> I.CodeSandbox:
+        sb: I.CodeSandbox = self.make()
+        if sb.isolation != "kernel":
+            pytest.skip("test double: isolation checks do not apply")
+        if not sb.available():
+            pytest.skip(f"{type(sb).__name__} is not available on this host")
+        return sb
+
+    async def test_doubles_never_execute_code(self, tmp_path: Any) -> None:
+        sb = self.make()
+        if sb.isolation == "kernel":
+            pytest.skip("real engine")
+        marker = tmp_path / "pwned"
+        result = await sb.run(SandboxRequest(code=f"open({str(marker)!r}, 'w').write('x')"))
+        assert not marker.exists()
+        assert result.status in SandboxStatus
+
+    async def test_hello_world(self) -> None:
+        result = await self._real().run(SandboxRequest(code="print('hello from the sandbox')"))
+        assert result.status is SandboxStatus.OK, result
+        assert result.stdout.strip() == "hello from the sandbox"
+
+    async def test_failure_is_a_status_not_an_exception(self) -> None:
+        result = await self._real().run(SandboxRequest(code="raise SystemExit(3)"))
+        assert result.status is SandboxStatus.ERROR
+        assert result.exit_code == 3
+
+    async def test_no_network(self) -> None:
+        code = (
+            "import socket\n"
+            "s = socket.socket(); s.settimeout(3)\n"
+            "try:\n    s.connect(('1.1.1.1', 443)); print('CONNECTED')\n"
+            "except OSError as e:\n    print('blocked', type(e).__name__)\n"
+        )
+        result = await self._real().run(SandboxRequest(code=code))
+        assert "CONNECTED" not in result.stdout
+        assert "blocked" in result.stdout
+
+    async def test_time_limit(self) -> None:
+        sb = self._real()
+        start = asyncio.get_running_loop().time()
+        result = await sb.run(
+            SandboxRequest(code="while True: pass", limits=SandboxLimits(wall_seconds=2))
+        )
+        assert result.status is SandboxStatus.TIMEOUT
+        assert asyncio.get_running_loop().time() - start < 30
+
+    async def test_files_in_and_out(self) -> None:
+        import base64
+
+        code = "data = open('/work/in/data.txt').read()\nopen('/work/out/upper.txt', 'w').write(data.upper())\n"
+        result = await self._real().run(
+            SandboxRequest(code=code, files={"data.txt": base64.b64encode(b"abc").decode()})
+        )
+        assert result.status is SandboxStatus.OK, result
+        assert base64.b64decode(result.files["upper.txt"]) == b"ABC"
+
+    async def test_output_is_capped(self) -> None:
+        result = await self._real().run(
+            SandboxRequest(code="print('x' * 200000)", limits=SandboxLimits(output_bytes=4096))
+        )
+        assert result.truncated
+        assert len(result.stdout) <= 4096

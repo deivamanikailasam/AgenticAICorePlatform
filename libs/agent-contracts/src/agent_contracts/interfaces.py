@@ -53,6 +53,8 @@ from agent_contracts.models import (
     RunResult,
     RunState,
     RunTrace,
+    SandboxRequest,
+    SandboxResult,
     SimTurn,
     StepObservation,
     ToolCall,
@@ -349,6 +351,23 @@ class LoopDetector(Component):
     def reset(self, run_id: str) -> None: ...
 
 
+class CodeSandbox(Component):
+    """Runs model-written code isolated from the host: no network, capped resources (Step 9)."""
+
+    slot = "code_sandbox"
+    #: "kernel" (gVisor, Kata, Firecracker: a separate kernel boundary) or "none" (test doubles
+    #: that never execute code).
+    isolation: ClassVar[str] = "kernel"
+
+    @abstractmethod
+    def available(self) -> bool:
+        """True if this engine can run code on this host right now."""
+
+    @abstractmethod
+    async def run(self, request: SandboxRequest) -> SandboxResult:
+        """Never raises for the code's own failures; they come back as a status."""
+
+
 # ---------------------------------------------------------------- reasoning roles
 
 
@@ -436,6 +455,7 @@ INTERFACES: dict[str, type[Component]] = {
         Tool,
         ToolRegistry,
         ToolExecutor,
+        CodeSandbox,
         PatternBuilder,
         RuntimeAdapter,
         Checkpointer,
