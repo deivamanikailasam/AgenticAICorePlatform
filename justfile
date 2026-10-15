@@ -91,7 +91,7 @@ provision-artefacts:
 up:
     {{compose}} build
     {{compose}} run --rm agent-health
-    {{compose}} up -d --wait --remove-orphans mcp-gateway
+    {{compose}} up -d --wait --remove-orphans mcp-gateway agent-api
 
 # Optional alternative engines (profiles): Cerbos, OpenFGA
 up-alternatives:

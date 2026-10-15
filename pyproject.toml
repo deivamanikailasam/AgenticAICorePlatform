@@ -23,6 +23,7 @@ dev = [
     "types-pyyaml>=6.0.12",
     "types-jsonschema>=4.26.0.20261006",
     "uvicorn>=0.54.0,<1",
+    "playwright==1.63.0",
 ]
 
 [tool.uv]

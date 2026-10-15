@@ -70,6 +70,33 @@ services:
       retries: 20
     restart: unless-stopped
 
+  # The run API (Step 17): create, stream (AG-UI over SSE or WebSocket), approve, cancel.
+  agent-api:
+    build: { context: ../.., dockerfile: infra/compose/service.Dockerfile, args: { PACKAGE: agent-api }, secrets: [extra_ca] }
+    image: agent-platform/agent-api:dev
+    command: ["agent-api"]
+    <<: *hardening
+    environment:
+      <<: *p0-endpoints
+      AGENT_API_HOST: 0.0.0.0
+      AGENT_API_PORT: "8091"
+      AGENT_API_AGENTS_DIR: /app/agents
+      AGENT_API_AUDIT_FILE: /tmp/agent-api-audit.jsonl
+      AGENT_API_PDP: ${AGENT_API_PDP:-opa}
+      AGENT_CERBOS_URL: http://cerbos:3592
+      P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
+      # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
+      SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
+    volumes:
+      - ../../agents:/app/agents:ro
+    ports: ["127.0.0.1:8091:8091"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8091/healthz')"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
   # Alternative policy decision point (Step 10, ADR 0020): `docker compose --profile cerbos up`
   # and MCP_GATEWAY_PDP=cerbos. Project 0 does not run Cerbos, so Project A owns it.
   cerbos:

@@ -1,0 +1,211 @@
+"""The run API: HTTP + SSE (default) or WebSocket, behind Keycloak.
+
+=========================================  ==============================================
+``GET  /``                                 a minimal page driven only by AG-UI events
+``GET  /healthz``                          liveness
+``GET  /v1/agents``                        agents this API can run
+``POST /v1/agents/{agent}/runs``           create a run (``Idempotency-Key`` honoured)
+``GET  /v1/runs/{id}``                     state and pending approvals
+``GET  /v1/runs/{id}/events?after=N``      AG-UI events over SSE (ends when the run is idle)
+``WS   /v1/runs/{id}/ws``                  the same events over a WebSocket
+``POST /v1/runs/{id}/approvals``           approve or reject, as the caller (verified token)
+``POST /v1/runs/{id}/resume``              answer a non-approval interrupt (owner only)
+``POST /v1/runs/{id}/cancel``              cancel (owner only)
+``GET  /v1/threads``                       the caller's threads and their runs
+=========================================  ==============================================
+
+Every call needs a bearer token verified against Keycloak (issuer, signature, expiry,
+audience). The WebSocket takes its token in the first message, so tokens never appear in URLs.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import AsyncIterator, Awaitable, Callable
+from importlib import resources
+from typing import Any, Protocol
+
+from agent_tools.auth import tenant_of
+from mcp.server.auth.provider import AccessToken
+from starlette.applications import Starlette
+from starlette.requests import Request
+from starlette.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
+from starlette.routing import Route, WebSocketRoute
+from starlette.websockets import WebSocket, WebSocketDisconnect
+
+from agent_api.runs import ConflictError, Principal, RunManager
+
+
+class TokenVerifier(Protocol):
+    async def verify_token(self, token: str) -> AccessToken | None: ...
+
+
+def principal_from(token: AccessToken) -> Principal:
+    claims = token.claims or {}
+    groups = tuple(str(g) for g in claims.get("groups", []))
+    return Principal(
+        user=str(claims.get("preferred_username") or token.subject or "unknown"),
+        tenant=tenant_of(list(groups)),
+        groups=groups,
+        roles=tuple(str(r) for r in claims.get("realm_access", {}).get("roles", [])),
+        token=token.token,
+        client_id=token.client_id,
+    )
+
+
+Handler = Callable[[Request, Principal], Awaitable[Response]]
+
+
+def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
+    async def authenticate(raw: str | None) -> Principal | None:
+        if not raw:
+            return None
+        verified = await verifier.verify_token(raw)
+        return principal_from(verified) if verified is not None else None
+
+    def guarded(handler: Handler) -> Callable[[Request], Awaitable[Response]]:
+        async def endpoint(request: Request) -> Response:
+            header = request.headers.get("authorization", "")
+            who = await authenticate(
+                header.removeprefix("Bearer ") if header.startswith("Bearer ") else None
+            )
+            if who is None:
+                return JSONResponse(
+                    {"error": "a valid bearer token is required"},
+                    401,
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            try:
+                return await handler(request, who)
+            except KeyError:
+                return JSONResponse({"error": "not found"}, 404)
+            except PermissionError as exc:
+                return JSONResponse({"error": str(exc)}, 403)
+            except ConflictError as exc:
+                return JSONResponse({"error": str(exc)}, 409)
+            except (LookupError, ValueError) as exc:
+                return JSONResponse({"error": str(exc)}, 422)
+
+        return endpoint
+
+    async def body(request: Request) -> dict[str, Any]:
+        try:
+            data = await request.json()
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"request body is not JSON: {exc.msg}") from exc
+        if not isinstance(data, dict):
+            raise ValueError("request body must be a JSON object")
+        return data
+
+    async def agents(request: Request, who: Principal) -> Response:
+        return JSONResponse(
+            {
+                "agents": [
+                    {
+                        "name": s.name,
+                        "version": s.version,
+                        "pattern": s.pattern.value,
+                        "description": s.description,
+                    }
+                    for s in manager.agents.values()
+                ]
+            }
+        )
+
+    async def create(request: Request, who: Principal) -> Response:
+        data = await body(request)
+        run, created = await manager.create(
+            request.path_params["agent"],
+            dict(data.get("input") or {}),
+            who,
+            request.headers.get("idempotency-key"),
+            data.get("thread_id"),
+        )
+        return JSONResponse(run.summary(), 201 if created else 200)
+
+    async def state(request: Request, who: Principal) -> Response:
+        run = manager.get(request.path_params["run_id"], who)
+        return JSONResponse(run.summary())
+
+    async def events(request: Request, who: Principal) -> Response:
+        run = manager.get(request.path_params["run_id"], who)
+        after = int(request.query_params.get("after", request.headers.get("last-event-id", "-1")))
+
+        async def stream() -> AsyncIterator[str]:
+            async for index, event in manager.events(run, after):
+                yield f"id: {index}\ndata: {json.dumps(event, separators=(',', ':'))}\n\n"
+
+        return StreamingResponse(
+            stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+        )
+
+    async def approvals(request: Request, who: Principal) -> Response:
+        run = manager.get(request.path_params["run_id"], who)
+        data = await body(request)
+        if not isinstance(data.get("approved"), bool):
+            raise ValueError("'approved' must be true or false")
+        await manager.approve(run, who, data["approved"], data.get("comment"))
+        return JSONResponse(run.summary(), 202)
+
+    async def resume(request: Request, who: Principal) -> Response:
+        run = manager.get(request.path_params["run_id"], who)
+        await manager.resume(run, who, await body(request))
+        return JSONResponse(run.summary(), 202)
+
+    async def cancel(request: Request, who: Principal) -> Response:
+        run = manager.get(request.path_params["run_id"], who)
+        await manager.cancel(run, who)
+        return JSONResponse(run.summary())
+
+    async def threads(request: Request, who: Principal) -> Response:
+        return JSONResponse({"threads": manager.threads(who)})
+
+    async def socket(ws: WebSocket) -> None:
+        await ws.accept()
+        try:
+            hello = await ws.receive_json()
+            who = await authenticate(str(hello.get("token") or ""))
+            if who is None:
+                await ws.close(code=4401, reason="a valid token is required")
+                return
+            try:
+                run = manager.get(ws.path_params["run_id"], who)
+            except KeyError:
+                await ws.close(code=4404, reason="not found")
+                return
+            async for index, event in manager.events(run, int(hello.get("after", -1))):
+                await ws.send_json({"id": index, **event})
+            await ws.close(code=1000)
+        except WebSocketDisconnect:
+            return
+
+    async def page(request: Request) -> Response:
+        html = resources.files("agent_api").joinpath("static/index.html").read_text()
+        return HTMLResponse(
+            html,
+            headers={
+                "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; connect-src 'self'"
+            },
+        )
+
+    async def health(request: Request) -> Response:
+        return JSONResponse({"status": "ok"})
+
+    return Starlette(
+        routes=[
+            Route("/", page),
+            Route("/healthz", health),
+            Route("/v1/agents", guarded(agents)),
+            Route("/v1/agents/{agent}/runs", guarded(create), methods=["POST"]),
+            Route("/v1/runs/{run_id}", guarded(state)),
+            Route("/v1/runs/{run_id}/events", guarded(events)),
+            Route("/v1/runs/{run_id}/approvals", guarded(approvals), methods=["POST"]),
+            Route("/v1/runs/{run_id}/resume", guarded(resume), methods=["POST"]),
+            Route("/v1/runs/{run_id}/cancel", guarded(cancel), methods=["POST"]),
+            Route("/v1/threads", guarded(threads)),
+            WebSocketRoute("/v1/runs/{run_id}/ws", socket),
+        ]
+    )

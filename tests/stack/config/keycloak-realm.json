@@ -3,7 +3,7 @@
   "enabled": true,
   "sslRequired": "none",
   "groups": [
-    { "name": "acme", "subGroups": [ { "name": "finance" }, { "name": "engineering" } ] },
+    { "name": "acme", "subGroups": [ { "name": "finance" }, { "name": "engineering" }, { "name": "approvers" }, { "name": "finance-approvers" } ] },
     { "name": "globex", "subGroups": [ { "name": "finance" } ] }
   ],
   "users": [
@@ -12,6 +12,9 @@
       "credentials": [ { "type": "password", "value": "standin-only", "temporary": false } ] },
     { "username": "bob", "enabled": true, "email": "bob@acme.test", "emailVerified": true,
       "firstName": "Bob", "lastName": "Engineer", "groups": ["/acme/engineering"],
+      "credentials": [ { "type": "password", "value": "standin-only", "temporary": false } ] },
+    { "username": "jo", "enabled": true, "email": "jo@acme.test", "emailVerified": true,
+      "firstName": "Jo", "lastName": "Approver", "groups": ["/acme/approvers", "/acme/finance-approvers"],
       "credentials": [ { "type": "password", "value": "standin-only", "temporary": false } ] },
     { "username": "gina", "enabled": true, "email": "gina@globex.test", "emailVerified": true,
       "firstName": "Gina", "lastName": "Globex", "groups": ["/globex/finance"],

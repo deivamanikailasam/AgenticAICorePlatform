@@ -1,0 +1,32 @@
+[project]
+name = "agent-api"
+version = "0.1.0"
+description = "Run API (Step 17): create, stream (AG-UI over SSE or WebSocket), state, cancel, resume, threads and approvals, behind Keycloak"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "agent-contracts",
+    "agent-spec",
+    "agent-tools",
+    "agent-runtime",
+    "agent-compiler",
+    "ag-ui-protocol==1.0.0",
+    "starlette>=0.48",
+    "uvicorn>=0.54.0,<1",
+]
+
+[project.scripts]
+agent-api = "agent_api.__main__:main"
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+agent-spec = { workspace = true }
+agent-tools = { workspace = true }
+agent-runtime = { workspace = true }
+agent-compiler = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_api"]
