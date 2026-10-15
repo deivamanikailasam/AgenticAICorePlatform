@@ -10,7 +10,7 @@ networks:
 
 secrets:
   extra_ca:
-    file: ${EXTRA_CA_BUNDLE:-/dev/null}
+    file: ${EXTRA_CA_BUNDLE:-./no-extra-ca.pem}
 
 x-p0-endpoints: &p0-endpoints
   P0_LITELLM_URL: http://litellm:4000
