@@ -532,6 +532,7 @@ class BudgetLimits(Frozen):
     max_wall_seconds: float | None = Field(default=None, gt=0)
     max_tool_calls: int | None = Field(default=None, ge=1)
     max_delegation_depth: int | None = Field(default=None, ge=0)
+    max_calls_per_tool: dict[str, int] = Field(default_factory=dict)  # tool name -> calls
 
 
 class BudgetCharge(Frozen):
@@ -539,6 +540,7 @@ class BudgetCharge(Frozen):
     usage: Usage = Usage()
     tool_calls: int = Field(default=0, ge=0)
     elapsed_seconds: float = Field(default=0.0, ge=0)
+    tool: str | None = None  # which tool the tool calls were, for per-tool limits
 
 
 class BudgetStatus(Frozen):
@@ -550,6 +552,8 @@ class BudgetStatus(Frozen):
     cost_aud: float = 0.0
     tool_calls: int = 0
     elapsed_seconds: float = 0.0
+    detail: str | None = None  # human-readable, e.g. "max_cost_aud: AUD 0.0120 of 0.0100"
+    depth: int = 0  # delegation depth of this run (0: a top-level run)
 
 
 class StepObservation(Frozen):

@@ -23,6 +23,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | audit_sink | memory | dummy | `agent_contracts.dummies.observability:MemoryAuditSink` | Hash-chained records in a list. |
 | budget_controller | ledger | dummy | `agent_contracts.dummies.safety:LedgerBudgetController` | Keeps every charge in a ledger (for audit) on top of the in-memory counters. |
 | budget_controller | memory | dummy | `agent_contracts.dummies.safety:InMemoryBudgetController` | Counters per run; every charge also counts against all ancestors. |
+| budget_controller | platform | implemented | `agent_runtime.budget:PlatformBudgetController` |  |
 | checkpointer | memory | dummy | `agent_contracts.dummies.state:InMemoryCheckpointer` | Checkpoints in a dictionary keyed by (tenant, thread). |
 | checkpointer | postgres | implemented | `agent_runtime.checkpoints:PostgresCheckpointer` | ``agent_runtime.checkpoints`` in the ``agent`` database (Project 0 Postgres). |
 | checkpointer | sqlite | dummy | `agent_contracts.dummies.state:SqliteCheckpointer` | Checkpoints in SQLite (in-memory by default). The 'SQLite (tests)' catalogue option. |
@@ -54,6 +55,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | guardrail | keyword_injection | dummy | `agent_contracts.dummies.safety:KeywordInjectionGuardrail` | Blocks text containing well-known injection phrases. A weak baseline, not a defence. |
 | guardrail | regex_pii | dummy | `agent_contracts.dummies.safety:RegexPiiGuardrail` | Redacts e-mail addresses and phone numbers. Presidio replaces this in Step 27. |
 | loop_detector | no_progress | dummy | `agent_contracts.dummies.safety:NoProgressLoopDetector` | Also flags ``patience`` consecutive steps that made no progress. |
+| loop_detector | platform | implemented | `agent_runtime.budget:PlatformLoopDetector` |  |
 | loop_detector | repeat | dummy | `agent_contracts.dummies.safety:RepeatLoopDetector` | Flags the same step signature seen ``threshold`` times within the last ``window`` steps. |
 | memory_policy | human_curated | implemented | `agent_memory.policy:HumanCuratedMemoryPolicy` | Only items a person curated (``source="human:<id>"``, validated) are stored; every other |
 | memory_policy | read_only | dummy | `agent_contracts.dummies.context:ReadOnlyMemoryPolicy` | Memory can be read but never written by agents (the 'read-only memory' option). |
