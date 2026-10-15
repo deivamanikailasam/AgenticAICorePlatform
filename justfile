@@ -17,7 +17,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test compose-check secret-scan catalogue-check validate
+check: lint typecheck test policy-test compose-check secret-scan catalogue-check spec-reference-check validate
 
 lint:
     uv run ruff check .
@@ -113,3 +113,9 @@ catalogue-check:
 validate *paths="agents/":
     uv run agent-spec validate {{paths}}
 
+# Regenerate the agent.yaml JSON Schema and reference page in docs/reference/
+spec-reference:
+    uv run python -m scripts.spec_reference
+
+spec-reference-check:
+    uv run python -m scripts.spec_reference --check

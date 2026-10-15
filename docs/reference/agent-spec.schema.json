@@ -1,0 +1,777 @@
+{
+  "$defs": {
+    "Approval": {
+      "additionalProperties": false,
+      "properties": {
+        "approvers": {
+          "default": "group:approvers",
+          "pattern": "^(group|user|role):[a-zA-Z0-9._@-]+$",
+          "title": "Approvers",
+          "type": "string"
+        },
+        "required": {
+          "default": true,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "sla_minutes": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sla Minutes"
+        },
+        "two_person": {
+          "default": false,
+          "title": "Two Person",
+          "type": "boolean"
+        }
+      },
+      "title": "Approval",
+      "type": "object"
+    },
+    "Autonomy": {
+      "enum": [
+        "workflow",
+        "agent",
+        "multi_agent",
+        "hybrid"
+      ],
+      "title": "Autonomy",
+      "type": "string"
+    },
+    "Budgets": {
+      "additionalProperties": false,
+      "description": "Limits for one run. Safe by default: steps and wall-clock time are always required.",
+      "properties": {
+        "max_cost_aud": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Cost Aud"
+        },
+        "max_delegation_depth": {
+          "default": 2,
+          "maximum": 10,
+          "minimum": 0,
+          "title": "Max Delegation Depth",
+          "type": "integer"
+        },
+        "max_fanout": {
+          "default": 8,
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Fanout",
+          "type": "integer"
+        },
+        "max_steps": {
+          "maximum": 10000,
+          "minimum": 1,
+          "title": "Max Steps",
+          "type": "integer"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
+        },
+        "max_tool_calls": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tool Calls"
+        },
+        "max_wall_seconds": {
+          "exclusiveMinimum": 0,
+          "maximum": 2592000,
+          "title": "Max Wall Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "max_steps",
+        "max_wall_seconds"
+      ],
+      "title": "Budgets",
+      "type": "object"
+    },
+    "Durability": {
+      "enum": [
+        "memory",
+        "checkpoint",
+        "temporal"
+      ],
+      "title": "Durability",
+      "type": "string"
+    },
+    "Edge": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "When"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Edge",
+      "type": "object"
+    },
+    "Evals": {
+      "additionalProperties": false,
+      "properties": {
+        "gates": {
+          "default": "default",
+          "title": "Gates",
+          "type": "string"
+        },
+        "suite": {
+          "title": "Suite",
+          "type": "string"
+        }
+      },
+      "required": [
+        "suite"
+      ],
+      "title": "Evals",
+      "type": "object"
+    },
+    "Graph": {
+      "additionalProperties": false,
+      "properties": {
+        "edges": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Edge"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "entry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entry"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/$defs/Node"
+          },
+          "minItems": 1,
+          "title": "Nodes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "nodes"
+      ],
+      "title": "Graph",
+      "type": "object"
+    },
+    "GuardrailRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "additionalProperties": true,
+          "title": "Config",
+          "type": "object"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "GuardrailRef",
+      "type": "object"
+    },
+    "Interop": {
+      "additionalProperties": false,
+      "properties": {
+        "a2a_publish": {
+          "default": false,
+          "title": "A2A Publish",
+          "type": "boolean"
+        },
+        "mcp_publish": {
+          "default": false,
+          "title": "Mcp Publish",
+          "type": "boolean"
+        }
+      },
+      "title": "Interop",
+      "type": "object"
+    },
+    "LongTermMemory": {
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "default": "validate_redact",
+          "title": "Policy",
+          "type": "string"
+        },
+        "scope": {
+          "default": "user",
+          "enum": [
+            "user",
+            "tenant",
+            "agent"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "store": {
+          "default": "pgvector",
+          "title": "Store",
+          "type": "string"
+        },
+        "ttl_days": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ttl Days"
+        }
+      },
+      "title": "LongTermMemory",
+      "type": "object"
+    },
+    "Memory": {
+      "additionalProperties": false,
+      "properties": {
+        "long_term": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LongTermMemory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "short_term": {
+          "default": "checkpoint",
+          "enum": [
+            "checkpoint",
+            "none"
+          ],
+          "title": "Short Term",
+          "type": "string"
+        }
+      },
+      "title": "Memory",
+      "type": "object"
+    },
+    "Node": {
+      "additionalProperties": false,
+      "properties": {
+        "approval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Approval"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "compensation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Compensation"
+        },
+        "config": {
+          "additionalProperties": true,
+          "title": "Config",
+          "type": "object"
+        },
+        "fn": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fn"
+        },
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "max_iterations": {
+          "anyOf": [
+            {
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Iterations"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "pattern": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pattern"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt"
+        },
+        "routes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Routes",
+          "type": "array"
+        },
+        "spec": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spec"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout Seconds"
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tool"
+        },
+        "tools": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        },
+        "type": {
+          "$ref": "#/$defs/NodeType"
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "title": "Node",
+      "type": "object"
+    },
+    "NodeType": {
+      "enum": [
+        "function",
+        "llm",
+        "tool",
+        "agent",
+        "router",
+        "approval",
+        "subgraph",
+        "join"
+      ],
+      "title": "NodeType",
+      "type": "string"
+    },
+    "Pattern": {
+      "description": "Every value of ``pattern:``; each maps to a PatternBuilder (Steps 4, 12-16, 22-23).",
+      "enum": [
+        "workflow",
+        "state_machine",
+        "prompt_chain",
+        "router",
+        "react",
+        "plan_execute",
+        "rewoo",
+        "reflection",
+        "evaluator_optimiser",
+        "agentic_rag",
+        "supervisor",
+        "hierarchical",
+        "handoff",
+        "group_chat",
+        "map_reduce",
+        "debate",
+        "hybrid"
+      ],
+      "title": "Pattern",
+      "type": "string"
+    },
+    "RiskTier": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "RiskTier",
+      "type": "string"
+    },
+    "Runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter": {
+          "default": "langgraph",
+          "title": "Adapter",
+          "type": "string"
+        },
+        "durability": {
+          "$ref": "#/$defs/Durability",
+          "default": "checkpoint"
+        }
+      },
+      "title": "Runtime",
+      "type": "object"
+    },
+    "SubAgent": {
+      "additionalProperties": false,
+      "description": "A worker in a multi-agent spec: another agent.yaml with its own tools and budget.",
+      "properties": {
+        "name": {
+          "pattern": "^[a-z][a-z0-9-]{1,62}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "role": {
+          "default": "",
+          "title": "Role",
+          "type": "string"
+        },
+        "spec": {
+          "title": "Spec",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "spec"
+      ],
+      "title": "SubAgent",
+      "type": "object"
+    },
+    "ToolRef": {
+      "additionalProperties": false,
+      "properties": {
+        "alias": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alias"
+        },
+        "approval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Approval"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "config": {
+          "additionalProperties": true,
+          "title": "Config",
+          "type": "object"
+        },
+        "rate_limit_per_minute": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rate Limit Per Minute"
+        },
+        "ref": {
+          "pattern": "^(mcp|local|a2a|sandbox)://[a-z0-9][a-z0-9._-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)?$",
+          "title": "Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "title": "ToolRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://agent-platform.local/schemas/agent-spec/v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The root of ``agent.yaml``.",
+  "properties": {
+    "agents": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/SubAgent"
+      },
+      "title": "Agents",
+      "type": "array"
+    },
+    "autonomy": {
+      "$ref": "#/$defs/Autonomy"
+    },
+    "budgets": {
+      "$ref": "#/$defs/Budgets"
+    },
+    "components": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Components",
+      "type": "object"
+    },
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    },
+    "evals": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Evals"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "graph": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Graph"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "guardrails": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/GuardrailRef"
+      },
+      "title": "Guardrails",
+      "type": "array"
+    },
+    "interop": {
+      "$ref": "#/$defs/Interop",
+      "default": {
+        "a2a_publish": false,
+        "mcp_publish": false
+      }
+    },
+    "labels": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Labels",
+      "type": "object"
+    },
+    "memory": {
+      "$ref": "#/$defs/Memory",
+      "default": {
+        "long_term": null,
+        "short_term": "checkpoint"
+      }
+    },
+    "models": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Models",
+      "type": "object"
+    },
+    "name": {
+      "pattern": "^[a-z][a-z0-9-]{1,62}$",
+      "title": "Name",
+      "type": "string"
+    },
+    "owner": {
+      "minLength": 1,
+      "title": "Owner",
+      "type": "string"
+    },
+    "pattern": {
+      "$ref": "#/$defs/Pattern"
+    },
+    "risk_tier": {
+      "$ref": "#/$defs/RiskTier"
+    },
+    "runtime": {
+      "$ref": "#/$defs/Runtime",
+      "default": {
+        "adapter": "langgraph",
+        "durability": "checkpoint"
+      }
+    },
+    "spec_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Spec Version",
+      "type": "integer"
+    },
+    "tools": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ToolRef"
+      },
+      "title": "Tools",
+      "type": "array"
+    },
+    "version": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "owner",
+    "risk_tier",
+    "autonomy",
+    "pattern",
+    "budgets"
+  ],
+  "title": "agent.yaml (spec_version 1)",
+  "type": "object"
+}
