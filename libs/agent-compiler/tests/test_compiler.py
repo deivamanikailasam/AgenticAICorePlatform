@@ -92,6 +92,8 @@ def test_agent_nodes_expand_and_irreversible_tools_get_approval() -> None:
         "name": "post_payment",
         "ref": "mcp://erp/post_payment",
         "approval": True,
+        "approvers": "group:finance-approvers",
+        "rate_limit_per_minute": None,
     }
 
 

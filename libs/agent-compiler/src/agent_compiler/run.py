@@ -1,4 +1,10 @@
-"""Run a spec end to end: load → compile → adapter → traced execution."""
+"""Run a spec end to end: load → compile → adapter → traced execution.
+
+This is the composition root for runs: it resolves the spec's functions and plugs in the node
+executors (Step 12) — LLM and router nodes through the platform model client, tool nodes through
+the caller's (authorising) tool executor, sub-workflows compiled from the referenced spec and run
+on the same adapter as child runs.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_contracts.dummies.runtime import BUILTIN_FUNCTIONS
+from agent_contracts.interfaces import ModelClient, RuntimeAdapter, ToolExecutor
 from agent_contracts.models import (
     ExecutablePlan,
     NodeKind,
@@ -16,7 +23,16 @@ from agent_contracts.models import (
     RunResult,
     RunStatus,
 )
+from agent_runtime.executors import (
+    LlmNodeExecutor,
+    RouterNodeExecutor,
+    SubplanNodeExecutor,
+    ToolNodeExecutor,
+)
+from agent_runtime.models.gateway import GatewayModelClient
+from agent_runtime.nodes import NodeExecutor, NodeRunner
 from agent_spec import AgentSpec, load_spec
+from agent_tools.assemble import tool_names
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import Span, Status, StatusCode
 
@@ -38,8 +54,92 @@ def resolve_function(name: str) -> Callable[[dict[str, Any]], Any]:
 
 
 def functions_for(plan: ExecutablePlan) -> dict[str, Callable[[dict[str, Any]], Any]]:
-    names = {str(n.config["fn"]) for n in plan.nodes if n.kind is NodeKind.FUNCTION}
+    """Every ``fn`` in the plan: function nodes, routers with a function, compensation steps."""
+    names = {str(n.config["fn"]) for n in plan.nodes if n.config.get("fn")}
     return {n: resolve_function(n) for n in names}
+
+
+NEEDS_MODEL = {NodeKind.LLM, NodeKind.ROUTER}
+
+
+def executors_for(
+    spec: AgentSpec,
+    plan: ExecutablePlan,
+    functions: Mapping[str, Callable[[dict[str, Any]], Any]],
+    *,
+    model: ModelClient | None = None,
+    tools: ToolExecutor | None = None,
+    spec_path: str | Path | None = None,
+) -> dict[NodeKind, NodeExecutor]:
+    kinds = {n.kind for n in plan.nodes}
+    executors: dict[NodeKind, NodeExecutor] = {}
+    if (
+        kinds & NEEDS_MODEL
+        and model is None
+        and any(
+            n.kind is NodeKind.LLM or not n.config.get("fn")
+            for n in plan.nodes
+            if n.kind in NEEDS_MODEL
+        )
+    ):
+        model = GatewayModelClient(spec_models=spec.models)
+    if NodeKind.LLM in kinds and model is not None:
+        executors[NodeKind.LLM] = LlmNodeExecutor(model)
+    if NodeKind.ROUTER in kinds:
+        executors[NodeKind.ROUTER] = RouterNodeExecutor(model, functions)
+    if NodeKind.TOOL in kinds:
+        if tools is None:
+            raise LookupError(
+                f"spec '{spec.name}' has tool nodes: pass a tool executor (the authorising "
+                "executor with this spec's grants; see agent_tools.assemble)"
+            )
+        executors[NodeKind.TOOL] = ToolNodeExecutor(tools, tool_names(plan))
+    if NodeKind.SUBPLAN in kinds:
+        base = Path(spec_path).parent if spec_path else Path.cwd()
+
+        async def run_subplan(ref: str, inputs: dict[str, Any], ctx: RunContext) -> RunResult:
+            child = load_spec(base / ref)
+            child_plan = compile_spec(child)
+            child_functions = functions_for(child_plan)
+            runner = NodeRunner(
+                child_functions,
+                executors_for(
+                    child,
+                    child_plan,
+                    child_functions,
+                    model=model,
+                    tools=tools,
+                    spec_path=base / ref,
+                ),
+            )
+            adapter = runtime_for(child, runner=runner)
+            handle = await adapter.build(child_plan)
+            return await adapter.invoke(handle, inputs, ctx)
+
+        executors[NodeKind.SUBPLAN] = SubplanNodeExecutor(run_subplan)
+    return executors
+
+
+def adapter_for(
+    spec: AgentSpec,
+    plan: ExecutablePlan,
+    *,
+    model: ModelClient | None = None,
+    tools: ToolExecutor | None = None,
+    spec_path: str | Path | None = None,
+    runner: NodeRunner | None = None,
+) -> RuntimeAdapter:
+    """The spec's runtime adapter with functions and executors plugged in. Test-double adapters
+    (Step 4) take functions only."""
+    functions = functions_for(plan)
+    if runner is None:
+        executors = executors_for(
+            spec, plan, functions, model=model, tools=tools, spec_path=spec_path
+        )
+        if spec.runtime.adapter in ("sequential", "stepwise") and not executors:
+            return runtime_for(spec, functions=functions)
+        runner = NodeRunner(functions, executors)
+    return runtime_for(spec, runner=runner)
 
 
 async def run(
@@ -47,10 +147,19 @@ async def run(
     inputs: Mapping[str, Any],
     ctx: RunContext,
     provider: TracerProvider | None = None,
+    *,
+    model: ModelClient | None = None,
+    tools: ToolExecutor | None = None,
+    spec_path: str | Path | None = None,
+    runner: NodeRunner | None = None,
 ) -> tuple[RunResult, str]:
-    """Execute ``spec`` and return the result and the trace id (hex)."""
+    """Execute ``spec`` and return the result and the trace id (hex).
+
+    Pass ``runner`` (``NodeRunner(..., replay=journal)``) to replay a recorded run; its
+    ``journal(run_id)`` holds what this run did.
+    """
     plan = compile_spec(spec)
-    adapter = runtime_for(spec, functions=functions_for(plan))
+    adapter = adapter_for(spec, plan, model=model, tools=tools, spec_path=spec_path, runner=runner)
     handle = await adapter.build(plan)
     tr = tracing.tracer(provider)
     attrs = {
@@ -92,7 +201,7 @@ async def run(
         run_id=ctx.run_id,
         status=state.status,
         state=state,
-        output=state.values.get(plan.exits[-1]) if plan.exits else None,
+        output=next((state.values[e] for e in reversed(plan.exits) if e in state.values), None),
     )
     tracing.flush(provider)
     return result, trace_id
@@ -101,4 +210,4 @@ async def run(
 async def run_file(
     path: str | Path, inputs: Mapping[str, Any], ctx: RunContext
 ) -> tuple[RunResult, str]:
-    return await run(load_spec(path), inputs, ctx)
+    return await run(load_spec(path), inputs, ctx, spec_path=path)

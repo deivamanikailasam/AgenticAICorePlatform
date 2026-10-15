@@ -20,7 +20,9 @@ version = "0.1.0"
 source = { editable = "libs/agent-compiler" }
 dependencies = [
     { name = "agent-contracts" },
+    { name = "agent-runtime" },
     { name = "agent-spec" },
+    { name = "agent-tools" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
@@ -29,7 +31,9 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-runtime", editable = "libs/agent-runtime" },
     { name = "agent-spec", editable = "libs/agent-spec" },
+    { name = "agent-tools", editable = "libs/agent-tools" },
     { name = "opentelemetry-api", specifier = ">=1.45.1,<2" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45.1,<2" },
     { name = "opentelemetry-sdk", specifier = ">=1.45.1,<2" },
