@@ -13,4 +13,7 @@ collaborators such as a tool registry or workflow table).
 """
 
 from agent_contracts.testing.contracts import *  # noqa: F403
-from agent_contracts.testing.contracts import __all__  # noqa: F401
+from agent_contracts.testing.contracts import __all__
+from agent_contracts.testing.workflow import WORKFLOW_FUNCTIONS, WorkflowRuntimeContract
+
+__all__ = [*__all__, "WORKFLOW_FUNCTIONS", "WorkflowRuntimeContract"]
