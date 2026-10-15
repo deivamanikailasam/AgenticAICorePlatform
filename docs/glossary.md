@@ -127,3 +127,8 @@ Every term used in this repository, in plain English. Grows with each step.
 | Error budget | The share of failures an SLO allows (1% for 99%) |
 | Burn rate | How fast the error budget is being used; 14.4× uses a month's budget in about two days |
 | Runbook | The page an on-call person follows when an alert fires: what it means, check, fix, escalate |
+| Audit trail | The permanent record of who did what, under which rules, and who allowed it; kept for years, unlike traces |
+| Hash chain | Each record stores a fingerprint of itself plus the record before, so changing, removing or reordering one breaks every fingerprint after it |
+| Append-only | Records can be added but never changed or deleted (enforced here by database triggers) |
+| Digest | A fixed-length fingerprint (SHA-256) of some data: proves which exact data was used without storing it |
+| Run reconstruction | Rebuilding a run's story from the audit trail plus its checkpoints, and checking the two agree |
