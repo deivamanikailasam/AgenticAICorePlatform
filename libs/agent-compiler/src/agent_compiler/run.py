@@ -9,7 +9,7 @@ on the same adapter as child runs.
 from __future__ import annotations
 
 import importlib
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -29,6 +29,8 @@ from agent_contracts.models import (
     ExecutablePlan,
     NodeKind,
     PlanNode,
+    PolicyDecision,
+    PolicyEffect,
     RunContext,
     RunEventType,
     RunResult,
@@ -73,6 +75,8 @@ from agent_compiler.compiler import compile_spec, runtime_for
 from agent_compiler.metering import Meter, MeteredModel
 
 FUNCTION_GROUP = "agent_platform.functions"
+#: why an agent may not run here (None: it may), e.g. the registry gate (Step 25)
+Admit = Callable[[AgentSpec, RunContext], Awaitable[str | None]]
 
 
 def resolve_function(name: str) -> Callable[[dict[str, Any]], Any]:
@@ -125,6 +129,7 @@ def executors_for(
     workers: WorkerFactory | None = None,
     authorise: Authorise | None = None,
     provider: TracerProvider | None = None,
+    admit: Admit | None = None,
 ) -> dict[NodeKind, NodeExecutor]:
     kinds = {n.kind for n in plan.nodes}
     executors: dict[NodeKind, NodeExecutor] = {}
@@ -166,7 +171,7 @@ def executors_for(
         )
     if NodeKind.SUPERVISOR in kinds:
         executors[NodeKind.SUPERVISOR] = supervisor_executor(
-            spec, model, spec_path, workers, authorise, provider
+            spec, model, spec_path, workers, authorise, provider, admit
         )
     if NodeKind.SUBPLAN in kinds:
         base = Path(spec_path).parent if spec_path else Path.cwd()
@@ -339,6 +344,7 @@ def supervisor_executor(
     workers: WorkerFactory | None,
     authorise: Authorise | None,
     provider: TracerProvider | None,
+    admit: Admit | None = None,
 ) -> TeamExecutor:
     """Team nodes: supervisors (Step 22); handoff, group chat, map-reduce and debate (Step 23).
     Each worker is its own spec, run as a child run with the model and tools the worker factory
@@ -366,6 +372,7 @@ def supervisor_executor(
             workers=workers,
             authorise=authorise,
             meter=meter,
+            admit=admit,
         )
         return WorkerResult(
             ok=result.status is RunStatus.SUCCEEDED,
@@ -381,9 +388,30 @@ def supervisor_executor(
             raise LookupError(f"spec '{spec.name}': the LLM supervisor needs a model client")
         return LlmDispatcher(model, role=str(node.config.get("model") or "planner"))
 
-    return TeamExecutor(
-        run_worker, SupervisorExecutor(run_worker, dispatcher, authorise), authorise, model
-    )
+    gate = admitted(spec, base, authorise, admit)
+    return TeamExecutor(run_worker, SupervisorExecutor(run_worker, dispatcher, gate), gate, model)
+
+
+def admitted(
+    spec: AgentSpec, base: Path, authorise: Authorise | None, admit: Admit | None
+) -> Authorise | None:
+    """Delegation decided by the registry first (Step 25: in staging and prod only approved
+    agents), then by policy. A refused agent is never built or run."""
+    if admit is None:
+        return authorise
+    paths = {a.name: base / a.spec for a in spec.agents}
+
+    async def gate(name: str, team: Sequence[str], ctx: RunContext) -> PolicyDecision:
+        path = paths.get(name)
+        if path is not None:
+            reason = await admit(load_spec(path), ctx)
+            if reason:
+                return PolicyDecision(effect=PolicyEffect.DENY, reasons=(reason,))
+        if authorise is None:
+            return PolicyDecision(effect=PolicyEffect.ALLOW, reasons=("admitted by the registry",))
+        return await authorise(name, team, ctx)
+
+    return gate
 
 
 def context_for(spec: AgentSpec, model: ModelClient, artefacts: Any = None) -> ContextWindow:
@@ -422,6 +450,7 @@ def adapter_for(
     workers: WorkerFactory | None = None,
     authorise: Authorise | None = None,
     provider: TracerProvider | None = None,
+    admit: Admit | None = None,
 ) -> RuntimeAdapter:
     """The spec's runtime adapter with functions and executors plugged in. Test-double adapters
     (Step 4) take functions only."""
@@ -437,6 +466,7 @@ def adapter_for(
             workers=workers,
             authorise=authorise,
             provider=provider,
+            admit=admit,
         )
         if spec.runtime.adapter in ("sequential", "stepwise") and not executors:
             return runtime_for(spec, functions=functions)
@@ -457,6 +487,7 @@ async def run(
     workers: WorkerFactory | None = None,
     authorise: Authorise | None = None,
     meter: Meter | None = None,
+    admit: Admit | None = None,
 ) -> tuple[RunResult, str]:
     """Execute ``spec`` and return the result and the trace id (hex).
 
@@ -474,6 +505,7 @@ async def run(
         workers=workers,
         authorise=authorise,
         provider=provider,
+        admit=admit,
     )
     handle = await adapter.build(plan)
     tr = tracing.tracer(provider)

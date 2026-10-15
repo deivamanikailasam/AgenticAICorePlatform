@@ -30,6 +30,8 @@ class Settings:
     )
     audience: str = field(default_factory=lambda: _env("AGENT_API_AUDIENCE", "agent-platform"))
     agents_dir: str = field(default_factory=lambda: _env("AGENT_API_AGENTS_DIR", "agents"))
+    # dev | staging | prod: staging and prod run only approved agents (Step 25)
+    environment: str = field(default_factory=lambda: _env("AGENT_ENV", "dev"))
     pdp: str = field(default_factory=lambda: _env("AGENT_API_PDP", "opa"))
     opa_url: str = field(default_factory=lambda: _env("P0_OPA_URL", "http://127.0.0.1:8181"))
     cerbos_url: str = field(

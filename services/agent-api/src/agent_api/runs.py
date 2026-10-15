@@ -208,15 +208,20 @@ class RunManager:
                     raise ConflictError("this Idempotency-Key was used with a different request")
                 return self.runs[known[0]], False
         spec = self.agents[agent]
-        plan = compile_spec(spec)
-        adapter, handle = await self._prepare(spec, plan, None)
         ctx = RunContext(
             tenant_id=who.tenant,
             user_id=who.user,
             agent_id=spec.name,
+            agent_version=spec.version,
             risk_tier=spec.risk_tier,
             **({"thread_id": thread_id} if thread_id else {}),
         )
+        if self.assembly.admit is not None:  # Step 25: only approved agents in staging and prod
+            refused = await self.assembly.admit(spec, ctx)
+            if refused:
+                raise PermissionError(refused)
+        plan = compile_spec(spec)
+        adapter, handle = await self._prepare(spec, plan, None)
         run = Run(
             run_id=ctx.run_id,
             thread_id=ctx.thread_id,

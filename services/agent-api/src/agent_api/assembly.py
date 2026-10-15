@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from agent_compiler.run import executors_for, functions_for
+from agent_compiler.run import Admit, executors_for, functions_for
 from agent_contracts.interfaces import (
     AuditSink,
     Checkpointer,
@@ -81,7 +81,10 @@ class Assembly:
         memory_factory: MemoryFactory | None = None,
         secrets: SecretResolver | None = None,
         a2a_transport: httpx.AsyncBaseTransport | None = None,
+        admit: Admit | None = None,
     ) -> None:
+        # Step 25: which agents may run and be delegated to here (the registry gate)
+        self.admit = admit
         self.secrets = secrets or EnvSecretResolver()
         self.a2a_transport = a2a_transport
         self.checkpointer = checkpointer
@@ -163,6 +166,7 @@ class Assembly:
             spec_path=spec_path,
             workers=self.worker,
             authorise=delegation_authoriser(self.pdp, self.audit),
+            admit=self.admit,
         )
         runner: EventingNodeRunner
         if self.checkpointer is not None:

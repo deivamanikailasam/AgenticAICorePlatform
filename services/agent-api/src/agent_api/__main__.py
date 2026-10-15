@@ -7,6 +7,9 @@ import asyncio
 import uvicorn
 from agent_contracts.dummies.observability import JsonlAuditSink
 from agent_contracts.interfaces import Checkpointer
+from agent_registry.factory import open_registry
+from agent_registry.gate import ApprovedOnly
+from agent_registry.sync import sync
 from agent_runtime.checkpoints import FieldCipher, PostgresCheckpointer
 from agent_spec.platform import load_platform
 from agent_tools.auth import KeycloakTokenVerifier
@@ -40,6 +43,18 @@ def main() -> None:
     exchanger = TokenExchanger(
         settings.token_url, settings.client_id, settings.client_secret, EnvSecretResolver()
     )
+    # Step 25: every deployed spec is in the registry (new versions as draft); in staging and
+    # prod only approved versions run or are delegated to
+    registry, where = open_registry()
+    agents = RunManager.load_agents(settings.agents_dir)
+    for result in asyncio.run(sync(registry, agents.values(), by="agent-api")):
+        if result.outcome.startswith("refused"):
+            print(f"registry: {result.name}@{result.version} {result.outcome}")
+    gate = ApprovedOnly(registry, settings.environment, audit)
+    print(
+        f"registry: {where}; environment {settings.environment}"
+        f"{' (approved agents only)' if gate.enforced else ''}"
+    )
     assembly = Assembly(
         load_platform(),
         build_pdp(settings.pdp, opa_url=settings.opa_url, cerbos_url=settings.cerbos_url),
@@ -47,8 +62,9 @@ def main() -> None:
         rag_core_url=settings.rag_core_url,
         exchanger=exchanger,
         checkpointer=checkpointer,
+        admit=gate.refusal,
     )
-    manager = RunManager(RunManager.load_agents(settings.agents_dir), assembly, store)
+    manager = RunManager(agents, assembly, store)
     verifier = KeycloakTokenVerifier(
         settings.issuer, audience=settings.audience, jwks_url=settings.jwks_url
     )
