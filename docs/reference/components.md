@@ -54,6 +54,8 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | policy_decision_point | rules | dummy | `agent_contracts.dummies.safety:RulesPolicyDecisionPoint` | In-process rules: same tenant only; irreversible needs approval. OPA: Step 10. |
 | router | first | dummy | `agent_contracts.dummies.reasoning:FirstRouter` | Always the first route (a fixed path, useful as a baseline). |
 | router | keyword | dummy | `agent_contracts.dummies.reasoning:KeywordRouter` | Picks the route whose name appears in the text; otherwise the first, with low confidence. |
+| runtime_adapter | agent_framework | implemented | `agent_runtime.adapters.agent_framework:AgentFrameworkAdapter` |  |
+| runtime_adapter | crewai | stub | `agent_runtime.adapters.stubs:CrewAIAdapter` | CrewAI. STUB (catalogue): role-based crews do not map onto the platform's plan graph |
 | runtime_adapter | langgraph | implemented | `agent_runtime.adapters.langgraph:LangGraphAdapter` |  |
 | runtime_adapter | sequential | dummy | `agent_contracts.dummies.runtime:SequentialRuntimeAdapter` | Runs one node at a time in queue order. The Step 4 stub adapter. |
 | runtime_adapter | stepwise | dummy | `agent_contracts.dummies.runtime:StepwiseRuntimeAdapter` | Runs every ready node in a 'superstep' before moving on (breadth-first). |

@@ -10,11 +10,15 @@ dependencies = [
     "jsonschema>=4.26.0,<5",
     # exact pins with a 14-day cooldown (ADR 0022): langgraph 1.2.12 was released 2026-09-21
     "langgraph==1.2.12",
+    # Microsoft Agent Framework (workflows only; no model providers): 1.19.0 released 2026-09-18
+    "agent-framework-core==1.19.0",
 ]
 
 [project.entry-points."agent_platform.components"]
 "model_client.litellm" = "agent_runtime.models.gateway:GatewayModelClient"
 "runtime_adapter.langgraph" = "agent_runtime.adapters.langgraph:LangGraphAdapter"
+"runtime_adapter.agent_framework" = "agent_runtime.adapters.agent_framework:AgentFrameworkAdapter"
+"runtime_adapter.crewai" = "agent_runtime.adapters.stubs:CrewAIAdapter"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }
