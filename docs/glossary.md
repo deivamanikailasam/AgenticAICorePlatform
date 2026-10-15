@@ -59,3 +59,9 @@ Every term used in this repository, in plain English. Grows with each step.
 | Signal | A message sent into a running workflow, such as an approval |
 | Durable timer | A wait recorded on the server, not in a process's memory, so it keeps counting through restarts |
 | Heartbeat | A regular "still alive" message from a long activity, so a dead worker is noticed quickly |
+| Semantic memory | Facts the agent keeps between conversations, such as a user's stated preference |
+| Episodic memory | Records of past runs and how they ended |
+| Procedural memory | Learned instructions, versioned like prompts; only from the platform or a user who confirmed them |
+| Memory poisoning | Getting false facts or instructions into an agent's memory so they steer later runs |
+| Taint | The mark a run gets once untrusted content is in its context; writes after that count as untrusted |
+| Right to erasure | A person's right to have the personal information an organisation holds about them deleted |

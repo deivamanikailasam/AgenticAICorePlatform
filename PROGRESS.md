@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 20 · Long-term memory (next)
+**Current step:** 21 · Context engineering (next)
 
 ## Environment note (read first)
 
@@ -39,13 +39,15 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 17 Run API and streaming | done | `agent-api` (ag-ui-protocol 1.0.0): create (idempotent), AG-UI over SSE and WebSocket, state, cancel, resume (refuses approvals), threads, approvals from verified tokens (self 403, outsider 404); events from inside the run on both adapters; container healthy with public/internal issuer split (also fixed in the gateway); integration: invoice-triage through the real service with Keycloak and OPA; headless Chromium drives the page to approval and payment | real Project 0 Keycloak hostname (`KC_HOSTNAME`) and `P0_KEYCLOAK_PUBLIC_URL` |
 | 18 Checkpoints and threads | done | Postgres checkpointer (contract; AES-256-GCM field encryption bound to tenant/thread/checkpoint; retention keeps newest per thread); Valkey (contract) and SQLite alternatives; history and fork; SIGKILL mid-run then resume without repeating the write on both adapters (SQLite) and with Postgres; durable run API: paused runs survive a restart, running runs resume from checkpoints, forks continue after the chosen checkpoint, runs and events encrypted at rest | checkpoint key in OpenBao (Step 29) |
 | 19 Durable long runs (Temporal) | done | temporalio 1.34.0; `durability: temporal` runs the plan as the `agent-run` workflow, nodes as `run_node` activities (retries, heartbeats), approvals as signals with a 7-day durable timer, values over 256 KiB by S3 reference; dev server 1.9.1 by digest on 127.0.0.1; `agent-worker` service; durable executor contract; approval wait survives worker stop and server restart with each side effect scheduled once; 24 h wait and expiry on the time-skipping server (CI only: download blocked here); Restate and DBOS stubs | API dispatch of temporal agents with per-node events; delegated credentials in the worker (Step 29) |
+| 20 Long-term memory | done | `libs/agent-memory`: pgvector store (encrypted, exact search), Qdrant v1.19.1 and Mem0 2.2.1 stores (35 integration tests), Zep and Letta stubs (unsupported/retired upstream); `validating` policy (provenance, untrusted refused, instructions only from platform or confirmed user, injection check, confidence, PII redaction, TTL) and `human_curated`; recall, taint-aware `remember` tool and episodes in the ReAct loop; poisoned-document test (ASI06); erasure, inspect and flush endpoints; `just eval-memory` (10 cases, stand-in model): no memory 0/10, memory 9/10 in-memory and 10/10 pgvector, 0 leaks | real-model eval; Project 0 lifecycle hook registration and `privacy-officer` role in Project 0 Keycloak; memory in the OpenAI Agents and Pydantic AI engines |
 
 ## Next
 
-- Step 20: long-term memory — semantic, episodic and procedural memory scoped per user, tenant
-  or agent; a `MemoryPolicy` (PII redaction, provenance, confidence, TTL, no unvalidated writes
-  from untrusted tool output); right-to-erasure via Project 0's lifecycle; pgvector default with
-  Qdrant, Mem0, Letta, Zep alternatives.
+- Step 21: context engineering — `ContextManager` with token budgets per section, history
+  trimming and rolling summaries, tool-result compaction, just-in-time tool loading,
+  prompt-cache-friendly ordering and delimiting of untrusted content; summarise, trim and
+  offload-to-S3 strategies; a 200-turn conversation stays under the context limit with no drop
+  in task success on the long-dialogue eval.
 
 ## Open issues
 
@@ -60,3 +62,4 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 8 | Approver identity and groups come from the caller of `resume` until the run API takes them from a verified token | done (Step 17) |
 | 9 | The proxy in this build container refuses tag pushes (HTTP 403); `step-NN` tags exist locally only. Create them on the Mac or rely on commit messages | owner |
 | 4 | LiteLLM key values from provisioning must be moved into OpenBao (automated in Step 29) | Step 29 |
+| 10 | Zep and Letta memory stores are stubs: Zep Community Edition is unsupported and Letta's self-hosted server is retired; completing either needs a cloud account and a data-residency decision (ADR 0031) | owner |

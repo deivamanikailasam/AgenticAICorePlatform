@@ -35,3 +35,5 @@ ADR supersedes it.
 | [0027](0027-agentic-rag.md) | Agentic RAG: strategy over rag-core, citations only from retrieved passages, grounding check, naive-RAG comparison | 16 |
 | [0028](0028-run-api-and-ag-ui.md) | Run API: AG-UI over SSE (WebSocket alternative), in-run events, approvals from verified tokens | 17 |
 | [0029](0029-checkpoints-and-durable-runs.md) | Checkpoints at the node runner, encrypted in Postgres; resume by journal replay; durable run API | 18 |
+| [0030](0030-temporal-for-durable-long-runs.md) | Temporal for durable long runs: plan interpreted in one workflow, nodes as activities, agent-worker; Restate and DBOS stubs | 19 |
+| [0031](0031-long-term-memory.md) | Long-term memory: pgvector default, write policy in front of every store, taint-aware remember, erasure everywhere; Zep and Letta stubs | 20 |
