@@ -38,6 +38,7 @@ dependencies = [
     { name = "ag-ui-protocol" },
     { name = "agent-compiler" },
     { name = "agent-contracts" },
+    { name = "agent-memory" },
     { name = "agent-runtime" },
     { name = "agent-spec" },
     { name = "agent-tools" },
@@ -50,6 +51,7 @@ requires-dist = [
     { name = "ag-ui-protocol", specifier = "==1.0.0" },
     { name = "agent-compiler", editable = "libs/agent-compiler" },
     { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-memory", editable = "libs/agent-memory" },
     { name = "agent-runtime", editable = "libs/agent-runtime" },
     { name = "agent-spec", editable = "libs/agent-spec" },
     { name = "agent-tools", editable = "libs/agent-tools" },
@@ -130,6 +132,8 @@ source = { editable = "libs/agent-memory" }
 dependencies = [
     { name = "agent-contracts" },
     { name = "agent-runtime" },
+    { name = "agent-spec" },
+    { name = "agent-tools" },
     { name = "mem0ai" },
     { name = "psycopg", extra = ["binary"] },
     { name = "psycopg-pool" },
@@ -140,6 +144,8 @@ dependencies = [
 requires-dist = [
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-runtime", editable = "libs/agent-runtime" },
+    { name = "agent-spec", editable = "libs/agent-spec" },
+    { name = "agent-tools", editable = "libs/agent-tools" },
     { name = "mem0ai", specifier = "==2.2.1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6,<4" },
     { name = "psycopg-pool", specifier = ">=3.3.0,<4" },

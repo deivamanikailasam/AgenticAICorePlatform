@@ -99,7 +99,7 @@ class ToolRef(_Spec):
 class LongTermMemory(_Spec):
     store: str = "pgvector"
     scope: Literal["user", "tenant", "agent"] = "user"
-    policy: str = "validate_redact"
+    policy: str = "validating"
     ttl_days: int | None = Field(default=None, ge=1)
 
 

@@ -9,6 +9,7 @@ dependencies = [
     "agent-tools",
     "agent-runtime",
     "agent-compiler",
+    "agent-memory",
     "ag-ui-protocol==1.0.0",
     "starlette>=0.48",
     "uvicorn>=0.54.0,<1",
@@ -23,6 +24,7 @@ agent-spec = { workspace = true }
 agent-tools = { workspace = true }
 agent-runtime = { workspace = true }
 agent-compiler = { workspace = true }
+agent-memory = { workspace = true }
 
 [build-system]
 requires = ["hatchling==1.32.4"]

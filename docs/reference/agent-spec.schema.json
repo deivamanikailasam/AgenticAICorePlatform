@@ -260,7 +260,7 @@
       "additionalProperties": false,
       "properties": {
         "policy": {
-          "default": "validate_redact",
+          "default": "validating",
           "title": "Policy",
           "type": "string"
         },

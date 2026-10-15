@@ -112,7 +112,7 @@ One of: `memory`, `checkpoint`, `temporal`
 |---|---|---|---|
 | `store` | string |  | `pgvector` |
 | `scope` | `user` \| `tenant` \| `agent` |  | `user` |
-| `policy` | string |  | `validate_redact` |
+| `policy` | string |  | `validating` |
 | `ttl_days` | integer or null |  |  |
 
 ### `Memory`

@@ -43,6 +43,7 @@ from agent_runtime.executors import (
     SubplanNodeExecutor,
     ToolNodeExecutor,
 )
+from agent_runtime.memory_hooks import RunMemory
 from agent_runtime.models.gateway import GatewayModelClient
 from agent_runtime.nodes import NodeExecutor, NodeRunner
 from agent_runtime.strategies import (
@@ -108,6 +109,7 @@ def executors_for(
     model: ModelClient | None = None,
     tools: ToolExecutor | None = None,
     spec_path: str | Path | None = None,
+    memory: RunMemory | None = None,
 ) -> dict[NodeKind, NodeExecutor]:
     kinds = {n.kind for n in plan.nodes}
     executors: dict[NodeKind, NodeExecutor] = {}
@@ -144,7 +146,7 @@ def executors_for(
             if any(n.config.get("tools") for n in plan.nodes if n.kind is NodeKind.AGENT):
                 raise LookupError("agent nodes with tools need a tool executor with a registry")
             tools, registry = _no_tools()
-        executors[NodeKind.AGENT] = agent_dispatcher(spec, plan, model, tools, registry)
+        executors[NodeKind.AGENT] = agent_dispatcher(spec, plan, model, tools, registry, memory)
     if NodeKind.SUBPLAN in kinds:
         base = Path(spec_path).parent if spec_path else Path.cwd()
 
@@ -258,15 +260,19 @@ def agent_dispatcher(
     model: ModelClient,
     tools: ToolExecutor,
     registry: ToolRegistry,
+    memory: RunMemory | None = None,
 ) -> AgentLoop:
     """The executor for agent nodes: the spec's ReAct engine plus the planning and reflection
-    strategies (Step 14), with planner and critic from the spec's components."""
+    strategies (Step 14), with planner and critic from the spec's components. Long-term memory
+    (Step 20) is used by the native ReAct engine."""
     names = tool_names(plan)
     engine = spec.components.get("agent_loop", "native")
     planner_name = spec.components.get("planner", "llm")
     critic_name = spec.components.get("critic", "llm")
 
     def react(m: ModelClient) -> AgentLoop:
+        if engine == "native" and memory is not None:
+            return AgentLoopExecutor(m, tools, registry, names, memory=memory)
         loop = _create("agent_loop", engine, model=m, tools=tools, registry=registry, names=names)
         assert isinstance(loop, AgentLoop)
         return loop
