@@ -35,6 +35,7 @@ The root of ``agent.yaml``.
 | `graph` | Graph or null |  |  |
 | `agents` | list of SubAgent |  | `[]` |
 | `supervisor` | SupervisorSettings |  | `{'dispatcher': 'llm', 'model': 'planner', 'max_rounds': 8, 'max_depth': 3, 'max_failures': 2, 'state': {}, 'output': None}` |
+| `team` | TeamSettings |  | `{'max_turns': 12, 'max_depth': 3, 'max_failures': 2, 'entry': None, 'handoffs': {}, 'speaker': 'round_robin', 'selector_model': 'planner', 'stop_phrase': 'TERMINATE', 'answer_from': None, 'history_messages': 20, 'items': 'items', 'mapper': None, 'reducer': None, 'concurrency': 4, 'max_items': 100, 'debaters': [], 'judge': None}` |
 | `components` | object |  |  |
 | `evals` | Evals or null |  |  |
 | `interop` | Interop |  | `{'a2a_publish': False, 'mcp_publish': False}` |
@@ -203,6 +204,32 @@ How a supervisor delegates (Step 22, ``pattern: supervisor`` or ``hierarchical``
 | `max_failures` | integer |  | `2` |
 | `state` | object |  |  |
 | `output` | string or null |  |  |
+
+### `TeamSettings`
+
+Handoff, group chat, map-reduce and debate teams (Step 23). Every pattern stops at its
+turn limit, at the spec's ``budgets.max_cost_aud`` across all agents, or when its circuit
+breakers open; each also has its own natural end (below).
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `max_turns` | integer |  | `12` |
+| `max_depth` | integer |  | `3` |
+| `max_failures` | integer |  | `2` |
+| `entry` | string or null |  |  |
+| `handoffs` | object |  |  |
+| `speaker` | `round_robin` \| `llm` |  | `round_robin` |
+| `selector_model` | string |  | `planner` |
+| `stop_phrase` | string |  | `TERMINATE` |
+| `answer_from` | string or null |  |  |
+| `history_messages` | integer |  | `20` |
+| `items` | string |  | `items` |
+| `mapper` | string or null |  |  |
+| `reducer` | string or null |  |  |
+| `concurrency` | integer |  | `4` |
+| `max_items` | integer |  | `100` |
+| `debaters` | list of string |  | `[]` |
+| `judge` | string or null |  |  |
 
 ### `ToolRef`
 

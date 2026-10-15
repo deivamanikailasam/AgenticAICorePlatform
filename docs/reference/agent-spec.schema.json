@@ -709,6 +709,155 @@
       "title": "SupervisorSettings",
       "type": "object"
     },
+    "TeamSettings": {
+      "additionalProperties": false,
+      "description": "Handoff, group chat, map-reduce and debate teams (Step 23). Every pattern stops at its\nturn limit, at the spec's ``budgets.max_cost_aud`` across all agents, or when its circuit\nbreakers open; each also has its own natural end (below).",
+      "properties": {
+        "answer_from": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Answer From"
+        },
+        "concurrency": {
+          "default": 4,
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Concurrency",
+          "type": "integer"
+        },
+        "debaters": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Debaters",
+          "type": "array"
+        },
+        "entry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entry"
+        },
+        "handoffs": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Handoffs",
+          "type": "object"
+        },
+        "history_messages": {
+          "default": 20,
+          "minimum": 1,
+          "title": "History Messages",
+          "type": "integer"
+        },
+        "items": {
+          "default": "items",
+          "title": "Items",
+          "type": "string"
+        },
+        "judge": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Judge"
+        },
+        "mapper": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mapper"
+        },
+        "max_depth": {
+          "default": 3,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "max_failures": {
+          "default": 2,
+          "minimum": 1,
+          "title": "Max Failures",
+          "type": "integer"
+        },
+        "max_items": {
+          "default": 100,
+          "minimum": 1,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "max_turns": {
+          "default": 12,
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Max Turns",
+          "type": "integer"
+        },
+        "reducer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reducer"
+        },
+        "selector_model": {
+          "default": "planner",
+          "title": "Selector Model",
+          "type": "string"
+        },
+        "speaker": {
+          "default": "round_robin",
+          "enum": [
+            "round_robin",
+            "llm"
+          ],
+          "title": "Speaker",
+          "type": "string"
+        },
+        "stop_phrase": {
+          "default": "TERMINATE",
+          "title": "Stop Phrase",
+          "type": "string"
+        }
+      },
+      "title": "TeamSettings",
+      "type": "object"
+    },
     "ToolRef": {
       "additionalProperties": false,
       "properties": {
@@ -906,6 +1055,28 @@
         "model": "planner",
         "output": null,
         "state": {}
+      }
+    },
+    "team": {
+      "$ref": "#/$defs/TeamSettings",
+      "default": {
+        "answer_from": null,
+        "concurrency": 4,
+        "debaters": [],
+        "entry": null,
+        "handoffs": {},
+        "history_messages": 20,
+        "items": "items",
+        "judge": null,
+        "mapper": null,
+        "max_depth": 3,
+        "max_failures": 2,
+        "max_items": 100,
+        "max_turns": 12,
+        "reducer": null,
+        "selector_model": "planner",
+        "speaker": "round_robin",
+        "stop_phrase": "TERMINATE"
       }
     },
     "tools": {

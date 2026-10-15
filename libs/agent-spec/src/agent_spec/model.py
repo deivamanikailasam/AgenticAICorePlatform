@@ -228,6 +228,39 @@ class SupervisorSettings(_Spec):
     output: str | None = None  # the state field returned as the answer
 
 
+class TeamSettings(_Spec):
+    """Handoff, group chat, map-reduce and debate teams (Step 23). Every pattern stops at its
+    turn limit, at the spec's ``budgets.max_cost_aud`` across all agents, or when its circuit
+    breakers open; each also has its own natural end (below)."""
+
+    max_turns: int = Field(default=12, ge=1, le=100)  # handoffs, chat turns or debate rounds
+    max_depth: int = Field(default=3, ge=1, le=10)
+    max_failures: int = Field(default=2, ge=1)
+    # handoff: start with ``entry``; an agent may hand off only to the agents listed for it;
+    # ends when an agent answers instead of handing off
+    entry: str | None = None
+    handoffs: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    # group chat: who speaks next; ends when a message contains ``stop_phrase``
+    speaker: Literal["round_robin", "llm"] = "round_robin"
+    selector_model: str = "planner"
+    stop_phrase: str = "TERMINATE"
+    answer_from: str | None = (
+        None  # whose latest message is the result (default: the one before the stop)
+    )
+    history_messages: int = Field(default=20, ge=1)
+    # map-reduce: ``mapper`` runs once per item of ``input[items]`` (at most ``concurrency`` at a
+    # time, at most ``max_items`` items), then ``reducer`` combines the results
+    items: str = "items"
+    mapper: str | None = None
+    reducer: str | None = None
+    concurrency: int = Field(default=4, ge=1, le=64)
+    max_items: int = Field(default=100, ge=1)
+    # debate: ``debaters`` argue for up to ``max_turns`` rounds; ``judge`` may end it early
+    # (``done: true``) and gives the answer
+    debaters: tuple[str, ...] = ()
+    judge: str | None = None
+
+
 class Evals(_Spec):
     suite: str
     gates: str = "default"
@@ -259,6 +292,7 @@ class AgentSpec(_Spec):
     graph: Graph | None = None
     agents: tuple[SubAgent, ...] = ()
     supervisor: SupervisorSettings = SupervisorSettings()
+    team: TeamSettings = TeamSettings()
     components: dict[str, str] = Field(default_factory=dict)  # slot -> registered name
     evals: Evals | None = None
     interop: Interop = Interop()

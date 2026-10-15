@@ -67,9 +67,13 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | model_client | scripted | dummy | `agent_contracts.dummies.models:ScriptedModelClient` | Replays a script of assistant turns (text or tool calls), then falls back to echo. |
 | pattern_builder | agentic_rag | implemented | `agent_compiler.patterns.react:AgenticRagPatternBuilder` | ``pattern: agentic_rag`` (Step 16): plan hops, retrieve through rag-core, cite, self-check. |
 | pattern_builder | chain | dummy | `agent_contracts.dummies.runtime:ChainPattern` | A straight chain of function nodes: ``{steps: [fn, fn, ...]}``. |
+| pattern_builder | debate | implemented | `agent_compiler.patterns.team:DebatePatternBuilder` |  |
 | pattern_builder | evaluator_optimiser | implemented | `agent_compiler.patterns.react:EvaluatorOptimiserPatternBuilder` | Optimiser drafts, separate evaluator scores, keep the best; bounded rounds. |
+| pattern_builder | group_chat | implemented | `agent_compiler.patterns.team:GroupChatPatternBuilder` |  |
+| pattern_builder | handoff | implemented | `agent_compiler.patterns.team:HandoffPatternBuilder` |  |
 | pattern_builder | hierarchical | implemented | `agent_compiler.patterns.team:HierarchicalPatternBuilder` | Same node: workers that are supervisors themselves form the hierarchy. |
 | pattern_builder | hybrid | implemented | `agent_compiler.patterns.graph:HybridPatternBuilder` | Workflow nodes and agent nodes mixed freely; agent nodes are expanded by the compiler. |
+| pattern_builder | map_reduce | implemented | `agent_compiler.patterns.team:MapReducePatternBuilder` |  |
 | pattern_builder | plan_execute | implemented | `agent_compiler.patterns.react:PlanExecutePatternBuilder` | Plan, carry out each step with a small ReAct run, re-plan on failure. |
 | pattern_builder | prompt_chain | implemented | `agent_compiler.patterns.graph:PromptChainPatternBuilder` | ``pattern: prompt_chain`` (Step 15): a straight line of steps (LLM, function, tool), each |
 | pattern_builder | react | implemented | `agent_compiler.patterns.react:ReactPatternBuilder` |  |

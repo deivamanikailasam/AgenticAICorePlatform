@@ -59,11 +59,14 @@ def _invoice(pattern: str) -> Any:
 
 
 def test_missing_inner_pattern_names_the_step() -> None:
+    reg = Registry()
+    reg.discover()
+    del reg._classes[("pattern_builder", "debate")]  # as if that step were not built yet
     with pytest.raises(
         CompileError,
-        match=r"no pattern builder installed for 'handoff' \(it arrives in Step 23\)",
+        match=r"no pattern builder installed for 'debate' \(it arrives in Step 23\)",
     ):
-        compile_spec(_invoice("handoff"))
+        compile_spec(_invoice("debate"), reg)
 
 
 def test_a_team_pattern_inside_a_graph_node_is_refused() -> None:
@@ -100,8 +103,9 @@ class _TwoStepAgent(PatternBuilder):
 def test_agent_nodes_expand_and_irreversible_tools_get_approval() -> None:
     reg = Registry()
     reg.discover()
-    reg.add("pattern_builder", "handoff", _TwoStepAgent)
-    plan = compile_spec(_invoice("handoff"), reg)
+    del reg._classes[("pattern_builder", "debate")]  # stand in a two-step inner pattern
+    reg.add("pattern_builder", "debate", _TwoStepAgent)
+    plan = compile_spec(_invoice("debate"), reg)
     ids = [n.id for n in plan.nodes]
     assert "resolve_exceptions.think" in ids
     assert "resolve_exceptions" not in ids

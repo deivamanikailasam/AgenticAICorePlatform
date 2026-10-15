@@ -1,0 +1,20 @@
+# Reference spec for pattern: group_chat (Step 23).
+spec_version: 1
+name: review-chat
+version: 0.1.0
+owner: agent-platform
+description: A writer and a critic revise a text until the critic is satisfied.
+risk_tier: low
+autonomy: multi_agent
+pattern: group_chat
+models: { default: local-qwen-fast, planner: local-qwen-quality }
+runtime: { adapter: langgraph, durability: checkpoint }
+budgets: { max_steps: 30, max_tokens: 60000, max_cost_aud: 0.30, max_wall_seconds: 300 }
+agents:
+  - { name: writer, spec: workers/writer.yaml, role: Writes and revises }
+  - { name: critic, spec: workers/critic.yaml, role: Reviews }
+team:
+  speaker: round_robin
+  stop_phrase: TERMINATE
+  answer_from: writer
+  max_turns: 6

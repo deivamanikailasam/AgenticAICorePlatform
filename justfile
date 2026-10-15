@@ -195,6 +195,10 @@ eval-memory *args:
 eval-long-dialogue *args:
     uv run python -m agent_runtime.dialogue_eval evals/golden/long-dialogue {{args}}
 
+# Team patterns (Step 23): reference specs on golden tasks, plus limit checks (stand-in agents)
+eval-teams:
+    uv run python -m agent_compiler.team_eval evals/golden/teams
+
 # The hybrid reference app against Project 0 (Mac; VERIFY-ON-MAC): just demo-invoice-triage INV-1002 j.smith
 demo-invoice-triage invoice="INV-1002" approver="":
     uv run python -m invoice_triage.demo {{invoice}} {{ if approver != "" { "--approver " + approver } else { "" } }}

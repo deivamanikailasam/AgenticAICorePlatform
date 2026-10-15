@@ -62,6 +62,7 @@ from agent_runtime.supervisor import (
     Worker,
     WorkerResult,
 )
+from agent_runtime.teams import TeamExecutor
 from agent_spec import AgentSpec, load_spec
 from agent_tools.assemble import tool_names
 from opentelemetry.sdk.trace import TracerProvider
@@ -338,9 +339,10 @@ def supervisor_executor(
     workers: WorkerFactory | None,
     authorise: Authorise | None,
     provider: TracerProvider | None,
-) -> SupervisorExecutor:
-    """Supervisor nodes (Step 22): each worker is its own spec, run as a child run with the
-    model and tools the worker factory builds for it, metered and traced per agent."""
+) -> TeamExecutor:
+    """Team nodes: supervisors (Step 22); handoff, group chat, map-reduce and debate (Step 23).
+    Each worker is its own spec, run as a child run with the model and tools the worker factory
+    builds for it, metered and traced per agent."""
     if workers is None:
         raise LookupError(
             f"spec '{spec.name}' delegates to workers: pass a worker factory (each worker needs "
@@ -379,7 +381,9 @@ def supervisor_executor(
             raise LookupError(f"spec '{spec.name}': the LLM supervisor needs a model client")
         return LlmDispatcher(model, role=str(node.config.get("model") or "planner"))
 
-    return SupervisorExecutor(run_worker, dispatcher, authorise)
+    return TeamExecutor(
+        run_worker, SupervisorExecutor(run_worker, dispatcher, authorise), authorise, model
+    )
 
 
 def context_for(spec: AgentSpec, model: ModelClient, artefacts: Any = None) -> ContextWindow:

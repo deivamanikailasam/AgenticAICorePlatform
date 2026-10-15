@@ -1,0 +1,21 @@
+# Reference spec for pattern: map_reduce (Step 23).
+spec_version: 1
+name: batch-summary
+version: 0.1.0
+owner: agent-platform
+description: Summarises many documents in parallel, then combines them (map-reduce).
+risk_tier: low
+autonomy: multi_agent
+pattern: map_reduce
+models: { default: local-qwen-fast, planner: local-qwen-quality }
+runtime: { adapter: langgraph, durability: checkpoint }
+budgets: { max_steps: 30, max_tokens: 60000, max_cost_aud: 0.30, max_wall_seconds: 300 }
+agents:
+  - { name: mapper, spec: workers/mapper.yaml, role: One summary per document }
+  - { name: reducer, spec: workers/reducer.yaml, role: Combines the summaries }
+team:
+  items: documents
+  mapper: mapper
+  reducer: reducer
+  concurrency: 4
+  max_items: 50

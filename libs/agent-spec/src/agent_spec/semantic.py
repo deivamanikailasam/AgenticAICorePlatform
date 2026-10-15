@@ -262,6 +262,8 @@ def semantic_issues(spec: AgentSpec) -> list[SpecIssue]:
         if out is not None and out not in spec.supervisor.state:
             issues.append(SpecIssue("supervisor.output", f"'{out}' is not in supervisor.state"))
 
+    issues += _team_issues(spec)
+
     if spec.risk_tier is RiskTier.HIGH and spec.evals is None:
         issues.append(SpecIssue("evals", "high-risk specs must name an eval suite"))
     if spec.risk_tier is not RiskTier.LOW and spec.tools and not spec.guardrails:
@@ -273,4 +275,43 @@ def semantic_issues(spec: AgentSpec) -> list[SpecIssue]:
                 severity="warning",
             )
         )
+    return issues
+
+
+def _team_issues(spec: AgentSpec) -> list[SpecIssue]:
+    """Step 23 patterns: every agent a setting names must be one of the spec's agents."""
+    pattern, team = spec.pattern.value, spec.team
+    if pattern not in ("handoff", "group_chat", "map_reduce", "debate"):
+        return []
+    names = {a.name for a in spec.agents}
+    issues: list[SpecIssue] = []
+    if not spec.agents:
+        issues.append(SpecIssue("agents", f"pattern '{pattern}' needs agents"))
+
+    def known(field: str, name: str | None, required: bool = True) -> None:
+        if name is None:
+            if required:
+                issues.append(SpecIssue(f"team.{field}", f"pattern '{pattern}' needs team.{field}"))
+        elif name not in names:
+            issues.append(SpecIssue(f"team.{field}", f"'{name}' is not one of the agents"))
+
+    if pattern == "handoff":
+        known("entry", team.entry)
+        for source, targets in team.handoffs.items():
+            known("handoffs", source)
+            for t in targets:
+                known("handoffs", t)
+    elif pattern == "group_chat":
+        if len(spec.agents) < 2:
+            issues.append(SpecIssue("agents", "a group chat needs at least two agents"))
+        known("answer_from", team.answer_from, required=False)
+    elif pattern == "map_reduce":
+        known("mapper", team.mapper)
+        known("reducer", team.reducer)
+    elif pattern == "debate":
+        if len(team.debaters) < 2:
+            issues.append(SpecIssue("team.debaters", "a debate needs at least two debaters"))
+        for d in team.debaters:
+            known("debaters", d)
+        known("judge", team.judge)
     return issues

@@ -1,0 +1,19 @@
+spec_version: 1
+name: policy-debate-judge
+version: 0.1.0
+owner: agent-platform
+description: Weighs the arguments and decides.
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+models: { default: local-qwen-fast }
+runtime: { adapter: langgraph, durability: memory }
+budgets: { max_steps: 4, max_tokens: 8000, max_cost_aud: 0.05, max_wall_seconds: 60 }
+graph:
+  nodes:
+    - id: act
+      type: agent
+      pattern: react
+      config:
+        template: "Proposal: $input.task. Debate so far: $input.transcript. Final round: $input.final. Decide whether it is settled."
+        output_schema: { type: object, properties: { done: { type: boolean }, answer: { type: string } }, required: [done] }
