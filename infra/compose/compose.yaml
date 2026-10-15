@@ -104,6 +104,24 @@ services:
       retries: 20
     restart: unless-stopped
 
+  # Durable long runs (Step 19, ADR 0030): `just up-temporal`. Development server with its state in
+  # a SQLite file on a volume, so runs survive a server restart. Production: Temporal with
+  # Postgres or Temporal Cloud (docs/setup/production.md). Project 0 does not run Temporal.
+  temporal:
+    image: docker.io/temporalio/temporal:1.9.1@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+    profiles: [temporal]
+    command: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/home/temporal/temporal.db", "--ui-port", "8233"]
+    <<: *hardening
+    volumes:
+      - temporal-data:/home/temporal
+    ports: ["127.0.0.1:7233:7233", "127.0.0.1:8233:8233"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "127.0.0.1:7233"]
+      interval: 3s
+      retries: 30
+    restart: unless-stopped
+
   # Alternative policy decision point (Step 10, ADR 0020): `docker compose --profile cerbos up`
   # and MCP_GATEWAY_PDP=cerbos. Project 0 does not run Cerbos, so Project A owns it.
   cerbos:
@@ -144,3 +162,6 @@ services:
       interval: 3s
       retries: 20
     restart: unless-stopped
+
+volumes:
+  temporal-data:

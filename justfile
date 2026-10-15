@@ -93,12 +93,16 @@ up:
     {{compose}} run --rm agent-health
     {{compose}} up -d --wait --remove-orphans mcp-gateway agent-api
 
+# Durable long runs (Step 19): the Temporal development server on 127.0.0.1:7233 (UI on 8233)
+up-temporal:
+    {{compose}} --profile temporal up -d --wait temporal
+
 # Optional alternative engines (profiles): Cerbos, OpenFGA
 up-alternatives:
     {{compose}} --profile cerbos --profile openfga up -d --wait cerbos openfga
 
 down:
-    {{compose}} --profile cerbos --profile openfga down
+    {{compose}} --profile cerbos --profile openfga --profile temporal down
 
 logs *svc:
     {{compose}} logs -f {{svc}}

@@ -67,8 +67,9 @@ jobs:
           just migrate
           just up
           just up-alternatives
+          just up-temporal
           just provision-openfga
-          just test-integration
+          AGENT_REQUIRE_TEMPORAL=1 AGENT_REQUIRE_TEMPORAL_TIMESKIP=1 just test-integration
       - if: failure()
         run: docker compose -f tests/stack/compose.p0-standin.yaml logs --tail=200
 
