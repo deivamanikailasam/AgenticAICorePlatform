@@ -1,0 +1,10 @@
+# One LiteLLM virtual key per agent role. Budgets are *initial guard limits*, not measurements:
+# tune them from the cost dashboards (Step 26). LiteLLM accounts cost in USD; AUD limits are
+# converted at the rate recorded in platform.yaml when Step 26 lands.
+budget_duration: 30d
+roles:
+  planner:    { models: [local-qwen-quality], max_budget_usd: 20 }
+  executor:   { models: [local-qwen-fast, local-qwen-quality], max_budget_usd: 20 }
+  router:     { models: [local-qwen-fast], max_budget_usd: 5 }
+  judge:      { models: [local-qwen-quality], max_budget_usd: 10 }
+  summariser: { models: [local-qwen-fast], max_budget_usd: 5 }
