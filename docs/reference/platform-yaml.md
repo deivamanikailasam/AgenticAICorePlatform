@@ -48,8 +48,9 @@ How the platform authenticates to a remote MCP server.
 
 | Field | Type | Required | Default |
 |---|---|---|---|
-| `kind` | `none` \| `oauth_client_credentials` \| `bearer` |  | `none` |
+| `kind` | `none` \| `oauth_client_credentials` \| `bearer` \| `on_behalf_of` |  | `none` |
 | `issuer` | string or null |  |  |
+| `audience` | string or null |  |  |
 | `client_id` | string or null |  |  |
 | `client_secret` | string or null |  |  |
 | `scope` | string or null |  |  |
@@ -72,7 +73,7 @@ One allowlisted MCP server. Servers not listed here are refused.
 | `trusted` | boolean |  | `False` |
 | `allowed_tools` | list of string or null |  |  |
 | `side_effects` | object |  |  |
-| `auth` | McpAuth |  | `{'kind': 'none', 'issuer': None, 'client_id': None, 'client_secret': None, 'scope': None, 'token': None}` |
+| `auth` | McpAuth |  | `{'kind': 'none', 'issuer': None, 'audience': None, 'client_id': None, 'client_secret': None, 'scope': None, 'token': None}` |
 | `timeout_seconds` | number |  | `30` |
 
 ### `ModelCapabilities`

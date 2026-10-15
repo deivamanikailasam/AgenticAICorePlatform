@@ -93,9 +93,11 @@ class Gateway:
             limiter=limiter,
             default_rate_limit_per_minute=settings.rate_limit_per_minute,
         )
-        self.pool = McpClientPool(platform, audit=audit, secrets=self.secrets)
         self.exchanger = TokenExchanger(
             settings.token_url, settings.client_id, settings.client_secret, self.secrets
+        )
+        self.pool = McpClientPool(
+            platform, audit=audit, secrets=self.secrets, exchanger=self.exchanger
         )
 
     async def load_tools(self) -> list[str]:

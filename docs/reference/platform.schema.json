@@ -75,6 +75,18 @@
       "additionalProperties": false,
       "description": "How the platform authenticates to a remote MCP server.",
       "properties": {
+        "audience": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audience"
+        },
         "client_id": {
           "anyOf": [
             {
@@ -116,7 +128,8 @@
           "enum": [
             "none",
             "oauth_client_credentials",
-            "bearer"
+            "bearer",
+            "on_behalf_of"
           ],
           "title": "Kind",
           "type": "string"
@@ -178,6 +191,7 @@
         "auth": {
           "$ref": "#/$defs/McpAuth",
           "default": {
+            "audience": null,
             "client_id": null,
             "client_secret": null,
             "issuer": null,

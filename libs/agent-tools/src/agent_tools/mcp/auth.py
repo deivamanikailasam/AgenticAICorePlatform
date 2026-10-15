@@ -1,4 +1,5 @@
-"""HTTP clients for remote MCP servers: anonymous, static bearer, or OAuth client credentials."""
+"""HTTP clients for remote MCP servers: anonymous, static bearer, OAuth client credentials, or a
+per-user on-behalf-of token (``bearer_override``, one short-lived connection per call)."""
 
 from __future__ import annotations
 
@@ -31,15 +32,22 @@ class MemoryTokenStorage(TokenStorage):
         self._client = client_info
 
 
-async def http_client_for(server: McpServer, secrets: SecretResolver) -> httpx2.AsyncClient:
+async def http_client_for(
+    server: McpServer, secrets: SecretResolver, bearer_override: str | None = None
+) -> httpx2.AsyncClient:
     timeout = httpx2.Timeout(server.timeout_seconds, read=max(server.timeout_seconds, 300))
     auth = server.auth
+    if bearer_override is not None:
+        return httpx2.AsyncClient(
+            timeout=timeout, headers={"Authorization": f"Bearer {bearer_override}"}
+        )
     if auth.kind == "bearer":
         token = await maybe_secret(auth.token, secrets)
         if not token:
             raise ValueError(f"MCP server {server.name}: bearer auth needs a token")
         return httpx2.AsyncClient(timeout=timeout, headers={"Authorization": f"Bearer {token}"})
-    if auth.kind == "oauth_client_credentials":
+    if auth.kind in ("oauth_client_credentials", "on_behalf_of"):
+        # on_behalf_of: these credentials are used for tools/list only; calls use the user's token
         secret = await maybe_secret(auth.client_secret, secrets)
         if not (auth.client_id and secret and auth.issuer and server.url):
             raise ValueError(

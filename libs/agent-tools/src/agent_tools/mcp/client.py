@@ -9,6 +9,9 @@
 * **Trust** — annotations (read-only, destructive, idempotent) are believed only for trusted
   servers; otherwise side effects come from ``side_effects`` or default to ``write``. Tool
   descriptions from untrusted servers are clipped and treated as untrusted text.
+* **On behalf of the user** — for ``auth.kind: on_behalf_of`` servers each call exchanges the
+  caller's token (``subject_token``) for one valid only for ``auth.audience`` and uses it on a
+  connection of its own; with no user token the call is refused, never sent as the platform.
 * **Every call** is traced (``execute_tool``) and audited (arguments hashed, never stored).
 """
 
@@ -32,6 +35,7 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.shared.exceptions import MCPError
 from opentelemetry import trace
 
+from agent_tools.identity import TokenExchanger, subject_token
 from agent_tools.mcp.auth import http_client_for
 from agent_tools.secrets import EnvSecretResolver, SecretResolver
 
@@ -70,9 +74,12 @@ class _Connection:
     dedicated owner task lets any request task use the client and any task close it.
     """
 
-    def __init__(self, server: McpServer, secrets: SecretResolver) -> None:
+    def __init__(
+        self, server: McpServer, secrets: SecretResolver, bearer_override: str | None = None
+    ) -> None:
         self.server = server
         self.secrets = secrets
+        self.bearer_override = bearer_override
         self.client: Client | None = None
         self.lock = asyncio.Lock()
         self._stop: asyncio.Event | None = None
@@ -90,7 +97,9 @@ class _Connection:
         else:
             if not self.server.url:
                 raise ValueError(f"MCP server {self.server.name}: http needs a url")
-            http = await stack.enter_async_context(await http_client_for(self.server, self.secrets))
+            http = await stack.enter_async_context(
+                await http_client_for(self.server, self.secrets, self.bearer_override)
+            )
             target = streamable_http_client(self.server.url, http_client=http)
         client = Client(
             target, mode=mode, read_timeout_seconds=self.server.timeout_seconds, cache=None
@@ -153,10 +162,12 @@ class McpClientPool:
         platform: PlatformConfig,
         audit: AuditSink | None = None,
         secrets: SecretResolver | None = None,
+        exchanger: TokenExchanger | None = None,
     ) -> None:
         self.platform = platform
         self.audit = audit
         self.secrets = secrets or EnvSecretResolver()
+        self.exchanger = exchanger
         self._conns: dict[str, _Connection] = {}
 
     def server(self, name: str) -> McpServer:
@@ -235,6 +246,20 @@ class McpClientPool:
 
     # ------------------------------------------------------------ calls
 
+    async def _on_behalf_of(self, cfg: McpServer) -> _Connection:
+        user_token = subject_token.get()
+        if user_token is None:
+            raise PermissionError(
+                f"MCP server {cfg.name} acts on behalf of the user and there is no user token; "
+                "refusing to call it with a service identity"
+            )
+        if self.exchanger is None or not cfg.auth.audience:
+            raise PermissionError(
+                f"MCP server {cfg.name}: on_behalf_of needs a token exchanger and auth.audience"
+            )
+        exchanged = await self.exchanger.exchange(user_token, cfg.auth.audience)
+        return _Connection(cfg, self.secrets, bearer_override=exchanged.access_token)
+
     async def call(
         self, ref: str, arguments: dict[str, Any], ctx: RunContext, call_id: str | None = None
     ) -> Any:
@@ -256,8 +281,13 @@ class McpClientPool:
             attrs["gen_ai.tool.call.id"] = call_id
         ok, error, version = False, None, None
         with _tracer.start_as_current_span(f"execute_tool {tool}", attributes=attrs) as span:
+            own: _Connection | None = None
             try:
-                client = await self.client(server_name)
+                if cfg.auth.kind == "on_behalf_of":
+                    own = await self._on_behalf_of(cfg)
+                    client = await own.get()
+                else:
+                    client = await self.client(server_name)
                 version = str(client.protocol_version)
                 span.set_attribute("mcp.protocol.version", version)
                 result = await client.call_tool(tool, arguments)
@@ -277,6 +307,8 @@ class McpClientPool:
                 span.set_status(trace.Status(trace.StatusCode.ERROR, error))
                 raise
             finally:
+                if own is not None:
+                    await own.close()
                 if self.audit is not None:
                     await self.audit.append(
                         AuditEvent(
@@ -292,6 +324,7 @@ class McpClientPool:
                                 "ok": ok,
                                 "error": error,
                                 "call_id": call_id,
+                                "on_behalf_of": cfg.auth.kind == "on_behalf_of",
                                 "duration_ms": int((time.perf_counter() - started) * 1000),
                             },
                         )

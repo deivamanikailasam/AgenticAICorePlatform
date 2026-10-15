@@ -10,7 +10,7 @@ from typing import Literal
 
 import yaml
 from agent_contracts.models import ModelCapabilities
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from agent_spec.errors import SpecError, SpecIssue
 from agent_spec.interpolate import interpolate
@@ -50,12 +50,21 @@ class Currency(_Cfg):
 class McpAuth(_Cfg):
     """How the platform authenticates to a remote MCP server."""
 
-    kind: Literal["none", "oauth_client_credentials", "bearer"] = "none"
+    # on_behalf_of: every call carries the *user's* token exchanged (RFC 8693) for ``audience``;
+    # tool discovery uses the client credentials below. Never falls back to a service identity.
+    kind: Literal["none", "oauth_client_credentials", "bearer", "on_behalf_of"] = "none"
     issuer: str | None = None  # OAuth: the authorization server the credentials belong to
+    audience: str | None = None  # on_behalf_of: the downstream service the token is valid for
     client_id: str | None = None
     client_secret: str | None = None  # a ${secret:path#key} reference, resolved at call time
     scope: str | None = None
     token: str | None = None  # bearer: a ${secret:path#key} reference
+
+    @model_validator(mode="after")
+    def _audience_for_on_behalf_of(self) -> McpAuth:
+        if self.kind == "on_behalf_of" and not self.audience:
+            raise ValueError("auth.kind on_behalf_of needs auth.audience")
+        return self
 
 
 class McpServer(_Cfg):

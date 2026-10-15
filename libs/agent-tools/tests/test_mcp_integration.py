@@ -54,15 +54,20 @@ def _client_secret() -> str:
     )
 
 
-@pytest.fixture(scope="module")
-def remote_url() -> Iterator[str]:
+def _start_remote(*extra: str) -> tuple[subprocess.Popen[bytes], int]:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     proc = subprocess.Popen(
-        [sys.executable, "-m", "mcp_servers.remote_http", str(port), ISSUER],
+        [sys.executable, "-m", "mcp_servers.remote_http", str(port), ISSUER, *extra],
         cwd=Path(__file__).parent,
     )
+    return proc, port
+
+
+@pytest.fixture(scope="module")
+def remote_url() -> Iterator[str]:
+    proc, port = _start_remote()
     url = f"http://127.0.0.1:{port}/mcp"
     for _ in range(50):
         try:
@@ -173,3 +178,92 @@ async def test_remote_server_rejects_calls_without_a_token(remote_url: str) -> N
             headers={"Accept": "application/json, text/event-stream"},
         )
     assert resp.status_code == 401
+
+
+def _user_token(username: str) -> str:
+    resp = httpx.post(
+        f"{ISSUER}/protocol/openid-connect/token",
+        data={
+            "grant_type": "password",
+            "client_id": "mcp-inspector",
+            "username": username,
+            "password": "standin-only",
+        },
+    )
+    resp.raise_for_status()
+    return str(resp.json()["access_token"])
+
+
+@pytest.fixture(scope="module")
+def obo_port() -> Iterator[int]:
+    """A resource server that accepts only tokens issued for the `rag-core` audience."""
+    proc, port = _start_remote("rag-core")
+    for _ in range(50):
+        try:
+            httpx.get(f"http://127.0.0.1:{port}/mcp", timeout=1)
+            break
+        except httpx.TransportError:
+            time.sleep(0.2)
+    yield port
+    proc.terminate()
+    proc.wait(10)
+
+
+async def test_on_behalf_of_server_sees_the_user_and_never_the_platform(
+    obo_port: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Step 10: an MCP server that accepts only `aud=rag-core` tokens gets the user's own rights."""
+    from agent_tools.identity import TokenExchanger, subject_token
+    from agent_tools.secrets import EnvSecretResolver
+
+    port = obo_port
+    monkeypatch.setenv("SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET", _client_secret())
+    ref = "${secret:keycloak/agent-platform#client_secret}"
+    server = McpServer(
+        name="obo",
+        transport="http",
+        url=f"http://127.0.0.1:{port}/mcp",
+        trusted=True,
+        auth=McpAuth(
+            kind="on_behalf_of",
+            audience="rag-core",
+            issuer=ISSUER,
+            client_id="agent-platform",
+            client_secret=ref,
+            scope="agent-platform:rag-core",
+        ),
+    )
+    roles = {r: "m" for r in ("default", "planner", "executor", "router", "judge", "summariser")}
+    cfg = PlatformConfig(
+        models=Models(roles=roles),
+        currency=Currency(usd_to_aud=1.5, source="t", as_of=date(2026, 10, 1)),
+        mcp=Mcp(servers=[server]),
+    )
+    secrets = EnvSecretResolver()
+    exchanger = TokenExchanger(
+        f"{ISSUER}/protocol/openid-connect/token", "agent-platform", ref, secrets
+    )
+    audit = MemoryAuditSink()
+    pool = McpClientPool(cfg, audit=audit, secrets=secrets, exchanger=exchanger)
+    reg = InMemoryToolRegistry()
+    try:
+        await pool.register_all(reg, "obo")
+        ex = PlatformToolExecutor(reg)
+        anonymous = await ex.execute(ToolCall(name="obo__whoami"), CTX)
+        assert not anonymous.ok
+        assert "service identity" in (anonymous.error or "")
+
+        reset = subject_token.set(_user_token("alice"))
+        try:
+            as_alice = await ex.execute(ToolCall(name="obo__whoami"), CTX)
+        finally:
+            subject_token.reset(reset)
+        assert as_alice.ok, as_alice.error
+        assert as_alice.output["user"] == "alice"
+        assert as_alice.output["client_id"] == "agent-platform"
+        events = [r.event.payload for r in await audit.read(CTX.run_id)]
+        assert [e["ok"] for e in events] == [False, True]
+        assert all(e["on_behalf_of"] for e in events)
+    finally:
+        await pool.aclose()
+        await exchanger.aclose()

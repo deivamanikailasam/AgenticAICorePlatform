@@ -141,3 +141,29 @@ def test_stdio_servers_get_only_allowlisted_environment(monkeypatch: pytest.Monk
     assert env["HTTPS_PROXY"] == "http://proxy:3128"
     assert env["FS_ROOT"] == "/data"
     assert "LITELLM_MASTER_KEY" not in env
+
+
+def test_on_behalf_of_needs_an_audience() -> None:
+    from agent_spec.platform import McpAuth
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="audience"):
+        McpAuth(kind="on_behalf_of")
+
+
+async def test_on_behalf_of_without_a_user_token_is_refused_before_connecting() -> None:
+    from agent_spec.platform import McpAuth
+
+    server = McpServer(
+        name="obo",
+        transport="http",
+        url="http://127.0.0.1:9/mcp",  # nothing listens: a connection attempt would fail differently
+        auth=McpAuth(kind="on_behalf_of", audience="rag-core"),
+    )
+    audit = MemoryAuditSink()
+    p = McpClientPool(platform(server), audit=audit)
+    with pytest.raises(PermissionError, match="service identity"):
+        await p.call("mcp://obo/whoami", {}, CTX)
+    (record,) = await audit.read()
+    assert record.event.payload["ok"] is False
+    assert record.event.payload["on_behalf_of"] is True
