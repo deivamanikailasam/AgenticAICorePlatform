@@ -36,3 +36,8 @@ Every term used in this repository, in plain English. Grows with each step.
 | Kill switch | A tested way to stop a run, an agent version or a tenant's agents immediately |
 | AIBOM | AI bill of materials: inventory of agents, models, tools and MCP servers |
 | Canary | Sending a small share of traffic to a new version before everyone |
+| ReAct | Reason–act–observe loop: the model calls a tool, reads the result, decides again |
+| Plan-and-execute | The model writes a plan first, then each step is carried out; re-plans when a step fails |
+| ReWOO | "Reasoning without observation": plan once with tool arguments, run the tools, answer once |
+| Reflection | The model critiques its own draft and revises it, for a bounded number of rounds |
+| Evaluator-optimiser | One model drafts, a separate evaluator scores, the drafter improves; best candidate wins |

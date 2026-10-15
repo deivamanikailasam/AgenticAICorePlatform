@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 14 · Planning and reflection (next)
+**Current step:** 15 · Routing, chaining and hybrid (next)
 
 ## Environment note (read first)
 
@@ -33,12 +33,13 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 11 Runtime adapter | done | LangGraph 1.2.12 and Microsoft Agent Framework 1.19.0 each pass the same 14 runtime contract tests; one agent.yaml gives identical state on both; hello-workflow on LangGraph with its Tempo trace | — |
 | 12 Deterministic workflows | done | on both engines: LLM + tool nodes in parallel then routing; saga undoes completed steps newest first (also after a policy denial); model-routed run replays identically without calling the model; sub-workflow; node timeout; tool nodes via the authorising executor with key `<run>:<node>` | — |
 | 13 Single tool-calling agent | done | ReAct loop: parallel reads, ordered writes, untrusted observations, bounded repairs, schema repair, `stopped` at max_steps, approval pause/resume, text ReAct fallback; agent_loop slot with native, OpenAI Agents SDK 0.22.3 and Pydantic AI 2.52.0 engines (contract); 8/8 golden tasks (stand-in model) on 3 engines × 2 adapters | golden tasks with the real local model (`-m mac`); Google ADK via A2A in Step 21 |
+| 14 Planning and reflection | done | plan_execute (re-plan on failure), rewoo (2 model calls), reflection (self-critique), evaluator_optimiser (judge, best candidate) as pattern builders; planner.llm / critic.llm pass their contracts; one model-call cap per node; all 5 patterns solve the 3 reference tasks on both adapters with a stand-in model, metered | `just compare-patterns` with the real local model (numbers: dataset 3 tasks, model alias) |
 
 ## Next
 
-- Step 14: planning and reflection — plan-and-execute (re-plan on failure), ReWOO, reflection /
-  self-critique and evaluator-optimiser with bounded rounds; each reports cost and steps against
-  ReAct on the same task.
+- Step 15: routing, chaining and hybrid — prompt chains with validation gates, LLM router with
+  embedding-classifier and rules alternatives, routing accuracy on a labelled set, hybrid
+  reference app end to end.
 
 ## Open issues
 
