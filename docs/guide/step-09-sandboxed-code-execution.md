@@ -6,7 +6,7 @@
 |---|---|
 | **Goal** | Run model-written code where it cannot hurt anything, and report what happened |
 | **Time** | About a day |
-| **You end up with** | The `code_sandbox` interface and contract, `services/sandbox-runner` with gVisor (default) and Kata engines, Firecracker and managed stubs, the `sandbox://python` tool, a gVisor installer and a CI job |
+| **You end up with** | The `code_sandbox` interface and contract, `services/sandbox-runner` with gVisor (default), Firecracker and Kata engines (verified on KVM), a managed-service stub, the `sandbox://python` tool, a gVisor installer and a CI job |
 | **New words** | sandbox, gVisor, OCI runtime, tmpfs, cgroup limit, fork bomb |
 
 ## 2. The big idea
@@ -83,9 +83,9 @@ tools:
 
 | Choice | Alternative | When the alternative wins |
 |---|---|---|
-| gVisor | Kata Containers | KVM hosts needing full VM isolation; implemented, needs KVM |
-| gVisor | Firecracker | Very high volume with fast microVM boot; stub until KVM is available |
-| gVisor | Managed sandbox service | No infrastructure to run; stub until a vendor is chosen |
+| gVisor | Kata Containers | KVM hosts needing VM isolation behind the same Docker interface; verified in CI |
+| gVisor | Firecracker | Untrusted code with a high blast radius; a whole microVM per run; verified in CI |
+| gVisor | Managed sandbox service | No infrastructure to run; stub by decision until a vendor passes privacy and residency review (ADR 0021) |
 | Docker CLI | Kubernetes pods with `RuntimeClass: gvisor` | Production (Step 38) |
 
 ## 10. Which approach fits which situation
@@ -110,7 +110,7 @@ tools:
 | A 10-minute loop is contained and reported | ✅ | `timeout` after about 3.9 s with a 3 s limit |
 | Results come back as artefacts | ✅ | `test_files_come_from_and_go_to_the_artefact_store`, `test_files_in_and_out` |
 | No host mounts | ✅ | `/home/user` and the Docker socket are not visible inside |
-| Alternatives | ⚠️ | Kata implemented, not verified (no KVM); Firecracker and managed are stubs (ADR 0019, open question) |
+| Alternatives | ✅ | Firecracker v1.17.0 and Kata 4.2.0 on GitHub's KVM runner: 21 passed (full contract + fork bomb, ten-minute loop, memory hog, host filesystem) with "not available" counted as failure; managed service is a stub by decision (ADR 0021) |
 | On the Mac | ⚠️ **VERIFY-ON-MAC** | gVisor inside OrbStack |
 | ADR | ✅ | ADR 0019 |
 

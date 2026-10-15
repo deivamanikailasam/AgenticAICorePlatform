@@ -101,6 +101,28 @@ MCP_GATEWAY_PDP=cerbos+openfga just with-secrets just up
 
 OpenFGA here keeps relationships in memory: they are lost when the container restarts.
 
+### Optional: microVM sandbox engines on the Mac (Firecracker, Kata)
+
+gVisor is the default sandbox and needs no KVM. To run the Firecracker or Kata engines, macOS
+has no KVM of its own, but an Apple M3-or-later Mac on macOS 15+ (your M5 Max qualifies) can
+give a Linux VM nested virtualisation. With [Lima](https://github.com/lima-vm/lima)
+(VERIFY-ON-MAC — the flags below are Lima's documented options; confirm with `limactl --version`):
+
+```bash
+brew install lima
+limactl start --name=agent-sandbox --vm-type=vz --cpus=8 --memory=24 \
+  --set '.nestedVirtualization = true' template://default
+limactl shell agent-sandbox -- ls -l /dev/kvm          # must exist
+limactl shell agent-sandbox                            # then, inside the VM, in the repo:
+sudo ./scripts/install_firecracker.sh                  # aarch64 binary + kernel, SHA-256 checked
+sudo ./scripts/build_sandbox_rootfs.sh                 # needs Docker inside the VM
+sudo ./scripts/install_kata.sh && sudo systemctl restart docker
+AGENT_REQUIRE_ENGINES=firecracker,kata just test-microvm
+```
+
+24 GB of the 128 GB is plenty for many concurrent sandboxes next to Project 0's local models;
+size it down if the models need the memory.
+
 ## 6. Verify
 
 ```bash

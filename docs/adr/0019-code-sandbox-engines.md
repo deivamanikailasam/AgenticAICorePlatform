@@ -1,6 +1,6 @@
 # ADR 0019: Code sandbox — gVisor by default, Kata as an option, Firecracker and managed as stubs
 
-- **Status:** Accepted
+- **Status:** Accepted; points 3–4 and the open question superseded by [ADR 0021](0021-sandbox-engines-decision.md)
 - **Date:** 2026-10-15
 - **Step:** 09
 - **Deciders:** repository owner (decision requested on the stubs — see "Open question")
