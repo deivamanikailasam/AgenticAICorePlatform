@@ -54,9 +54,11 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | pattern_builder | evaluator_optimiser | implemented | `agent_compiler.patterns.react:EvaluatorOptimiserPatternBuilder` | Optimiser drafts, separate evaluator scores, keep the best; bounded rounds. |
 | pattern_builder | hybrid | implemented | `agent_compiler.patterns.graph:HybridPatternBuilder` | Workflow nodes and agent nodes mixed freely; agent nodes are expanded by the compiler. |
 | pattern_builder | plan_execute | implemented | `agent_compiler.patterns.react:PlanExecutePatternBuilder` | Plan, carry out each step with a small ReAct run, re-plan on failure. |
+| pattern_builder | prompt_chain | implemented | `agent_compiler.patterns.graph:PromptChainPatternBuilder` | ``pattern: prompt_chain`` (Step 15): a straight line of steps (LLM, function, tool), each |
 | pattern_builder | react | implemented | `agent_compiler.patterns.react:ReactPatternBuilder` |  |
 | pattern_builder | reflection | implemented | `agent_compiler.patterns.react:ReflectionPatternBuilder` | Draft, self-critique, revise; bounded rounds. |
 | pattern_builder | rewoo | implemented | `agent_compiler.patterns.react:RewooPatternBuilder` | Plan once with tool arguments, run the tools without re-prompting, solve once. |
+| pattern_builder | router | implemented | `agent_compiler.patterns.graph:RouterPatternBuilder` | ``pattern: router`` (Step 15): the entry is a router node and every route it may choose |
 | pattern_builder | single | dummy | `agent_contracts.dummies.runtime:SingleNodePattern` | One function node: ``{fn: name}``. |
 | pattern_builder | state_machine | implemented | `agent_compiler.patterns.graph:StateMachinePatternBuilder` | Same translation; states are nodes and transitions are edges with outcomes. |
 | pattern_builder | workflow | implemented | `agent_compiler.patterns.graph:GraphPatternBuilder` | Translates ``graph: {entry, nodes, edges}`` one-to-one into plan nodes and edges. |

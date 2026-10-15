@@ -31,7 +31,13 @@ MULTI_AGENT_PATTERNS = {
     Pattern.GROUP_CHAT,
     Pattern.DEBATE,
 }
-GRAPH_PATTERNS = {Pattern.WORKFLOW, Pattern.STATE_MACHINE, Pattern.HYBRID}
+GRAPH_PATTERNS = {
+    Pattern.WORKFLOW,
+    Pattern.STATE_MACHINE,
+    Pattern.PROMPT_CHAIN,
+    Pattern.ROUTER,
+    Pattern.HYBRID,
+}
 # The platform's guardrail vocabulary (Step 27 implements each); registered guardrails also count.
 KNOWN_GUARDRAILS = {
     "prompt_injection",

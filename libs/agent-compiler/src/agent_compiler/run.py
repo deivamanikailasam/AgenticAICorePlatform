@@ -74,8 +74,13 @@ def resolve_function(name: str) -> Callable[[dict[str, Any]], Any]:
 
 
 def functions_for(plan: ExecutablePlan) -> dict[str, Callable[[dict[str, Any]], Any]]:
-    """Every ``fn`` in the plan: function nodes, routers with a function, compensation steps."""
+    """Every ``fn`` in the plan: function nodes, routers with a function, compensation steps and
+    validation gates."""
     names = {str(n.config["fn"]) for n in plan.nodes if n.config.get("fn")}
+    for n in plan.nodes:
+        gate = (n.config.get("config") or {}).get("gate") or {}
+        if isinstance(gate, Mapping) and gate.get("fn"):
+            names.add(str(gate["fn"]))
     return {n: resolve_function(n) for n in names}
 
 
@@ -104,7 +109,7 @@ def executors_for(
     ):
         model = GatewayModelClient(spec_models=spec.models)
     if NodeKind.LLM in kinds and model is not None:
-        executors[NodeKind.LLM] = LlmNodeExecutor(model)
+        executors[NodeKind.LLM] = LlmNodeExecutor(model, functions)
     if NodeKind.ROUTER in kinds:
         executors[NodeKind.ROUTER] = RouterNodeExecutor(
             model, functions, router_factory(spec, model, spec_path)

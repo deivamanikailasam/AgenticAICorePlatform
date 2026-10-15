@@ -10,6 +10,7 @@ free-form ``config``):
   instructions to the platform;
 * **LLM** — ``config.template`` (and optional ``config.system``) with ``config.output_schema``
   for structured output, through the platform model client (a role resolves to a gateway alias);
+  ``config.gate`` validates the output before the next step (Step 15, ``gates.py``);
 * **router** — picks one of ``routes``: with ``fn`` by a function, otherwise by a ``Router``
   component (LLM with a schema that only allows the declared routes, embedding classifier or
   rules; Step 15), with an optional confidence floor and fallback route;
@@ -90,17 +91,41 @@ def _cfg(node: PlanNode) -> dict[str, Any]:
 
 
 class LlmNodeExecutor:
-    def __init__(self, model: ModelClient) -> None:
+    """One model call; with ``config.gate`` the output must pass the gate (``gates.py``) before
+    the run moves on: failures are sent back with the reasons, at most ``max_retries`` times."""
+
+    def __init__(
+        self,
+        model: ModelClient,
+        functions: Mapping[str, Callable[..., Any]] | None = None,
+    ) -> None:
         self.model = model
+        self.functions = dict(functions or {})
 
     async def _chat(
-        self, node: PlanNode, prompt: str, ctx: RunContext, schema: dict[str, Any] | None
+        self,
+        node: PlanNode,
+        prompt: str | list[Message],
+        ctx: RunContext,
+        schema: dict[str, Any] | None,
     ) -> Any:
+        return self._parse(await self._reply(node, prompt, ctx, schema), schema)
+
+    async def _reply(
+        self,
+        node: PlanNode,
+        prompt: str | list[Message],
+        ctx: RunContext,
+        schema: dict[str, Any] | None,
+    ) -> str:
         cfg = _cfg(node)
         messages = []
         if cfg.get("system"):
             messages.append(Message(role=Role.SYSTEM, content=str(cfg["system"])))
-        messages.append(Message(role=Role.USER, content=prompt))
+        if isinstance(prompt, str):
+            messages.append(Message(role=Role.USER, content=prompt))
+        else:
+            messages += prompt
         response = await self.model.chat(
             ChatRequest(
                 model=str(node.config.get("model") or "default"),
@@ -111,7 +136,10 @@ class LlmNodeExecutor:
                 metadata={"run_id": ctx.run_id, "node_id": node.id, "tenant_id": ctx.tenant_id},
             )
         )
-        text = response.message.content or ""
+        return response.message.content or ""
+
+    @staticmethod
+    def _parse(text: str, schema: dict[str, Any] | None) -> Any:
         return json.loads(text) if schema is not None else text
 
     async def __call__(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> Any:
@@ -123,9 +151,35 @@ class LlmNodeExecutor:
             )
         if not cfg.get("template"):
             raise ValueError(f"llm node '{node.id}' needs config.template")
-        return await self._chat(
-            node, render(str(cfg["template"]), values), ctx, cfg.get("output_schema")
-        )
+        prompt = render(str(cfg["template"]), values)
+        schema = cfg.get("output_schema")
+        gate = cfg.get("gate")
+        if not gate:
+            return await self._chat(node, prompt, ctx, schema)
+        from agent_runtime.gates import GateFailedError, gate_reasons
+
+        conversation = [Message(role=Role.USER, content=prompt)]
+        reasons: list[str] = []
+        for _ in range(int(gate.get("max_retries", 1)) + 1):
+            text = await self._reply(node, conversation, ctx, schema)
+            try:
+                output = self._parse(text, schema)
+            except json.JSONDecodeError as exc:
+                reasons = [f"not valid JSON: {exc.msg}"]
+            else:
+                reasons = gate_reasons(gate, output, values, self.functions)
+                if not reasons:
+                    return output
+            conversation += [
+                Message(role=Role.ASSISTANT, content=text),
+                Message(
+                    role=Role.USER,
+                    content="Your answer failed validation: "
+                    + "; ".join(reasons)
+                    + ". Answer the original request again, fixing these problems.",
+                ),
+            ]
+        raise GateFailedError(node.id, reasons)
 
 
 RouterFactory = Callable[[PlanNode], Router]
