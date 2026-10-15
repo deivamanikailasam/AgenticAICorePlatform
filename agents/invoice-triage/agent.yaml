@@ -1,5 +1,6 @@
-# The spec's example, in the exact v1 layout. Deterministic validation, an agentic node for
-# exceptions, and an irreversible payment behind a human approval.
+# The spec's example, in the exact v1 layout, completed as the hybrid reference app (Step 15):
+# deterministic validation, an agentic node for exceptions, and an irreversible payment behind a
+# human approval. Functions and the demo ERP server live in apps/invoice-triage.
 spec_version: 1
 name: invoice-triage
 version: 0.3.0
@@ -23,10 +24,30 @@ guardrails: [prompt_injection, pii_redaction, tool_args_schema, output_schema]
 graph:
   nodes:
     - { id: validate, type: function, fn: invoice.validate }
-    - { id: resolve_exceptions, type: agent, pattern: react, model: planner, tools: [get_invoice, search] }
-    - { id: pay, type: tool, tool: post_payment }
+    - id: resolve_exceptions
+      type: agent
+      pattern: react
+      model: planner
+      tools: [get_invoice, search]
+      config:
+        template: "Invoice $input.invoice.id failed validation: ${validate.error}. Check it with get_invoice and the payment policy with search, then decide what to pay."
+        output_schema:
+          type: object
+          properties:
+            invoice_id: { type: string }
+            amount: { type: number, exclusiveMinimum: 0 }
+            currency: { type: string, enum: [AUD] }
+            resolution: { type: string }
+          required: [invoice_id, amount, currency, resolution]
+    - { id: prepare_payment, type: function, fn: invoice.payment_details }
+    - id: pay
+      type: tool
+      tool: post_payment
+      config:
+        args: { invoice_id: $prepare_payment.invoice_id, amount_aud: $prepare_payment.amount_aud, currency: $prepare_payment.currency }
   edges:
     - "validate -> resolve_exceptions: on_error"
-    - "validate -> pay: on_ok"
-    - "resolve_exceptions -> pay"
+    - "validate -> prepare_payment: on_ok"
+    - "resolve_exceptions -> prepare_payment"
+    - "prepare_payment -> pay: on_ok"
 evals: { suite: evals/invoice-triage, gates: default }

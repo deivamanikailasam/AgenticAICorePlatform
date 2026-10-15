@@ -59,11 +59,23 @@ from opentelemetry.trace import Span, Status, StatusCode
 from agent_compiler import tracing
 from agent_compiler.compiler import compile_spec, runtime_for
 
+FUNCTION_GROUP = "agent_platform.functions"
+
 
 def resolve_function(name: str) -> Callable[[dict[str, Any]], Any]:
-    """``hello`` (built in) or a dotted path ``package.module.func`` / ``package.module:func``."""
+    """``hello`` (built in), a name an installed package registers under the
+    ``agent_platform.functions`` entry-point group (``invoice.validate``), or a dotted path
+    ``package.module.func`` / ``package.module:func``."""
     if name in BUILTIN_FUNCTIONS:
         return BUILTIN_FUNCTIONS[name]
+    from importlib.metadata import entry_points
+
+    registered = {ep.name: ep for ep in entry_points(group=FUNCTION_GROUP)}
+    if name in registered:
+        fn = registered[name].load()
+        if not callable(fn):
+            raise LookupError(f"registered function '{name}' is not callable")
+        return fn  # type: ignore[no-any-return]
     module, _, attr = name.replace(":", ".").rpartition(".")
     if not module:
         raise LookupError(f"function '{name}' is not built in and is not a dotted path")

@@ -29,7 +29,7 @@ fmt:
     uv run ruff check --fix .
 
 typecheck:
-    uv run mypy scripts $(for d in libs/*/src services/*/src; do [ -n "$(find "$d" -name '*.py' -print -quit 2>/dev/null)" ] && echo "$d"; done)
+    uv run mypy scripts $(for d in libs/*/src services/*/src apps/*/src; do [ -n "$(find "$d" -name '*.py' -print -quit 2>/dev/null)" ] && echo "$d"; done)
 
 test *args:
     uv run pytest {{args}}
@@ -178,6 +178,10 @@ compare-patterns cases="evals/reference/planning-tasks/cases.jsonl":
 # Routing accuracy of the LLM, embedding and rules routers on the labelled set (Mac; VERIFY-ON-MAC)
 eval-routing dataset="evals/labelled/routing" routers="llm,embedding,rules":
     uv run python -m agent_compiler.route_eval {{dataset}} {{routers}}
+
+# The hybrid reference app against Project 0 (Mac; VERIFY-ON-MAC): just demo-invoice-triage INV-1002 j.smith
+demo-invoice-triage invoice="INV-1002" approver="":
+    uv run python -m invoice_triage.demo {{invoice}} {{ if approver != "" { "--approver " + approver } else { "" } }}
 
 # Firecracker and Kata engines (needs /dev/kvm; see scripts/install_firecracker.sh, install_kata.sh)
 test-microvm:

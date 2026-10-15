@@ -78,7 +78,7 @@ def test_react_agent_node_becomes_a_loop_with_an_approval_gate() -> None:
     assert ("validate", "resolve_exceptions.loop", "on_error") in edges
     assert ("resolve_exceptions.loop", "resolve_exceptions.approval", "needs_approval") in edges
     assert ("resolve_exceptions.approval", "resolve_exceptions.loop", None) in edges
-    assert ("resolve_exceptions.loop", "pay.approval", None) in edges
+    assert ("resolve_exceptions.loop", "prepare_payment", None) in edges
 
 
 class _TwoStepAgent(PatternBuilder):
@@ -103,8 +103,9 @@ def test_agent_nodes_expand_and_irreversible_tools_get_approval() -> None:
     assert "pay.approval" in ids
     edges = {(e.source, e.target, e.condition) for e in plan.edges}
     assert ("validate", "resolve_exceptions.think", "on_error") in edges
-    assert ("resolve_exceptions.act", "pay.approval", None) in edges
-    assert ("validate", "pay.approval", "on_ok") in edges
+    assert ("resolve_exceptions.act", "prepare_payment", None) in edges
+    assert ("validate", "prepare_payment", "on_ok") in edges
+    assert ("prepare_payment", "pay.approval", "on_ok") in edges
     assert ("pay.approval", "pay", "on_ok") in edges
     gate = plan.node("pay.approval")
     assert gate.kind is NodeKind.APPROVAL

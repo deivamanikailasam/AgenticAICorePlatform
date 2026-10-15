@@ -29,7 +29,7 @@ dev = [
 package = false
 
 [tool.uv.workspace]
-members = ["libs/*", "services/*"]
+members = ["libs/*", "services/*", "apps/*"]
 
 [tool.ruff]
 line-length = 100
@@ -68,5 +68,5 @@ markers = [
     "sandbox: runs containers through Docker with a sandbox runtime (gVisor); skipped where unavailable",
     "microvm: boots Firecracker microVMs (needs /dev/kvm and the assets from scripts/install_firecracker.sh)",
 ]
-testpaths = ["tests", "libs", "services"]
+testpaths = ["tests", "libs", "services", "apps"]
 pythonpath = ["."]
