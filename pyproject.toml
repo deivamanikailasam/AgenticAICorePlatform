@@ -61,10 +61,11 @@ ignore_missing_imports = true  # no inline types; calls are wrapped in agent_too
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "-q -m 'not integration and not mac' --strict-markers --import-mode=importlib"
+addopts = "-q -m 'not integration and not mac and not sandbox' --strict-markers --import-mode=importlib"
 markers = [
     "integration: needs the Project 0 services (or the stand-in stack) running",
     "mac: needs Project 0 itself on the Mac (real models, real realms); VERIFY-ON-MAC",
+    "sandbox: runs containers through Docker with a sandbox runtime (gVisor); skipped where unavailable",
 ]
 testpaths = ["tests", "libs", "services"]
 pythonpath = ["."]

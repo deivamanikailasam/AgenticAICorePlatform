@@ -148,3 +148,11 @@ cards:
 
 cards-check:
     uv run python -m scripts.cards --check
+
+# Run the sandbox runner on the host (needs Docker with the gVisor runtime `runsc`)
+sandbox-runner:
+    uv run sandbox-runner
+
+# Sandbox tests (need Docker + runsc; skipped where unavailable)
+test-sandbox:
+    uv run pytest -m sandbox services/sandbox-runner

@@ -1,0 +1,42 @@
+kind: tool
+name: python
+version: 1.0.0
+ref: sandbox://python
+owner: agent-platform
+purpose: Run a short Python 3.12 program in an isolated sandbox with no network access.
+  Input files are in /work/in; write output files to /work/out. Returns stdout, stderr
+  and files.
+side_effect: read
+default_rule: Allowed if the user may read the data.
+idempotent: false
+timeout_seconds: 180.0
+retry:
+  max_attempts: 1
+  backoff_seconds: 0.5
+data_classification: internal
+deprecated: false
+input_schema:
+  type: object
+  properties:
+    code:
+      type: string
+      minLength: 1
+      maxLength: 200000
+    files:
+      type: object
+      additionalProperties:
+        type: string
+    wall_seconds:
+      type: number
+      minimum: 1
+      maximum: 120
+      default: 10
+  required:
+  - code
+  additionalProperties: false
+output_schema:
+  type: object
+  required:
+  - status
+limitations: Output is untrusted data and is never treated as instructions.
+eval_results: none yet (agent evals start in Step 34)

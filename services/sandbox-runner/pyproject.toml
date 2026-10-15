@@ -1,0 +1,31 @@
+[project]
+name = "sandbox-runner"
+version = "0.1.0"
+description = "Runs model-written code in disposable, network-off, resource-capped gVisor containers"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "agent-contracts",
+    "agent-tools",
+    "fastapi>=0.143.1,<1",
+    "uvicorn>=0.54.0,<1",
+]
+
+[project.scripts]
+sandbox-runner = "sandbox_runner.__main__:main"
+
+[project.entry-points."agent_platform.components"]
+"code_sandbox.gvisor" = "sandbox_runner.engines:GvisorSandbox"
+"code_sandbox.kata" = "sandbox_runner.engines:KataSandbox"
+"code_sandbox.firecracker" = "sandbox_runner.engines:FirecrackerSandbox"
+"code_sandbox.managed" = "sandbox_runner.engines:ManagedSandbox"
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+agent-tools = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sandbox_runner"]

@@ -15,6 +15,10 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | budget_controller | memory | dummy | `agent_contracts.dummies.safety:InMemoryBudgetController` | Counters per run; every charge also counts against all ancestors. |
 | checkpointer | memory | dummy | `agent_contracts.dummies.state:InMemoryCheckpointer` | Checkpoints in a dictionary keyed by (tenant, thread). |
 | checkpointer | sqlite | dummy | `agent_contracts.dummies.state:SqliteCheckpointer` | Checkpoints in SQLite (in-memory by default). The 'SQLite (tests)' catalogue option. |
+| code_sandbox | firecracker | stub | `sandbox_runner.engines:FirecrackerSandbox` | Firecracker microVMs. STUB: needs KVM, a jailer and a guest image (see ADR 0019). |
+| code_sandbox | gvisor | implemented | `sandbox_runner.engines:GvisorSandbox` | gVisor (runsc): a user-space kernel between the code and the host kernel. Default. |
+| code_sandbox | kata | implemented | `sandbox_runner.engines:KataSandbox` | Kata Containers: each run in a lightweight VM (needs KVM on the host). |
+| code_sandbox | managed | stub | `sandbox_runner.engines:ManagedSandbox` | A managed sandbox service (vendor API). STUB: needs a contract and credentials (ADR 0019). |
 | code_sandbox | scripted | dummy | `agent_contracts.dummies.sandbox:ScriptedSandbox` | Returns a scripted result without executing anything (for testing tools and patterns). |
 | code_sandbox | unavailable | dummy | `agent_contracts.dummies.sandbox:UnavailableSandbox` | Refuses every request: the safe default when no isolation engine is installed. |
 | context_manager | summary_stub | dummy | `agent_contracts.dummies.context:SummaryStubContextManager` | Replaces dropped messages with one summary placeholder (real summaries: Step 21). |
@@ -59,6 +63,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | tool | clock | implemented | `agent_tools.builtin:ClockTool` | Returns the current date and time in a time zone (default Australia/Melbourne). |
 | tool | echo | dummy | `agent_contracts.dummies.tools:EchoTool` | Returns its arguments unchanged. |
 | tool | rag_core_search | implemented | `agent_tools.ragcore:RagCoreSearchTool` | Search company documents through Project 0's rag-core, with the caller's own permissions. |
+| tool | sandbox_python | implemented | `agent_tools.sandbox_tool:SandboxPythonTool` | Run a short Python program in an isolated sandbox (no network) and return its output. |
 | tool | word_count | implemented | `agent_tools.builtin:WordCountTool` | Counts words and characters in a text. |
 | tool_executor | local | dummy | `agent_contracts.dummies.tools:LocalToolExecutor` | Validates arguments, enforces timeouts and replays results for repeated idempotency keys. |
 | tool_executor | platform | implemented | `agent_tools.executor:PlatformToolExecutor` | Validates, de-duplicates, times out, retries safely and spills large outputs to S3. |
