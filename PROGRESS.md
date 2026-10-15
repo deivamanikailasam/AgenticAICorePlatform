@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 5 · Model access per role (next). Phase A complete.
+**Current step:** 6 · Tool contract and registry (next)
 
 ## Environment note (read first)
 
@@ -24,12 +24,13 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 2 Contracts and component registry | done | 46 dummies pass 23 contracts; `just components`; catalogue check | — |
 | 3 The agent.yaml spec | done | readable errors with lines; `just validate agents/`; schema + reference generated and checked | — |
 | 4 Pattern compiler and runtime adapter skeleton | done | hello compiles and runs through the stub adapter; trace found in Tempo (stand-in) | trace in Project 0's Tempo/Grafana |
+| 5 Model access per role | done | roles resolve (unit + stand-in); tools, structured output with repair, streaming, retries; AUD cost per run/role; capability check in client and compiler | structured output on both real local Qwen models (`-m mac`); capability table vs model cards |
 
 ## Next
 
-- Step 5: `ModelClient` over the LiteLLM gateway (tool calling, structured output, streaming,
-  retries), role aliases in `platform.yaml`, capability check, per-run token and AUD cost.
-  Structured-output test on both local Qwen models is VERIFY-ON-MAC (stand-in has mock models).
+- Step 6: `Tool` model with side-effect classes, idempotency, timeout, retry, data class, owner;
+  Postgres-backed registry with versions and deprecation; output size cap with spill to S3;
+  schema-invalid args rejected; duplicate idempotency key returns first result; tool cards.
 
 ## Open issues
 
