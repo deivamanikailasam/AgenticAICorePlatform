@@ -7,6 +7,7 @@ from collections import deque
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from typing import Any
 
+from agent_contracts.dummies._util import mark_dummies
 from agent_contracts.interfaces import PatternBuilder, RuntimeAdapter
 from agent_contracts.models import (
     ExecutablePlan,
@@ -223,3 +224,6 @@ class StepwiseRuntimeAdapter(_GraphWalker):
         batch = list(run.queue)
         run.queue.clear()
         return batch
+
+
+mark_dummies(globals())

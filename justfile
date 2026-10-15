@@ -17,7 +17,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test compose-check secret-scan
+check: lint typecheck test policy-test compose-check secret-scan catalogue-check
 
 lint:
     uv run ruff check .
@@ -101,3 +101,10 @@ secrets-init:
 # List every registered component (the switchable parts)
 components *args:
     uv run agent-components {{args}}
+
+# Regenerate docs/reference/components.md from the registry
+catalogue:
+    uv run python -m scripts.catalogue
+
+catalogue-check:
+    uv run python -m scripts.catalogue --check

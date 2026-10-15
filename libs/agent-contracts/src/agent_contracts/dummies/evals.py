@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 
+from agent_contracts.dummies._util import mark_dummies
 from agent_contracts.interfaces import Evaluator, Simulator
 from agent_contracts.models import EvalCase, EvalScore, Message, Role, RunTrace, SimTurn
 
@@ -69,3 +70,6 @@ class PatientUserSimulator(Simulator):
         if sum(1 for m in history if m.role is Role.USER) >= self.patience:
             return SimTurn(done=True, reason="patience exhausted")
         return SimTurn(message=Message(role=Role.USER, content=self.goal))
+
+
+mark_dummies(globals())

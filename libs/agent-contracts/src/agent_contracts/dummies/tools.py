@@ -7,6 +7,7 @@ from typing import Any
 
 import jsonschema
 
+from agent_contracts.dummies._util import mark_dummies
 from agent_contracts.interfaces import Tool, ToolExecutor, ToolRegistry
 from agent_contracts.models import (
     RunContext,
@@ -210,3 +211,6 @@ class RetryingToolExecutor(LocalToolExecutor):
             await asyncio.sleep(tool.spec.retry.backoff_seconds)
             result = await self._attempt(tool, call, ctx)
         return result
+
+
+mark_dummies(globals())

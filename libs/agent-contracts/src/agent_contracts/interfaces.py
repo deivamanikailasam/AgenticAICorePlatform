@@ -65,6 +65,9 @@ class Component(ABC):  # noqa: B024 - marker base, no abstract methods by design
     """Base of every registrable component. ``slot`` names the registry slot."""
 
     slot: ClassVar[str] = ""
+    #: "implemented" (passes its contract), "stub" (documented adapter, ADR says when to
+    #: finish it) or "dummy" (test double from agent_contracts.dummies).
+    component_status: ClassVar[str] = "implemented"
 
 
 # ---------------------------------------------------------------- models

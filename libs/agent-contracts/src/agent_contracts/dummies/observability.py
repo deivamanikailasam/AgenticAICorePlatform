@@ -8,7 +8,7 @@ from contextlib import AbstractContextManager, contextmanager
 from pathlib import Path
 from typing import Any
 
-from agent_contracts.dummies._util import canonical
+from agent_contracts.dummies._util import canonical, mark_dummies
 from agent_contracts.interfaces import AuditSink, TelemetryEmitter
 from agent_contracts.models import AuditEvent, AuditRecord
 
@@ -148,3 +148,6 @@ class JsonlAuditSink(AuditSink):
         doc["event"]["payload"]["tampered"] = True
         lines[seq] = json.dumps(doc)
         self.path.write_text("\n".join(lines) + "\n")
+
+
+mark_dummies(globals())

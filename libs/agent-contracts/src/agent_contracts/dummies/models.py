@@ -5,7 +5,7 @@ from collections import deque
 from collections.abc import AsyncIterator, Iterable
 from typing import Any, Literal
 
-from agent_contracts.dummies._util import approx_tokens
+from agent_contracts.dummies._util import approx_tokens, mark_dummies
 from agent_contracts.interfaces import ModelClient
 from agent_contracts.models import (
     ChatChunk,
@@ -100,3 +100,6 @@ class ScriptedModelClient(ModelClient):
         yield ChatChunk(
             tool_calls=calls, finish_reason=response.finish_reason, usage=response.usage
         )
+
+
+mark_dummies(globals())

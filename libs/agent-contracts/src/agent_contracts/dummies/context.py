@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
-from agent_contracts.dummies._util import approx_tokens
+from agent_contracts.dummies._util import approx_tokens, mark_dummies
 from agent_contracts.interfaces import ContextManager, MemoryPolicy
 from agent_contracts.models import (
     ContextSection,
@@ -91,3 +91,6 @@ class SummaryStubContextManager(_Budgeted):
         if not dropped:
             return []
         return [Message(role=Role.SYSTEM, content=f"[summary of {len(dropped)} earlier messages]")]
+
+
+mark_dummies(globals())

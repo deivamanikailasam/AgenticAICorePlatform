@@ -5,7 +5,7 @@ import sqlite3
 from collections.abc import Callable, Coroutine, Mapping, Sequence
 from typing import Any
 
-from agent_contracts.dummies._util import words
+from agent_contracts.dummies._util import mark_dummies, words
 from agent_contracts.interfaces import Checkpointer, DurableExecutor, MemoryStore
 from agent_contracts.models import (
     Checkpoint,
@@ -289,3 +289,6 @@ class SqliteMemoryStore(MemoryStore):
         cur = self._db.execute("delete from memory where tenant=? and user=?", (tenant_id, user_id))
         self._db.commit()
         return cur.rowcount
+
+
+mark_dummies(globals())

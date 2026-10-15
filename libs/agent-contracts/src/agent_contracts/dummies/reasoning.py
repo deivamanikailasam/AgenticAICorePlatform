@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from agent_contracts.dummies._util import words
+from agent_contracts.dummies._util import mark_dummies, words
 from agent_contracts.interfaces import Critic, Planner, Router
 from agent_contracts.models import Critique, Plan, PlanStep, RouteDecision, RunContext
 
@@ -76,3 +76,6 @@ class OverlapCritic(Critic):
         t = words(task)
         score = len(t & words(output)) / len(t) if t else 0.0
         return Critique(score=score, passed=score >= self.threshold and bool(output.strip()))
+
+
+mark_dummies(globals())

@@ -6,6 +6,7 @@ from collections import defaultdict, deque
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
+from agent_contracts.dummies._util import mark_dummies
 from agent_contracts.interfaces import (
     ApprovalGate,
     BudgetController,
@@ -275,3 +276,6 @@ class NoProgressLoopDetector(RepeatLoopDetector):
     def reset(self, run_id: str) -> None:
         super().reset(run_id)
         self._stalled.pop(run_id, None)
+
+
+mark_dummies(globals())
