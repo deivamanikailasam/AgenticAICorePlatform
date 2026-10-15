@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Tool contract, registry, executor, idempotency, artefact spill, MCP, policy and rate limits"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "agent-audit",
     "agent-contracts",
     "jsonschema>=4.26.0,<5",
     "psycopg[binary]>=3.3.6,<4",
@@ -42,6 +43,7 @@ dependencies = [
 "credential_broker.azure" = "agent_tools.cloud_secrets:AzureCredentialBroker"
 
 [tool.uv.sources]
+agent-audit = { workspace = true }
 agent-contracts = { workspace = true }
 agent-spec = { workspace = true }
 

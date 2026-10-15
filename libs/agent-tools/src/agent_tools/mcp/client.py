@@ -31,7 +31,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from agent_contracts.interfaces import AuditSink, ToolRegistry
-from agent_contracts.models import AuditEvent, RunContext, SideEffect, ToolSpec
+from agent_contracts.models import AuditEvent, RunContext, SideEffect, ToolSpec, arguments_digest
 from agent_spec.platform import McpServer, PlatformConfig
 from mcp import Client, StdioServerParameters
 from mcp.client.stdio import get_default_environment
@@ -347,7 +347,9 @@ class McpClientPool:
                 if self.audit is not None:
                     await self.audit.append(
                         AuditEvent(
-                            type="tool.call",
+                            # the transport record; the platform's tool.call is written by the
+                            # authorising executor (Step 31)
+                            type="mcp.call",
                             ctx=ctx,
                             payload={
                                 "transport": "mcp",
@@ -356,6 +358,7 @@ class McpClientPool:
                                 "ref": ref,
                                 "protocol_version": version,
                                 "arguments_sha256": args_hash,
+                                "arguments_digest": arguments_digest(dict(arguments)),
                                 "ok": ok,
                                 "error": error,
                                 "call_id": call_id,

@@ -27,6 +27,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_audit.redact import audited_arguments
 from agent_contracts.interfaces import (
     AuditSink,
     CredentialBroker,
@@ -162,6 +163,8 @@ class AuthorisingToolExecutor(ToolExecutor):
             "client_id": caller.client_id if caller else None,
             "tool": call.name,
             "call_id": call.id,
+            # Step 31: the exact arguments' digest (as approvals bind it) and a redacted copy
+            **audited_arguments(call.arguments),
         }
         if call.approval is not None:
             payload |= {
@@ -220,8 +223,27 @@ class AuthorisingToolExecutor(ToolExecutor):
             "error_code": result.error_code.value if result.error_code else None,
             "duration_ms": int((time.perf_counter() - started) * 1000),
         }
-        await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
+        await self._record(ctx, payload)
         return result
+
+    async def _record(self, ctx: RunContext, payload: dict[str, Any]) -> None:
+        """The tool.call record; calls to remote A2A agents also get an a2a.call record."""
+        await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
+        ref = str(payload.get("ref") or "")
+        if ref.startswith("a2a://"):
+            await self.audit.append(
+                AuditEvent(
+                    type="a2a.call",
+                    ctx=ctx,
+                    payload={
+                        "agent": ref.removeprefix("a2a://").partition("/")[0],
+                        "ref": ref,
+                        "call_id": payload["call_id"],
+                        "ok": payload["ok"],
+                        "arguments_digest": payload["arguments_digest"],
+                    },
+                )
+            )
 
     async def _with_credential(
         self,
@@ -271,7 +293,7 @@ class AuthorisingToolExecutor(ToolExecutor):
                     "error_code": result.error_code.value if result.error_code else None,
                     "duration_ms": int((time.perf_counter() - started) * 1000),
                 }
-                await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
+                await self._record(ctx, payload)
                 return result
         payload |= {"ok": False, "error_code": code.value}
         await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))

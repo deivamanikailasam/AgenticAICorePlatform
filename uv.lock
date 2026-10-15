@@ -403,6 +403,7 @@ version = "0.1.0"
 source = { editable = "libs/agent-tools" }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server", "signing"] },
+    { name = "agent-audit" },
     { name = "agent-contracts" },
     { name = "agent-spec" },
     { name = "boto3" },
@@ -420,6 +421,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", extras = ["http-server", "signing"], specifier = "==1.2.1" },
+    { name = "agent-audit", editable = "libs/agent-audit" },
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-spec", editable = "libs/agent-spec" },
     { name = "boto3", specifier = ">=1.43.114,<2" },
