@@ -24,6 +24,7 @@ dependencies = [
 "tool.calculator" = "agent_tools.builtin:CalculatorTool"
 "tool.clock" = "agent_tools.builtin:ClockTool"
 "tool.word_count" = "agent_tools.builtin:WordCountTool"
+"tool.rag_core_search" = "agent_tools.ragcore:RagCoreSearchTool"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }
