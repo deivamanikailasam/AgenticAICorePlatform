@@ -86,11 +86,13 @@ class _Budgeted(ContextManager):
 
 
 class TrimContextManager(_Budgeted):
-    """Drops the oldest, lowest-priority messages until the context fits."""
+    """Drops the oldest, lowest-priority messages until the context fits (a test double; the
+    platform's managers are in ``agent_runtime.context``, Step 21)."""
 
 
 class SummaryStubContextManager(_Budgeted):
-    """Replaces dropped messages with one summary placeholder (real summaries: Step 21)."""
+    """Replaces dropped messages with one summary placeholder (a test double; real rolling
+    summaries are in ``agent_runtime.context``, Step 21)."""
 
     def _summary(self, dropped: list[Message]) -> list[Message]:
         if not dropped:

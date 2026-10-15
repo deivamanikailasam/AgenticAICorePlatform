@@ -29,8 +29,11 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | code_sandbox | managed | stub | `sandbox_runner.engines:ManagedSandbox` | A managed sandbox service (vendor API). Documented STUB by decision (ADR 0021): sending |
 | code_sandbox | scripted | dummy | `agent_contracts.dummies.sandbox:ScriptedSandbox` | Returns a scripted result without executing anything (for testing tools and patterns). |
 | code_sandbox | unavailable | dummy | `agent_contracts.dummies.sandbox:UnavailableSandbox` | Refuses every request: the safe default when no isolation engine is installed. |
-| context_manager | summary_stub | dummy | `agent_contracts.dummies.context:SummaryStubContextManager` | Replaces dropped messages with one summary placeholder (real summaries: Step 21). |
-| context_manager | trim | dummy | `agent_contracts.dummies.context:TrimContextManager` | Drops the oldest, lowest-priority messages until the context fits. |
+| context_manager | offload_s3 | implemented | `agent_runtime.context:OffloadContextManager` | ``context_manager.offload_s3``: archive the oldest turns and long tool results to the |
+| context_manager | rolling_summary | implemented | `agent_runtime.context:RollingSummaryContextManager` | ``context_manager.rolling_summary`` (default): summarise the oldest turns, chunk by chunk. |
+| context_manager | summary_stub | dummy | `agent_contracts.dummies.context:SummaryStubContextManager` | Replaces dropped messages with one summary placeholder (a test double; real rolling |
+| context_manager | trim | implemented | `agent_runtime.context:TrimContextManager` | ``context_manager.trim``: drop the oldest turns; no summary. |
+| context_manager | trim_dummy | dummy | `agent_contracts.dummies.context:TrimContextManager` | Drops the oldest, lowest-priority messages until the context fits (a test double; the |
 | critic | length | dummy | `agent_contracts.dummies.reasoning:LengthCritic` | Passes outputs of at least ``min_words`` words. |
 | critic | llm | implemented | `agent_runtime.reasoning:LlmCritic` |  |
 | critic | overlap | dummy | `agent_contracts.dummies.reasoning:OverlapCritic` | Scores the share of task words that the output mentions. |
