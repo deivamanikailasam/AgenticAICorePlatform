@@ -1,7 +1,7 @@
 [project]
 name = "agent-tools"
 version = "0.1.0"
-description = "Tool contract, registry, executor, idempotency and artefact spill (Step 6); MCP and policy later"
+description = "Tool contract, registry, executor, idempotency, artefact spill, MCP, policy and rate limits"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "agent-contracts",
@@ -20,6 +20,7 @@ dependencies = [
 "tool_registry.postgres" = "agent_tools.registry:PostgresToolRegistry"
 "tool_registry.in_memory" = "agent_tools.registry:InMemoryToolRegistry"
 "tool_executor.platform" = "agent_tools.executor:PlatformToolExecutor"
+"tool_executor.authorising" = "agent_tools.authorising:AuthorisingToolExecutor"
 "policy_decision_point.opa" = "agent_tools.policy:OpaPolicyDecisionPoint"
 "tool.calculator" = "agent_tools.builtin:CalculatorTool"
 "tool.clock" = "agent_tools.builtin:ClockTool"

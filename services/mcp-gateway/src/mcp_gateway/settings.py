@@ -35,6 +35,12 @@ class Settings:
             "AGENT_PLATFORM_CLIENT_SECRET", "${secret:keycloak/agent-platform#client_secret}"
         )
     )
+    valkey_url: str = field(default_factory=lambda: _env("P0_VALKEY_URL", ""))
+    # per tool, tenant and client, for people calling through the gateway; agents' own limits
+    # come from their spec (tools[].rate_limit_per_minute)
+    rate_limit_per_minute: int = field(
+        default_factory=lambda: int(_env("MCP_GATEWAY_RATE_LIMIT_PER_MINUTE", "120"))
+    )
     proxy_servers: tuple[str, ...] = field(
         default_factory=lambda: tuple(s for s in _env("MCP_GATEWAY_PROXY", "").split(",") if s)
     )

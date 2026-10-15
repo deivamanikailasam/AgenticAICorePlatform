@@ -1,0 +1,175 @@
+"""``AuthorisingToolExecutor``: policy, rate limit and audit around the platform executor (Step 10).
+
+For every call, in this order:
+1. look the tool up (unknown tools are refused before policy, so nothing about them leaks);
+2. ask the policy decision point, with who is calling (``current_caller``), the tenant, agent,
+   tool, side effect, data class, arguments and risk tier; ``deny`` and ``require_approval`` stop
+   here. A grant in the agent's spec can tighten ``allow`` to ``require_approval``, never loosen;
+3. count the call against the tool's per-minute limit for this tenant and agent;
+4. run it through the inner executor (validation, idempotency, timeouts, retries, spill);
+5. audit the decision and the outcome, allowed or not.
+
+Tools that address tenant-owned data take a ``tenant_id`` argument; it is passed to policy as
+``resource_tenant_id``, so a call for another tenant's data is denied and audited.
+"""
+
+from __future__ import annotations
+
+import contextvars
+import time
+from collections.abc import Mapping
+from dataclasses import dataclass, field
+from typing import Any
+
+from agent_contracts.interfaces import AuditSink, PolicyDecisionPoint, ToolExecutor, ToolRegistry
+from agent_contracts.models import (
+    AuditEvent,
+    PolicyDecision,
+    PolicyEffect,
+    PolicyInput,
+    RunContext,
+    ToolCall,
+    ToolErrorCode,
+    ToolResult,
+)
+
+from agent_tools.ratelimit import MemoryRateLimiter, RateLimiter
+
+TENANT_ARGUMENT = "tenant_id"
+
+
+@dataclass(frozen=True)
+class Caller:
+    """Who the current call acts for, as established by a verified token at the edge."""
+
+    subject: Mapping[str, Any]
+    via: str = "runtime"
+    client_id: str | None = None
+
+
+#: Set by the edge (MCP gateway, agent API, runtime) for the duration of one call.
+current_caller: contextvars.ContextVar[Caller | None] = contextvars.ContextVar(
+    "current_caller", default=None
+)
+
+
+@dataclass(frozen=True)
+class ToolGrant:
+    """What an agent's spec grants for one tool (``tools[]`` in agent.yaml)."""
+
+    rate_limit_per_minute: int | None = None
+    approval_required: bool = False
+    approvers: str | None = None
+
+
+@dataclass
+class AuthorisingToolExecutor(ToolExecutor):
+    inner: ToolExecutor
+    registry: ToolRegistry
+    pdp: PolicyDecisionPoint
+    audit: AuditSink
+    limiter: RateLimiter = field(default_factory=MemoryRateLimiter)
+    #: tool name → grant. None means "not an agent" (a person calling through the gateway).
+    grants: Mapping[str, ToolGrant] | None = None
+    default_rate_limit_per_minute: int | None = None
+
+    async def decide(self, call: ToolCall, ctx: RunContext) -> PolicyDecision:
+        caller = current_caller.get()
+        spec = (await self.registry.get(call.name)).spec
+        resource_tenant = call.arguments.get(TENANT_ARGUMENT)
+        decision = await self.pdp.decide(
+            PolicyInput(
+                ctx=ctx,
+                tool=call.name,
+                tool_ref=spec.ref,
+                tool_tags=spec.tags,
+                side_effect=spec.side_effect,
+                data_classification=spec.data_classification,
+                resource_tenant_id=str(resource_tenant) if resource_tenant is not None else None,
+                arguments=dict(call.arguments),
+                subject=dict(caller.subject) if caller else {},
+                allowed_tools=tuple(self.grants) if self.grants is not None else None,
+            )
+        )
+        grant = (self.grants or {}).get(call.name)
+        if decision.effect is PolicyEffect.ALLOW and grant is not None and grant.approval_required:
+            return decision.model_copy(
+                update={
+                    "effect": PolicyEffect.REQUIRE_APPROVAL,
+                    "reasons": (*decision.reasons, "the agent's spec requires approval"),
+                    "approvers": grant.approvers or "group:approvers",
+                }
+            )
+        return decision
+
+    def _limit(self, name: str) -> int | None:
+        grant = (self.grants or {}).get(name)
+        if grant is not None and grant.rate_limit_per_minute is not None:
+            return grant.rate_limit_per_minute
+        return self.default_rate_limit_per_minute
+
+    async def execute(self, call: ToolCall, ctx: RunContext) -> ToolResult:
+        started = time.perf_counter()
+        caller = current_caller.get()
+        payload: dict[str, Any] = {
+            "via": caller.via if caller else "runtime",
+            "client_id": caller.client_id if caller else None,
+            "tool": call.name,
+            "call_id": call.id,
+        }
+        try:
+            payload["ref"] = (await self.registry.get(call.name)).spec.ref
+        except KeyError:
+            return _fail(call, ToolErrorCode.NOT_FOUND, f"unknown tool {call.name}", started)
+
+        decision = await self.decide(call, ctx)
+        payload |= {
+            "decision": decision.effect.value,
+            "reasons": list(decision.reasons),
+            "policy_version": decision.policy_version,
+        }
+        if decision.effect is not PolicyEffect.ALLOW:
+            await self.audit.append(AuditEvent(type="policy.decision", ctx=ctx, payload=payload))
+            if decision.effect is PolicyEffect.REQUIRE_APPROVAL:
+                return _fail(
+                    call,
+                    ToolErrorCode.APPROVAL_REQUIRED,
+                    f"approval required from {decision.approvers}: {'; '.join(decision.reasons)}",
+                    started,
+                )
+            return _fail(
+                call, ToolErrorCode.DENIED, f"denied: {'; '.join(decision.reasons)}", started
+            )
+
+        limit = self._limit(call.name)
+        if limit is not None:
+            rate = await self.limiter.hit(f"{ctx.tenant_id}:{ctx.agent_id}:{call.name}", limit)
+            if not rate.allowed:
+                payload |= {"ok": False, "error_code": ToolErrorCode.RATE_LIMITED.value}
+                await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
+                return _fail(
+                    call,
+                    ToolErrorCode.RATE_LIMITED,
+                    f"rate limit {limit}/min reached; retry in {rate.retry_after_seconds}s",
+                    started,
+                )
+
+        result = await self.inner.execute(call, ctx)
+        payload |= {
+            "ok": result.ok,
+            "error_code": result.error_code.value if result.error_code else None,
+            "duration_ms": int((time.perf_counter() - started) * 1000),
+        }
+        await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
+        return result
+
+
+def _fail(call: ToolCall, code: ToolErrorCode, message: str, started: float) -> ToolResult:
+    return ToolResult(
+        call_id=call.id,
+        tool=call.name,
+        ok=False,
+        error_code=code,
+        error=message,
+        duration_ms=int((time.perf_counter() - started) * 1000),
+    )

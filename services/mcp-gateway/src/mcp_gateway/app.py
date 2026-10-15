@@ -5,29 +5,30 @@ Exposed tools:
 * ``rag-core__search``   — Project 0 retrieval, called on behalf of the user (token exchange);
 * ``<server>__<tool>``   — tools of allowlisted external MCP servers, proxied (``MCP_GATEWAY_PROXY``).
 
-Every call: verify the Keycloak token (bearer middleware) → derive tenant and subject → ask OPA →
-execute through the platform tool executor → audit the decision and the outcome. Clients never
-reach a tool or a downstream server directly.
+Every call: verify the Keycloak token (bearer middleware) → derive tenant and subject → the
+authorising executor (policy decision, rate limit, platform executor, audit of the decision and
+the outcome). Clients never reach a tool or a downstream server directly.
 """
 
 from __future__ import annotations
 
 import json
-import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
 import mcp_types as types
 from agent_contracts.interfaces import AuditSink, PolicyDecisionPoint, Tool, ToolRegistry
-from agent_contracts.models import AuditEvent, PolicyEffect, PolicyInput, SideEffect, ToolCall
+from agent_contracts.models import SideEffect, ToolCall, ToolErrorCode
 from agent_spec.platform import PlatformConfig
 from agent_tools.auth import KeycloakTokenVerifier
+from agent_tools.authorising import AuthorisingToolExecutor, Caller, current_caller
 from agent_tools.builtin import BUILTIN_TOOLS
 from agent_tools.executor import PlatformToolExecutor
 from agent_tools.identity import TokenExchanger, subject_token
 from agent_tools.mcp import McpClientPool
 from agent_tools.ragcore import RagCoreSearchTool
+from agent_tools.ratelimit import MemoryRateLimiter, RateLimiter, ValkeyRateLimiter
 from agent_tools.registry import InMemoryToolRegistry
 from agent_tools.secrets import EnvSecretResolver, SecretResolver
 from mcp.server.auth.middleware.auth_context import get_access_token
@@ -70,6 +71,7 @@ class Gateway:
         audit: AuditSink,
         secrets: SecretResolver | None = None,
         registry: ToolRegistry | None = None,
+        limiter: RateLimiter | None = None,
     ) -> None:
         self.settings = settings
         self.platform = platform
@@ -77,7 +79,20 @@ class Gateway:
         self.audit = audit
         self.secrets = secrets or EnvSecretResolver()
         self.registry = registry or InMemoryToolRegistry()
-        self.executor = PlatformToolExecutor(self.registry)
+        if limiter is None:
+            limiter = (
+                ValkeyRateLimiter(settings.valkey_url)
+                if settings.valkey_url
+                else MemoryRateLimiter()
+            )
+        self.executor = AuthorisingToolExecutor(
+            PlatformToolExecutor(self.registry),
+            self.registry,
+            pdp,
+            audit,
+            limiter=limiter,
+            default_rate_limit_per_minute=settings.rate_limit_per_minute,
+        )
         self.pool = McpClientPool(platform, audit=audit, secrets=self.secrets)
         self.exchanger = TokenExchanger(
             settings.token_url, settings.client_id, settings.client_secret, self.secrets
@@ -126,55 +141,23 @@ class Gateway:
             ctx, subject = context_for(token, run_id=meta.get(RUN_META))
         except PermissionError as exc:
             return _error(str(exc))
-        name, arguments = params.name, dict(params.arguments or {})
-        started = time.perf_counter()
-        try:
-            spec = (await self.registry.get(name)).spec
-        except KeyError:
-            return _error(f"unknown tool {name}")
-        decision = await self.pdp.decide(
-            PolicyInput(
-                ctx=ctx,
-                tool=name,
-                side_effect=spec.side_effect,
-                data_classification=spec.data_classification,
-                arguments=arguments,
-                subject=subject,
-            )
+        call = ToolCall(
+            name=params.name,
+            arguments=dict(params.arguments or {}),
+            idempotency_key=meta.get(IDEMPOTENCY_META),
         )
-        payload: dict[str, Any] = {
-            "via": "mcp-gateway",
-            "tool": name,
-            "ref": spec.ref,
-            "decision": decision.effect.value,
-            "reasons": list(decision.reasons),
-            "client_id": token.client_id,
-        }
-        if decision.effect is not PolicyEffect.ALLOW:
-            await self.audit.append(AuditEvent(type="policy.decision", ctx=ctx, payload=payload))
-            msg = (
-                "approval required"
-                if decision.effect is PolicyEffect.REQUIRE_APPROVAL
-                else "denied"
-            )
-            return _error(f"{msg}: {'; '.join(decision.reasons)}")
-        reset = subject_token.set(token.token)
+        caller = current_caller.set(
+            Caller(subject=subject, via="mcp-gateway", client_id=token.client_id)
+        )
+        on_behalf = subject_token.set(token.token)
         try:
-            result = await self.executor.execute(
-                ToolCall(
-                    name=name, arguments=arguments, idempotency_key=meta.get(IDEMPOTENCY_META)
-                ),
-                ctx,
-            )
+            result = await self.executor.execute(call, ctx)
         finally:
-            subject_token.reset(reset)
-        payload |= {
-            "ok": result.ok,
-            "error_code": result.error_code.value if result.error_code else None,
-            "duration_ms": int((time.perf_counter() - started) * 1000),
-        }
-        await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
+            subject_token.reset(on_behalf)
+            current_caller.reset(caller)
         if not result.ok:
+            if result.error_code in (ToolErrorCode.DENIED, ToolErrorCode.APPROVAL_REQUIRED):
+                return _error(result.error or "denied")
             return _error(
                 f"{result.error_code.value if result.error_code else 'failed'}: {result.error}"
             )
