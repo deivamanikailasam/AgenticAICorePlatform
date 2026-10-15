@@ -40,6 +40,9 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | context_manager | summary_stub | dummy | `agent_contracts.dummies.context:SummaryStubContextManager` | Replaces dropped messages with one summary placeholder (a test double; real rolling |
 | context_manager | trim | implemented | `agent_runtime.context:TrimContextManager` | ``context_manager.trim``: drop the oldest turns; no summary. |
 | context_manager | trim_dummy | dummy | `agent_contracts.dummies.context:TrimContextManager` | Drops the oldest, lowest-priority messages until the context fits (a test double; the |
+| credential_broker | aws | stub | `agent_tools.cloud_secrets:AwsCredentialBroker` | AWS. STUB: STS ``AssumeRole`` (session policy per call, ``DurationSeconds`` ≥ 900) or RDS |
+| credential_broker | azure | stub | `agent_tools.cloud_secrets:AzureCredentialBroker` | Azure. STUB: Entra ID tokens for a user-assigned managed identity. |
+| credential_broker | gcp | stub | `agent_tools.cloud_secrets:GcpCredentialBroker` | GCP. STUB: short-lived service-account tokens via the IAM Credentials API. |
 | credential_broker | memory | dummy | `agent_contracts.dummies.credentials:InMemoryCredentialBroker` | Issues a fresh random user name and password for each allowed source. |
 | credential_broker | openbao | implemented | `agent_tools.openbao:OpenBaoCredentialBroker` | Dynamic credentials from ``<mount>/creds/<role>``; leases revoked through |
 | credential_broker | static | dummy | `agent_contracts.dummies.credentials:StaticCredentialBroker` | Issues the same test values every time (for tests that check exact values). |

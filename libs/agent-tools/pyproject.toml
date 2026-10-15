@@ -37,6 +37,9 @@ dependencies = [
 "tool.sql_read" = "agent_tools.sql_read:SqlReadTool"
 "credential_broker.openbao" = "agent_tools.openbao:OpenBaoCredentialBroker"
 "credential_broker.vault" = "agent_tools.openbao:VaultCredentialBroker"
+"credential_broker.aws" = "agent_tools.cloud_secrets:AwsCredentialBroker"
+"credential_broker.gcp" = "agent_tools.cloud_secrets:GcpCredentialBroker"
+"credential_broker.azure" = "agent_tools.cloud_secrets:AzureCredentialBroker"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }
