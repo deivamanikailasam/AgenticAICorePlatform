@@ -10,6 +10,7 @@ networks:
 volumes:
   pgdata:
   tempodata:
+  seaweeddata:
 
 services:
   postgres:
@@ -99,3 +100,15 @@ services:
       - tempodata:/var/tempo
     ports: ["127.0.0.1:3200:3200"]
     mem_limit: 512m
+
+  seaweedfs:
+    image: docker.io/chrislusf/seaweedfs:4.09@sha256:353c69c8ddd7e13c85c1290dca9d1690bf3d066237b7ede7920b8fd2864858e7
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-master.volumeSizeLimitMB=64", "-volume.max=8"]
+    volumes:
+      - seaweeddata:/data
+    ports: ["127.0.0.1:8333:8333"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/ || exit 1"]
+      interval: 3s
+      retries: 40
