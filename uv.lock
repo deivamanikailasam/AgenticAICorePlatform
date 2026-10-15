@@ -7,6 +7,7 @@ members = [
     "agent-api",
     "agent-compiler",
     "agent-contracts",
+    "agent-memory",
     "agent-platform",
     "agent-runtime",
     "agent-spec",
@@ -120,6 +121,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/de/4a/7aa2feee4c17864e49d83b368b4740940e00551a035ba12d3bc2678d4c87/agent_framework_core-1.19.0.tar.gz", hash = "sha256:b483482551f56ff465d2633cadbe344791390f03c5f715ec0939e55b865bc86f", size = 703611, upload-time = "2026-09-18T11:00:03.137Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/22/af/6ed9435277f39373eee1b88f1aff42ea7809d0b520f1932ff59dbf49fd5b/agent_framework_core-1.19.0-py3-none-any.whl", hash = "sha256:c887e6d5380b5ab21731b981f4c3e6b342f211bda20526ab82fa20c34a9bddbd", size = 764283, upload-time = "2026-09-18T10:57:40.824Z" },
+]
+
+[[package]]
+name = "agent-memory"
+version = "0.1.0"
+source = { editable = "libs/agent-memory" }
+dependencies = [
+    { name = "agent-contracts" },
+    { name = "agent-runtime" },
+    { name = "psycopg", extra = ["binary"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-runtime", editable = "libs/agent-runtime" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6,<4" },
 ]
 
 [[package]]

@@ -41,6 +41,7 @@ INJECTION = re.compile(
     re.IGNORECASE,
 )
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+PHONE = re.compile(r"\+?\d[\d\s-]{7,}\d")
 
 
 class KeywordInjectionGuardrail(Guardrail):
@@ -63,21 +64,23 @@ class KeywordInjectionGuardrail(Guardrail):
 
 
 class RegexPiiGuardrail(Guardrail):
-    """Redacts e-mail addresses. Presidio replaces this in Step 27."""
+    """Redacts e-mail addresses and phone numbers. Presidio replaces this in Step 27."""
 
     name = "regex_pii"
     stages = frozenset({GuardrailStage.INPUT, GuardrailStage.OUTPUT, GuardrailStage.TOOL_RESULT})
 
     async def check(self, payload: GuardrailInput) -> GuardrailResult:
-        found = EMAIL.findall(payload.text)
+        found = ["email" for _ in EMAIL.findall(payload.text)]
+        text = EMAIL.sub("[EMAIL]", payload.text)
+        found += ["phone" for _ in PHONE.findall(text)]
         if not found:
             return GuardrailResult(guardrail=self.name, passed=True)
         return GuardrailResult(
             guardrail=self.name,
             passed=True,
             action=GuardrailAction.REDACT,
-            findings=tuple("email" for _ in found),
-            redacted_text=EMAIL.sub("[EMAIL]", payload.text),
+            findings=tuple(found),
+            redacted_text=PHONE.sub("[PHONE]", text),
         )
 
 
