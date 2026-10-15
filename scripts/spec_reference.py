@@ -1,4 +1,4 @@
-"""Write (or check) docs/reference/agent-spec.schema.json and docs/reference/agent-yaml.md."""
+"""Write (or check) the agent.yaml and platform.yaml schemas and reference pages in docs/reference."""
 
 from __future__ import annotations
 
@@ -6,12 +6,21 @@ import json
 import sys
 from pathlib import Path
 
-from agent_spec.reference import render_reference, schema
+from agent_spec.reference import (
+    platform_schema,
+    render_platform_reference,
+    render_reference,
+    schema,
+)
 
 REF = Path(__file__).resolve().parent.parent / "docs" / "reference"
 OUTPUTS = {
     REF / "agent-spec.schema.json": lambda: json.dumps(schema(), indent=2, sort_keys=True) + "\n",
     REF / "agent-yaml.md": render_reference,
+    REF / "platform.schema.json": lambda: (
+        json.dumps(platform_schema(), indent=2, sort_keys=True) + "\n"
+    ),
+    REF / "platform-yaml.md": render_platform_reference,
 }
 
 

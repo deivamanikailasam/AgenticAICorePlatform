@@ -1,0 +1,30 @@
+# Platform-wide configuration (Step 5). Specs choose model *roles*; this file maps roles to
+# LiteLLM gateway aliases and records what each alias can do.
+platform_version: 1
+
+gateway:
+  url: ${P0_LITELLM_URL:-http://127.0.0.1:4000}
+  key_env_prefix: LITELLM_KEY_      # per-role virtual keys from `just provision` (Step 1)
+  timeout_seconds: 60
+  max_retries: 2
+
+models:
+  roles:
+    default: local-qwen-fast
+    planner: local-qwen-quality
+    executor: local-qwen-fast
+    router: local-qwen-fast
+    judge: local-qwen-quality
+    summariser: local-qwen-fast
+  # VERIFY-ON-MAC: confirm each value against Project 0's model cards and LiteLLM config.
+  capabilities:
+    local-qwen-fast:    { tool_calling: true, structured_output: true, streaming: true, context_window: 32768 }
+    local-qwen-quality: { tool_calling: true, structured_output: true, streaming: true, context_window: 32768 }
+  fallbacks: {}                     # applied by the gateway (Project 0 Steps 7-10), listed here for docs
+
+currency:
+  usd_to_aud: 1.4434                # = 1 / 0.6928
+  source: "exchange-rates.org AUD/USD history, 0.6928 on 2026-10-01"
+  as_of: 2026-10-01                 # refresh monthly; cost reports state this date
+
+components: {}                      # platform defaults per slot, e.g. { checkpointer: postgres }

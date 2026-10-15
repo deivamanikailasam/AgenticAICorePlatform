@@ -1,0 +1,161 @@
+{
+  "$defs": {
+    "Currency": {
+      "additionalProperties": false,
+      "description": "LiteLLM accounts cost in USD; budgets and reports are in AUD.",
+      "properties": {
+        "as_of": {
+          "format": "date",
+          "title": "As Of",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "usd_to_aud": {
+          "exclusiveMinimum": 0,
+          "title": "Usd To Aud",
+          "type": "number"
+        }
+      },
+      "required": [
+        "usd_to_aud",
+        "source",
+        "as_of"
+      ],
+      "title": "Currency",
+      "type": "object"
+    },
+    "Gateway": {
+      "additionalProperties": false,
+      "properties": {
+        "key_env_prefix": {
+          "default": "LITELLM_KEY_",
+          "title": "Key Env Prefix",
+          "type": "string"
+        },
+        "max_retries": {
+          "default": 2,
+          "maximum": 6,
+          "minimum": 0,
+          "title": "Max Retries",
+          "type": "integer"
+        },
+        "timeout_seconds": {
+          "default": 60,
+          "exclusiveMinimum": 0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        },
+        "url": {
+          "default": "http://127.0.0.1:4000",
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "title": "Gateway",
+      "type": "object"
+    },
+    "ModelCapabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "context_window": {
+          "default": 8192,
+          "exclusiveMinimum": 0,
+          "title": "Context Window",
+          "type": "integer"
+        },
+        "streaming": {
+          "default": false,
+          "title": "Streaming",
+          "type": "boolean"
+        },
+        "structured_output": {
+          "default": false,
+          "title": "Structured Output",
+          "type": "boolean"
+        },
+        "tool_calling": {
+          "default": false,
+          "title": "Tool Calling",
+          "type": "boolean"
+        }
+      },
+      "title": "ModelCapabilities",
+      "type": "object"
+    },
+    "Models": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ModelCapabilities"
+          },
+          "title": "Capabilities",
+          "type": "object"
+        },
+        "fallbacks": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Fallbacks",
+          "type": "object"
+        },
+        "roles": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Roles",
+          "type": "object"
+        }
+      },
+      "required": [
+        "roles"
+      ],
+      "title": "Models",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "components": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Components",
+      "type": "object"
+    },
+    "currency": {
+      "$ref": "#/$defs/Currency"
+    },
+    "gateway": {
+      "$ref": "#/$defs/Gateway",
+      "default": {
+        "key_env_prefix": "LITELLM_KEY_",
+        "max_retries": 2,
+        "timeout_seconds": 60.0,
+        "url": "http://127.0.0.1:4000"
+      }
+    },
+    "models": {
+      "$ref": "#/$defs/Models"
+    },
+    "platform_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Platform Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "models",
+    "currency"
+  ],
+  "title": "platform.yaml (platform_version 1)",
+  "type": "object"
+}

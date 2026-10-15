@@ -28,7 +28,7 @@ fmt:
     uv run ruff check --fix .
 
 typecheck:
-    uv run mypy scripts $(ls -d libs/*/src services/*/src 2>/dev/null || true)
+    uv run mypy scripts $(for d in libs/*/src services/*/src; do [ -n "$(find "$d" -name '*.py' -print -quit 2>/dev/null)" ] && echo "$d"; done)
 
 test *args:
     uv run pytest {{args}}

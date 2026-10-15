@@ -68,3 +68,31 @@ def render_reference() -> str:
     for name in sorted(defs):
         out += _table(name, defs[name], defs)
     return "\n".join(out).rstrip() + "\n"
+
+
+def platform_schema() -> dict[str, Any]:
+    from agent_spec.platform import PlatformConfig
+
+    s = PlatformConfig.model_json_schema()
+    s["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+    s["title"] = "platform.yaml (platform_version 1)"
+    return s
+
+
+def render_platform_reference() -> str:
+    s = platform_schema()
+    defs = s.get("$defs", {})
+    out = [
+        "# `platform.yaml` reference (platform_version 1)",
+        "",
+        "Generated from `agent_spec.platform` by `just spec-reference` — do not edit by hand.",
+        "Specs name model *roles*; `models.roles` maps each role to a LiteLLM gateway alias, and",
+        "`models.capabilities` records what each alias can do (checked at compile time).",
+        "Costs from the gateway are in USD and converted with `currency.usd_to_aud`, whose",
+        "`source` and `as_of` date are shown on every cost report.",
+        "",
+        *_table("PlatformConfig (root)", s, defs),
+    ]
+    for name in sorted(defs):
+        out += _table(name, defs[name], defs)
+    return "\n".join(out).rstrip() + "\n"
