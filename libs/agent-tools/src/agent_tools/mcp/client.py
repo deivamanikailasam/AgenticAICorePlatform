@@ -23,6 +23,7 @@ import json
 import os
 import re
 import time
+from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 from typing import Any
 
@@ -236,13 +237,36 @@ class McpClientPool:
             )
         return specs
 
-    async def register_all(self, registry: ToolRegistry, name: str) -> list[ToolSpec]:
+    async def register_all(
+        self,
+        registry: ToolRegistry,
+        name: str,
+        screen: Callable[[ToolSpec], Awaitable[str | None]] | None = None,
+    ) -> list[ToolSpec]:
+        """Register the server's tools. With ``screen`` (Step 27), a tool whose description or
+        parameter descriptions carry an injection is not registered, so no model ever sees it;
+        the refusal is audited."""
         from agent_tools.mcp.tool import McpTool
 
         specs = await self.discover(name)
+        kept = []
         for spec in specs:
+            reason = await screen(spec) if screen is not None else None
+            if reason:
+                if self.audit is not None:
+                    await self.audit.append(
+                        AuditEvent(
+                            type="mcp.tool_refused",
+                            ctx=RunContext(
+                                tenant_id="platform", user_id="system", agent_id="mcp-pool"
+                            ),
+                            payload={"server": name, "tool": spec.name, "reason": reason},
+                        )
+                    )
+                continue
             await registry.register(McpTool(spec, self))
-        return specs
+            kept.append(spec)
+        return kept
 
     # ------------------------------------------------------------ calls
 

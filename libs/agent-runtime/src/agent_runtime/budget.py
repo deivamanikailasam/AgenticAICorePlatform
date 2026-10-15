@@ -242,6 +242,7 @@ class RunBudgets:
         self._detectors: dict[str, tuple[LoopDetector, bool]] = {}
         self._open: set[str] = set()
         self._last: dict[tuple[str, str], str] = {}  # (run, call signature) -> result fingerprint
+        self._contexts: dict[str, RunContext] = {}
 
     async def open(self, spec: Any, ctx: RunContext) -> BudgetStatus:
         loop = spec.budgets.loop
@@ -250,9 +251,14 @@ class RunBudgets:
             loop.enabled,
         )
         self._open.add(ctx.run_id)
+        self._contexts[ctx.run_id] = ctx
         status = await self.controller.open(ctx.run_id, limits_of(spec.budgets), ctx.parent_run_id)
         self._raise_if(status)
         return status
+
+    def context(self, run_id: str | None) -> RunContext | None:
+        """The context of an open run (guardrails audit model-call findings with it)."""
+        return self._contexts.get(run_id) if run_id else None
 
     def known(self, run_id: str | None) -> bool:
         return run_id is not None and run_id in self._open
@@ -288,6 +294,7 @@ class RunBudgets:
     async def finish(self, spec: Any, ctx: RunContext, result: RunResult, model: Any) -> RunResult:
         status = await self.controller.status(ctx.run_id) if self.known(ctx.run_id) else None
         self._open.discard(ctx.run_id)
+        self._contexts.pop(ctx.run_id, None)
         self._detectors.pop(ctx.run_id, None)
         for key in [k for k in self._last if k[0] == ctx.run_id]:
             del self._last[key]

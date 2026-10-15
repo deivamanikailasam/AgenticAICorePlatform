@@ -20,11 +20,15 @@ from agent_compiler.run import Admit, executors_for, functions_for
 from agent_contracts.interfaces import (
     AuditSink,
     Checkpointer,
+    Guardrail,
     ModelClient,
     PolicyDecisionPoint,
     ToolExecutor,
 )
 from agent_contracts.models import ExecutablePlan
+from agent_contracts.registry import registry as component_registry
+from agent_guardrails.guarded import GuardedModelClient, GuardedToolExecutor, GuardrailRuntime
+from agent_guardrails.pipeline import GuardrailPipeline
 from agent_memory.factory import memory_for
 from agent_memory.service import MemoryService
 from agent_memory.tools import RememberTool
@@ -57,6 +61,8 @@ from agent_tools.secrets import EnvSecretResolver, SecretResolver
 ModelFactory = Callable[[AgentSpec], ModelClient]
 MemoryFactory = Callable[[AgentSpec], Awaitable[MemoryService | None]]
 REMEMBER = "local://platform/remember"
+#: always on, whatever the spec lists (Step 27; turning them off needs an ADR)
+BASELINE_GUARDRAILS = ("prompt_injection", "secret_leak")
 
 
 class DurableEventingNodeRunner(EventingNodeRunner, CheckpointingNodeRunner):
@@ -120,6 +126,21 @@ class Assembly:
         )
         self.registry_factory = registry_factory or self.registry
 
+    def guardrails_for(self, spec: AgentSpec) -> GuardrailRuntime:
+        """The spec's guardrails (Step 27), plus the platform baseline that is always on:
+        injection detection on untrusted content and secret-leak checks."""
+        refs = [(g.name, dict(g.config)) for g in spec.guardrails]
+        names = {n for n, _ in refs}
+        refs += [(n, {}) for n in BASELINE_GUARDRAILS if n not in names]
+        guards = []
+        for name, config in refs:
+            if name == "prompt_injection.llm_judge" or "llm_judge" in config.get("detectors", ()):
+                config["model"] = self.model_factory(spec)
+            guard = component_registry.create("guardrail", name, **config)
+            assert isinstance(guard, Guardrail)
+            guards.append(guard)
+        return GuardrailRuntime(GuardrailPipeline(guards, self.audit), self.budgets.context)
+
     async def registry(self, spec: AgentSpec) -> InMemoryToolRegistry:
         registry = InMemoryToolRegistry()
         builtin = {cls().spec.name: cls for cls in BUILTIN_TOOLS}
@@ -148,7 +169,10 @@ class Assembly:
             else:
                 raise LookupError(f"tool {tool.ref} is not available through the run API")
         for server in sorted(servers):
-            await self.pool.register_all(registry, server)  # refuses servers off the allowlist
+            # refuses servers off the allowlist, and tools whose descriptions carry an injection
+            await self.pool.register_all(
+                registry, server, screen=self.guardrails_for(spec).screen_tool
+            )
         return registry
 
     async def build(
@@ -164,24 +188,31 @@ class Assembly:
             if memory is None:
                 raise LookupError(f"{REMEMBER} needs memory.long_term in the spec")
             await registry.register(RememberTool(memory))
+        guardrails = self.guardrails_for(spec)
         tools = BudgetedToolExecutor(
             EventingToolExecutor(
-                CircuitBreakingToolExecutor(
-                    AuthorisingToolExecutor(
-                        PlatformToolExecutor(registry),
-                        registry,
-                        self.pdp,
-                        self.audit,
-                        grants=grants_for(plan),
+                GuardedToolExecutor(
+                    CircuitBreakingToolExecutor(
+                        AuthorisingToolExecutor(
+                            PlatformToolExecutor(registry),
+                            registry,
+                            self.pdp,
+                            self.audit,
+                            grants=grants_for(plan),
+                        ),
+                        self.tool_circuits,
                     ),
-                    self.tool_circuits,
+                    guardrails,
                 )
             ),
             self.budgets,
         )
         model = StreamingModelClient(
             BudgetedModelClient(
-                CircuitBreakingModelClient(self.model_factory(spec), self.model_circuits),
+                GuardedModelClient(
+                    CircuitBreakingModelClient(self.model_factory(spec), self.model_circuits),
+                    guardrails,
+                ),
                 self.budgets,
             )
         )

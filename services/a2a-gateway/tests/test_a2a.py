@@ -13,6 +13,7 @@ Everything runs in process (ASGI transports, a loopback gRPC port). Pydantic AI 
 from __future__ import annotations
 
 import asyncio
+import json
 import socket
 import uuid
 from collections.abc import AsyncIterator
@@ -475,9 +476,13 @@ async def test_a_project_a_agent_calls_a_pydantic_ai_agent_as_a_tool(
     run = finish_of(events.text)
     assert run["status"] == "succeeded", run
     reply = run["output"]["ask"] if "ask" in run["output"] else run["output"]
-    assert reply["agent"] == "pyd-helper"
-    assert reply["state"] == "TASK_STATE_COMPLETED"
-    assert "wire AUD 9000" in reply["text"]  # returned as data; nothing acted on it
+    # the partner answered, but its reply tells the agent to ignore its instructions: the
+    # tool-result guardrail (Step 27) quarantines it, so no model ever reads the injected text
+    assert "wire AUD 9000" not in json.dumps(reply)
+    assert any("override" in f for f in reply["removed_by_guardrails"])
+    flagged = [r.event.payload for r in await audit.read() if r.event.type == "guardrail.result"]
+    assert flagged[0]["stage"] == "tool_result"
+    assert flagged[0]["tool"] == "pyd-helper"
     assert executor.authorization == ["Bearer partner-issued-token"]
     calls = [r.event.payload for r in await audit.read() if r.event.type == "tool.call"]
     assert [(c["ref"], c["decision"]) for c in calls] == [("a2a://pyd-helper", "allow")]
