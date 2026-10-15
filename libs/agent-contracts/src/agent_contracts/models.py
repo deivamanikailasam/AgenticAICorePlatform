@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 
 def new_id() -> str:
@@ -783,3 +783,35 @@ class ApprovalRoute(Frozen):
     escalate_to: str | None = None
     reasons: tuple[str, ...] = ()
     policy_version: str | None = None
+
+
+class Credential(Frozen):
+    """A short-lived credential issued to one tool call (Step 29).
+
+    ``values`` hold the secret material (user name, password, token...). They are ``SecretStr``
+    and excluded from ``repr`` and from every dump, so a credential written to a log, an audit
+    record, a trace or a prompt shows only its lease. Read a value with ``secret("password")``.
+    """
+
+    lease_id: str
+    source: str  # where it came from, e.g. "openbao:agent-db/creds/tool-reader"
+    issued_at: datetime = Field(default_factory=utcnow)
+    expires_at: datetime
+    renewable: bool = False
+    issued_to: str | None = None  # the identity the issuer saw (e.g. the agent's client id)
+    values: dict[str, SecretStr] = Field(default_factory=dict, exclude=True, repr=False)
+
+    def secret(self, key: str) -> str:
+        return self.values[key].get_secret_value()
+
+    def ttl_seconds(self, at: datetime | None = None) -> float:
+        return (self.expires_at - (at or utcnow())).total_seconds()
+
+    def lease(self) -> dict[str, Any]:
+        """What the audit record keeps: the lease, never the secret."""
+        return {
+            "lease_id": self.lease_id,
+            "source": self.source,
+            "issued_to": self.issued_to,
+            "expires_at": self.expires_at.isoformat(),
+        }

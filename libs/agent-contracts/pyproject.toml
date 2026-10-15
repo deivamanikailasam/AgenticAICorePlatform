@@ -69,6 +69,8 @@ agent-components = "agent_contracts.registry:main"
 "code_sandbox.scripted" = "agent_contracts.dummies.sandbox:ScriptedSandbox"
 "agent_loop.minimal" = "agent_contracts.dummies.agent_loop:MinimalReactLoop"
 "agent_loop.single_shot" = "agent_contracts.dummies.agent_loop:SingleShotToolLoop"
+"credential_broker.memory" = "agent_contracts.dummies.credentials:InMemoryCredentialBroker"
+"credential_broker.static" = "agent_contracts.dummies.credentials:StaticCredentialBroker"
 
 [build-system]
 requires = ["hatchling==1.32.4"]

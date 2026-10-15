@@ -61,6 +61,7 @@ __all__ = [
     "CheckpointerContract",
     "CodeSandboxContract",
     "ContextManagerContract",
+    "CredentialBrokerContract",
     "CriticContract",
     "DurableExecutorContract",
     "EvaluatorContract",
@@ -1073,3 +1074,55 @@ class AgentRegistryContract(_Contract):
         await reg.register(agent_record())
         await reg.set_eval_status("triage", "1.0.0", "passed")
         assert (await reg.get("triage")).eval_status == "passed"
+
+
+class CredentialBrokerContract(_Contract):
+    """Subclasses set ``source`` (a source the broker may issue), and optionally
+    ``forbidden_source`` (one it exists for but may not use) and ``unknown_source``."""
+
+    interface = I.CredentialBroker
+    source: ClassVar[str] = "db/tool-reader"
+    forbidden_source: ClassVar[str | None] = None
+    unknown_source: ClassVar[str] = "no-such/role"
+
+    async def test_issues_short_lived_distinct_credentials(self) -> None:
+        broker = self.make()
+        a = await broker.issue(self.source, ctx())
+        b = await broker.issue(self.source, ctx())
+        try:
+            assert a.lease_id
+            assert a.lease_id != b.lease_id
+            assert a.values, "a credential carries secret values"
+            assert 0 < a.ttl_seconds() <= broker.MAX_TTL_SECONDS
+            assert await broker.valid(a)
+        finally:
+            await broker.revoke(a)
+            await broker.revoke(b)
+
+    async def test_secret_values_never_serialise(self) -> None:
+        broker = self.make()
+        cred = await broker.issue(self.source, ctx())
+        try:
+            secrets = [v.get_secret_value() for v in cred.values.values()]
+            shown = " ".join(
+                [repr(cred), str(cred), cred.model_dump_json(), json.dumps(cred.lease())]
+            )
+            assert not any(s and s in shown for s in secrets)
+            assert cred.lease_id in json.dumps(cred.lease())
+        finally:
+            await broker.revoke(cred)
+
+    async def test_revoked_credentials_are_no_longer_valid(self) -> None:
+        broker = self.make()
+        cred = await broker.issue(self.source, ctx())
+        await broker.revoke(cred)
+        assert not await broker.valid(cred)
+        await broker.revoke(cred)  # idempotent
+
+    async def test_unknown_and_forbidden_sources_are_refused(self) -> None:
+        broker = self.make()
+        with pytest.raises((KeyError, PermissionError)):
+            await broker.issue(self.unknown_source, ctx())
+        if self.forbidden_source is not None:
+            with pytest.raises(PermissionError):
+                await broker.issue(self.forbidden_source, ctx())

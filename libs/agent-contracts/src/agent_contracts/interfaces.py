@@ -33,6 +33,7 @@ from agent_contracts.models import (
     ChatResponse,
     Checkpoint,
     ContextSection,
+    Credential,
     Critique,
     EvalCase,
     EvalScore,
@@ -502,6 +503,31 @@ class AgentRegistry(Component):
     async def history(self, name: str, version: str) -> Sequence[AgentStatusChange]: ...
 
 
+class CredentialBroker(Component):
+    """Short-lived credentials for tools, issued at call time and revoked after (Step 29).
+
+    Credentials come from a secret manager, never from a prompt, the environment or the
+    agent's spec. ``source`` names what to issue (a role the broker's identity may use); a
+    source the identity may not use raises ``PermissionError``, an unknown one ``KeyError``.
+    Every credential expires on its own within ``MAX_TTL_SECONDS``, so a leaked one is useful
+    for minutes at most, and ``revoke`` ends it at once.
+    """
+
+    slot = "credential_broker"
+    MAX_TTL_SECONDS: ClassVar[int] = 900
+
+    @abstractmethod
+    async def issue(self, source: str, ctx: RunContext) -> Credential: ...
+
+    @abstractmethod
+    async def revoke(self, credential: Credential) -> None:
+        """End the lease now. Revoking an ended lease is not an error."""
+
+    @abstractmethod
+    async def valid(self, credential: Credential) -> bool:
+        """True while the issuer still honours the lease (not revoked, not expired)."""
+
+
 class AuditSink(Component):
     """Hash-chained, append-only audit events (Step 31)."""
 
@@ -566,6 +592,7 @@ INTERFACES: dict[str, type[Component]] = {
         TelemetryEmitter,
         AuditSink,
         AgentRegistry,
+        CredentialBroker,
         Evaluator,
         Simulator,
     )

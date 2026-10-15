@@ -37,6 +37,7 @@ CONTRACTS: dict[str, type] = {
     "telemetry_emitter": C.TelemetryEmitterContract,
     "audit_sink": C.AuditSinkContract,
     "agent_registry": C.AgentRegistryContract,
+    "credential_broker": C.CredentialBrokerContract,
     "evaluator": C.EvaluatorContract,
     "simulator": C.SimulatorContract,
 }
