@@ -196,3 +196,28 @@ test_approval_never_overrides_a_denial if {
 	d := tools.decision with input as over
 	d.effect == "deny"
 }
+
+# ---------------------------------------------------------------- delegation (Step 22)
+
+delegate := with_input({
+	"action": "agent.delegate",
+	"ctx": {"tenant_id": "acme", "user_id": "alice", "agent_id": "research-report", "risk_tier": "low"},
+	"tool": "analyst",
+	"tool_ref": "agent://analyst",
+	"data_classification": null,
+	"allowed_tools": ["researcher", "analyst", "writer"],
+})
+
+test_delegation_to_a_team_worker_allowed if tools.decision.effect == "allow" with input as delegate
+
+test_delegation_outside_the_team_denied if {
+	d := tools.decision with input as object.union(delegate, {"tool": "payments-agent"})
+	d.effect == "deny"
+	"tool payments-agent is not granted to agent research-report" in d.reasons
+}
+
+test_delegation_to_a_switched_off_worker_denied if {
+	d := tools.decision with input as delegate with data.agent.config.kill_switch.agents as {"analyst": true}
+	d.effect == "deny"
+	"agent analyst is disabled (kill switch)" in d.reasons
+}

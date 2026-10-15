@@ -1,4 +1,6 @@
-# Tool-call authorisation (Step 10). One decision per call; deny unless a rule allows.
+# Tool-call authorisation (Step 10) and delegation between agents (Step 22, action
+# "agent.delegate": tool = the worker, allowed_tools = the team). One decision per call; deny
+# unless a rule allows.
 #
 # Input (agent_contracts.models.PolicyInput):
 #   ctx                  {tenant_id, user_id, agent_id, risk_tier, run_id, ...}
@@ -19,7 +21,7 @@ package agent.tools
 
 import rego.v1
 
-version := "2026-10-15.2"
+version := "2026-10-15.3"
 
 cfg := data.agent.config
 
@@ -33,6 +35,11 @@ deny contains "tool execution is disabled for this tenant (kill switch)" if {
 
 deny contains "tool execution is disabled for this agent (kill switch)" if {
 	cfg.kill_switch.agents[input.ctx.agent_id] == true
+}
+
+deny contains sprintf("agent %s is disabled (kill switch)", [input.tool]) if {
+	input.action == "agent.delegate"
+	cfg.kill_switch.agents[input.tool] == true
 }
 
 deny contains "cross-tenant access" if {
@@ -99,7 +106,7 @@ approval_satisfied if {
 
 # ------------------------------------------------------------------ decision
 
-default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.2"}
+default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.3"}
 
 decision := {"effect": "deny", "reasons": sort(deny), "version": version} if count(deny) > 0
 
