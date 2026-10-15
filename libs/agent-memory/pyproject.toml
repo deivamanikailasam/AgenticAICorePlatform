@@ -18,6 +18,8 @@ dependencies = [
 "memory_store.pgvector" = "agent_memory.pgvector:PgVectorMemoryStore"
 "memory_store.qdrant" = "agent_memory.qdrant:QdrantMemoryStore"
 "memory_store.mem0" = "agent_memory.mem0:Mem0MemoryStore"
+"memory_store.zep" = "agent_memory.stubs:ZepMemoryStore"
+"memory_store.letta" = "agent_memory.stubs:LettaMemoryStore"
 "memory_policy.validating" = "agent_memory.policy:ValidatingMemoryPolicy"
 "memory_policy.human_curated" = "agent_memory.policy:HumanCuratedMemoryPolicy"
 
