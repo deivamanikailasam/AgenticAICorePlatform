@@ -200,6 +200,7 @@ version = "0.1.0"
 source = { editable = "libs/agent-guardrails" }
 dependencies = [
     { name = "agent-contracts" },
+    { name = "agent-telemetry" },
     { name = "httpx" },
     { name = "jsonschema" },
 ]
@@ -207,6 +208,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-telemetry", editable = "libs/agent-telemetry" },
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
     { name = "jsonschema", specifier = ">=4.26.0,<5" },
 ]

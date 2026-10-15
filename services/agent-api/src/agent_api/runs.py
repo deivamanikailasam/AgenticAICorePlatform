@@ -22,6 +22,7 @@ import asyncio
 import contextlib
 import hashlib
 import json
+import time
 from collections.abc import AsyncIterator, Coroutine, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -49,6 +50,7 @@ from agent_runtime.events import current_sink, json_safe
 from agent_runtime.executors import resolve
 from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec, load_spec
+from agent_telemetry.metrics import agent_metrics
 from agent_telemetry.spans import agent_span, end_agent
 from agent_tools.approvals import RulesApprovalRouter
 from agent_tools.assemble import tool_names
@@ -166,6 +168,16 @@ class RunManager:
         )
         self.tool_specs: dict[str, dict[str, ToolSpec]] = {}  # agent -> tool name -> spec
         self.reviews: dict[str, dict[str, Any]] = {}  # run id -> review-after item (Step 28)
+        agent_metrics().pending_from(self.pending_approvals)  # Step 30 gauge
+
+    def pending_approvals(self) -> list[tuple[int, dict[str, Any]]]:
+        """Approvals waiting for a decision, per agent (read by the metrics gauge)."""
+        counts: dict[str, int] = {}
+        for run in list(self.runs.values()):
+            if run.status == "interrupted":
+                waiting = sum(1 for i in run.interrupts if i.get("reason") == "approval")
+                counts[run.agent] = counts.get(run.agent, 0) + waiting
+        return [(n, {"gen_ai.agent.name": agent}) for agent, n in sorted(counts.items())]
 
     @classmethod
     def load_agents(cls, directory: str | Path) -> dict[str, AgentSpec]:
@@ -780,6 +792,7 @@ class RunManager:
             spec = self.agents[run.agent]
             # Step 30: one invoke_agent span per run (and per resume); everything the run does,
             # model calls, tool calls and team workers, nests under it
+            began = time.perf_counter()
             with agent_span(spec.name, spec.version, run.ctx, spec.description) as span:
                 if not budgets.known(run.run_id):  # Step 26 (re-opened after a restart)
                     await budgets.open(spec, run.ctx)
@@ -791,10 +804,17 @@ class RunManager:
                         else None
                     )
                     result = await budgets.finish(spec, run.ctx, result, summariser)
-                end_agent(
-                    span,
+                usage = self.assembly.ledger.total(run.run_id)
+                end_agent(span, result.status.value, usage, result.state.stop_reason)
+            if result.status.value != "interrupted":
+                # Step 30: runs, success, steps, cost per run and tenant, latency, budget trips
+                agent_metrics().run_finished(
+                    spec.name,
+                    run.ctx.tenant_id,
                     result.status.value,
-                    self.assembly.ledger.total(run.run_id),
+                    time.perf_counter() - began,
+                    self.assembly.ledger.calls(run.run_id),
+                    usage.cost_aud,
                     result.state.stop_reason,
                 )
             run.status = result.status.value

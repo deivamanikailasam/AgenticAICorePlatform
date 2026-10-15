@@ -9,6 +9,7 @@ when the content policy allows it, after redaction.
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import contextmanager
 from typing import Any, Literal
@@ -31,6 +32,7 @@ from opentelemetry.trace import Span, SpanKind, Status, StatusCode
 
 from agent_telemetry import semconv as S  # noqa: N812 - short alias for many constants
 from agent_telemetry.content import messages_json, output_json, policy
+from agent_telemetry.metrics import agent_metrics
 
 SCOPE = "agent_platform"
 
@@ -135,7 +137,22 @@ class TracingModelClient(ModelClient):
                 await policy.redact(output_json(response.message, response.finish_reason)),
             )
 
+    def _measure(
+        self, request: ChatRequest, started: float, response: ChatResponse | None, error: str | None
+    ) -> None:
+        usage = response.usage if response is not None else Usage()
+        agent_metrics().chat_finished(
+            request.model,
+            response.model if response is not None else None,
+            time.perf_counter() - started,
+            usage.input_tokens,
+            usage.output_tokens,
+            self.agent,
+            error,
+        )
+
     async def chat(self, request: ChatRequest) -> ChatResponse:
+        started = time.perf_counter()
         span = self._start(request)
         with trace.use_span(
             span, end_on_exit=True, record_exception=True, set_status_on_exception=True
@@ -145,11 +162,14 @@ class TracingModelClient(ModelClient):
                 response = await self.inner.chat(request)
             except Exception as exc:
                 span.set_attribute(S.ERROR_TYPE, type(exc).__name__)
+                self._measure(request, started, None, type(exc).__name__)
                 raise
             await self._finish(span, response)
+            self._measure(request, started, response, None)
             return response
 
     async def stream(self, request: ChatRequest) -> AsyncIterator[ChatChunk]:
+        started = time.perf_counter()
         span = self._start(request)
         with trace.use_span(
             span, end_on_exit=True, record_exception=True, set_status_on_exception=True
@@ -168,14 +188,14 @@ class TracingModelClient(ModelClient):
                     yield chunk
             except Exception as exc:
                 span.set_attribute(S.ERROR_TYPE, type(exc).__name__)
+                self._measure(request, started, None, type(exc).__name__)
                 raise
             message = Message(role=Role.ASSISTANT, content="".join(parts), tool_calls=tuple(calls))
-            await self._finish(
-                span,
-                ChatResponse(
-                    message=message, model=request.model, usage=usage, finish_reason=finish
-                ),
+            response = ChatResponse(
+                message=message, model=request.model, usage=usage, finish_reason=finish
             )
+            await self._finish(span, response)
+            self._measure(request, started, response, None)
 
 
 def _tool_type(ref: str | None) -> str:
@@ -209,6 +229,7 @@ class TracingToolExecutor(ToolExecutor):
         }
         if ref:
             attrs[S.TOOL_REF] = ref
+        started = time.perf_counter()
         with tracer().start_as_current_span(
             f"{S.EXECUTE_TOOL} {call.name}", kind=SpanKind.INTERNAL, attributes=attrs
         ) as span:
@@ -218,6 +239,13 @@ class TracingToolExecutor(ToolExecutor):
                     await policy.redact(json.dumps(call.arguments, default=str)),
                 )
             result = await self.inner.execute(call, ctx)
+            agent_metrics().tool_finished(
+                call.name,
+                str(attrs[S.AGENT_NAME]),
+                str(attrs[S.TOOL_TYPE]),
+                time.perf_counter() - started,
+                None if result.ok else (result.error_code.value if result.error_code else "failed"),
+            )
             span.set_attribute(S.TOOL_OK, result.ok)
             if not result.ok:
                 code = result.error_code.value if result.error_code else "failed"

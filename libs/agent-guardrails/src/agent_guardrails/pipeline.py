@@ -23,6 +23,7 @@ from agent_contracts.models import (
     RunContext,
     Trust,
 )
+from agent_telemetry.metrics import agent_metrics
 
 
 @dataclass
@@ -78,6 +79,9 @@ class GuardrailPipeline:
                 current = r.redacted_text
         blocked = any(r.action is GuardrailAction.BLOCK for r in results)
         outcome = Outcome(blocked, current, results)
+        for r in results:  # Step 30: guardrail hits, by guardrail, stage and action
+            if not r.passed:
+                agent_metrics().guardrail_hit(r.guardrail, stage.value, r.action.value)
         if self.audit is not None and ctx is not None and outcome.findings:
             await self.audit.append(
                 AuditEvent(

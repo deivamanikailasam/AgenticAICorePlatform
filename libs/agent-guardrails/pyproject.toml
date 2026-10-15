@@ -5,6 +5,7 @@ description = "Guardrails (Step 27): injection detection, PII redaction (Presidi
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "agent-contracts",
+    "agent-telemetry",
     "httpx>=0.28.1,<0.29",
     "jsonschema>=4.26.0,<5",
 ]
@@ -24,6 +25,7 @@ dependencies = [
 "guardrail.secret_leak" = "agent_guardrails.secrets:SecretLeakGuardrail"
 
 [tool.uv.sources]
+agent-telemetry = { workspace = true }
 agent-contracts = { workspace = true }
 
 [build-system]

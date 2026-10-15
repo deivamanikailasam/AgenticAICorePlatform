@@ -128,4 +128,23 @@ def setup(
     )
     provider = build_provider(service, general, lf, redactor)
     trace.set_tracer_provider(provider)
+    if otlp_endpoint:
+        setup_metrics(service, otlp_endpoint)
     return provider
+
+
+def setup_metrics(service: str, otlp_endpoint: str, interval_seconds: float = 15.0) -> None:
+    """Metrics to the collector over OTLP, every ``interval_seconds`` (the collector exposes
+    them to Prometheus)."""
+    from opentelemetry import metrics
+    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+    from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
+    reader = PeriodicExportingMetricReader(
+        OTLPMetricExporter(endpoint=f"{otlp_endpoint.rstrip('/')}/v1/metrics"),
+        export_interval_millis=int(interval_seconds * 1000),
+    )
+    metrics.set_meter_provider(
+        MeterProvider(resource=Resource.create({"service.name": service}), metric_readers=[reader])
+    )
