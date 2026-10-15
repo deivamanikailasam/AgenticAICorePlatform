@@ -42,6 +42,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | planner | per_tool | dummy | `agent_contracts.dummies.reasoning:PerToolPlanner` | One step per available tool, chained in order; one step if there are no tools. |
 | planner | single_step | dummy | `agent_contracts.dummies.reasoning:SingleStepPlanner` | A plan with exactly one step: the goal itself. |
 | policy_decision_point | deny_all | dummy | `agent_contracts.dummies.safety:DenyAllPolicyDecisionPoint` | Denies everything: the safe default when no policy is configured. |
+| policy_decision_point | opa | implemented | `agent_tools.policy:OpaPolicyDecisionPoint` | Evaluates ``data.<package path>`` (default ``agent/tools/decision``) over HTTP. |
 | policy_decision_point | rules | dummy | `agent_contracts.dummies.safety:RulesPolicyDecisionPoint` | In-process rules: same tenant only; irreversible needs approval. OPA: Step 10. |
 | router | first | dummy | `agent_contracts.dummies.reasoning:FirstRouter` | Always the first route (a fixed path, useful as a baseline). |
 | router | keyword | dummy | `agent_contracts.dummies.reasoning:KeywordRouter` | Picks the route whose name appears in the text; otherwise the first, with low confidence. |

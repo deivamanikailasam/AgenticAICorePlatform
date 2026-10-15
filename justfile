@@ -39,7 +39,13 @@ test-integration *args:
 
 # Rego unit tests for every policy bundle
 policy-test:
-    @if compgen -G "policies/**/*.rego" > /dev/null || compgen -G "policies/*.rego" > /dev/null; then opa test policies/ -v --explain fails; else echo "policy-test: no policies yet"; fi
+    opa fmt --fail --list policies/ || (echo "policy-test: run 'opa fmt -w policies/'" && exit 1)
+    opa check --strict policies/
+    opa test policies/ --explain fails
+
+# Load Project A's Rego policies into OPA (dev/CI; production uses bundles, Step 38)
+provision-policies:
+    uv run python -m scripts.provision.opa_policies
 
 compose-check:
     uv run python -m scripts.check_compose
@@ -57,7 +63,7 @@ health:
     uv run python -m scripts.health
 
 # Create Project A's shared resources in Project 0 (idempotent)
-provision: provision-db provision-keycloak provision-litellm provision-artefacts
+provision: provision-db provision-keycloak provision-litellm provision-artefacts provision-policies
 
 provision-db:
     uv run python -m scripts.provision.agent_db

@@ -418,6 +418,8 @@ class PolicyInput(Frozen):
     data_classification: DataClass | None = None
     resource_tenant_id: str | None = None
     arguments: dict[str, Any] = Field(default_factory=dict)
+    # who is asking, as established by the caller's verified token: authenticated, groups, roles
+    subject: dict[str, Any] = Field(default_factory=dict)
 
 
 class PolicyDecision(Frozen):
