@@ -78,6 +78,9 @@ def approval_facts(call: ToolCall) -> dict[str, Any] | None:
         "approved": ev.approved,
         "approver": ev.approver,
         "approver_groups": list(ev.approver_groups),
+        "co_approver": ev.co_approver,
+        "co_approver_groups": list(ev.co_approver_groups),
+        "edited": ev.edited,
         "bound": ev.tool == call.name and ev.arguments_digest == arguments_digest(call.arguments),
     }
 

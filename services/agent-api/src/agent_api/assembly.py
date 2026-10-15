@@ -25,7 +25,7 @@ from agent_contracts.interfaces import (
     PolicyDecisionPoint,
     ToolExecutor,
 )
-from agent_contracts.models import ExecutablePlan
+from agent_contracts.models import ExecutablePlan, NodeKind, SideEffect
 from agent_contracts.registry import registry as component_registry
 from agent_guardrails.guarded import GuardedModelClient, GuardedToolExecutor, GuardrailRuntime
 from agent_guardrails.pipeline import GuardrailPipeline
@@ -48,7 +48,7 @@ from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec
 from agent_spec.platform import PlatformConfig
 from agent_tools.a2a import A2aRemoteAgentTool
-from agent_tools.assemble import grants_for
+from agent_tools.assemble import grants_for, tool_names
 from agent_tools.authorising import AuthorisingToolExecutor, delegation_authoriser
 from agent_tools.builtin import BUILTIN_TOOLS
 from agent_tools.executor import PlatformToolExecutor
@@ -63,6 +63,38 @@ MemoryFactory = Callable[[AgentSpec], Awaitable[MemoryService | None]]
 REMEMBER = "local://platform/remember"
 #: always on, whatever the spec lists (Step 27; turning them off needs an ADR)
 BASELINE_GUARDRAILS = ("prompt_injection", "secret_leak")
+
+
+async def require_approvals(plan: ExecutablePlan, registry: InMemoryToolRegistry) -> None:
+    """An irreversible tool always waits for a person (Step 28): a plan in which one could run
+    without an approval step is refused before the run starts. Policy also requires approval for
+    irreversible calls at execution time; this makes the wait part of the plan."""
+    specs = {t.name: t for t in await registry.list()}
+    names = tool_names(plan)
+
+    def irreversible(spec_name: str) -> bool:
+        tool = specs.get(names.get(spec_name, spec_name))
+        return tool is not None and tool.side_effect is SideEffect.IRREVERSIBLE
+
+    for node in plan.nodes:
+        cfg = node.config
+        if (
+            node.kind is NodeKind.TOOL
+            and irreversible(str(cfg.get("tool")))
+            and not cfg.get("approval_node")
+        ):
+            raise LookupError(
+                f"tool {cfg.get('tool')} is irreversible: the spec must require approval for it "
+                "(tools[].approval) before it can run"
+            )
+        if node.kind is NodeKind.AGENT:
+            gated = set(cfg.get("approval_tools", ()))
+            for t in cfg.get("tools", ()):
+                if irreversible(str(t)) and str(t) not in gated:
+                    raise LookupError(
+                        f"agent node {node.id} may call {t}, which is irreversible: the spec "
+                        "must require approval for it (tools[].approval)"
+                    )
 
 
 class DurableEventingNodeRunner(EventingNodeRunner, CheckpointingNodeRunner):
@@ -188,6 +220,7 @@ class Assembly:
             if memory is None:
                 raise LookupError(f"{REMEMBER} needs memory.long_term in the spec")
             await registry.register(RememberTool(memory))
+        await require_approvals(plan, registry)
         guardrails = self.guardrails_for(spec)
         tools = BudgetedToolExecutor(
             EventingToolExecutor(

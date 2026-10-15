@@ -253,13 +253,17 @@ class ToolNodeExecutor:
         self.names = dict(names or {})
 
     async def __call__(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> Any:
-        from agent_runtime.approvals import ApproverNotAllowedError, evidence_for
+        from agent_runtime.approvals import ApproverNotAllowedError, edited_arguments, evidence_for
 
         spec_name = str(node.config["tool"])
         name = self.names.get(spec_name, spec_name)
         cfg = _cfg(node)
         arguments = resolve(cfg.get("args", {}), values)
         gate = node.config.get("approval_node")
+        # a reviewer may approve changed arguments: the call runs with exactly those (Step 28)
+        edited = edited_arguments(values.get(str(gate))) if gate else None
+        if edited is not None:
+            arguments = edited
         try:
             evidence = (
                 evidence_for(

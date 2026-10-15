@@ -26,6 +26,7 @@ audience). The WebSocket takes its token in the first message, so tokens never a
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -63,7 +64,9 @@ def principal_from(token: AccessToken) -> Principal:
 Handler = Callable[[Request, Principal], Awaitable[Response]]
 
 
-def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
+def build_app(
+    manager: RunManager, verifier: TokenVerifier, sweep_seconds: float = 30.0
+) -> Starlette:
     async def authenticate(raw: str | None) -> Principal | None:
         if not raw:
             return None
@@ -149,12 +152,24 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
         )
 
     async def approvals(request: Request, who: Principal) -> Response:
+        """``{"approved": true|false}`` or, with Step 28, ``{"decision": "approve" | "reject" |
+        "escalate", "arguments": {...edited...}, "comment": "..."}``."""
         run = manager.get(request.path_params["run_id"], who)
         data = await body(request)
-        if not isinstance(data.get("approved"), bool):
-            raise ValueError("'approved' must be true or false")
-        await manager.approve(run, who, data["approved"], data.get("comment"))
-        return JSONResponse(run.summary(), 202)
+        if "decision" in data:
+            action = str(data["decision"])
+        elif isinstance(data.get("approved"), bool):
+            action = "approve" if data["approved"] else "reject"
+        else:
+            raise ValueError("send 'decision' (approve, reject, escalate) or 'approved'")
+        edited = data.get("arguments")
+        if edited is not None and not isinstance(edited, dict):
+            raise ValueError("'arguments' must be an object")
+        outcome = await manager.decide(run, who, action, edited, data.get("comment"))
+        return JSONResponse({**run.summary(), "outcome": outcome}, 202)
+
+    async def inbox(request: Request, who: Principal) -> Response:
+        return JSONResponse({"approvals": manager.inbox(who)})
 
     async def resume(request: Request, who: Principal) -> Response:
         run = manager.get(request.path_params["run_id"], who)
@@ -237,7 +252,18 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
     @contextlib.asynccontextmanager
     async def lifespan(app: Starlette) -> AsyncIterator[None]:
         await manager.recover()  # Step 18: runs survive a restart
-        yield
+
+        async def timers() -> None:  # Step 28: approval SLAs escalate, then expire
+            while True:
+                await asyncio.sleep(sweep_seconds)
+                with contextlib.suppress(Exception):
+                    await manager.sweep_approvals()
+
+        task = asyncio.create_task(timers())
+        try:
+            yield
+        finally:
+            task.cancel()
 
     return Starlette(
         lifespan=lifespan,
@@ -249,6 +275,7 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
             Route("/v1/runs/{run_id}", guarded(state)),
             Route("/v1/runs/{run_id}/events", guarded(events)),
             Route("/v1/runs/{run_id}/approvals", guarded(approvals), methods=["POST"]),
+            Route("/v1/approvals", guarded(inbox)),
             Route("/v1/runs/{run_id}/resume", guarded(resume), methods=["POST"]),
             Route("/v1/runs/{run_id}/cancel", guarded(cancel), methods=["POST"]),
             Route("/v1/threads", guarded(threads)),

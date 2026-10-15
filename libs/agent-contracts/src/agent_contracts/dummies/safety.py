@@ -30,6 +30,7 @@ from agent_contracts.models import (
     PolicyDecision,
     PolicyEffect,
     PolicyInput,
+    RiskTier,
     SideEffect,
     StepObservation,
 )
@@ -86,7 +87,8 @@ class RegexPiiGuardrail(Guardrail):
 
 class RulesPolicyDecisionPoint(PolicyDecisionPoint):
     """In-process rules: same tenant only; irreversible needs approval, satisfied by a bound
-    approval from someone else in an ``approvers`` group (as the OPA policy). OPA: Step 10."""
+    approval from someone else in an ``approvers`` group, or by two different people from the
+    two-person group for high-risk agents (as the OPA policy). OPA: Step 10."""
 
     async def decide(self, request: PolicyInput) -> PolicyDecision:
         if request.resource_tenant_id and request.resource_tenant_id != request.ctx.tenant_id:
@@ -97,6 +99,31 @@ class RulesPolicyDecisionPoint(PolicyDecisionPoint):
                 reasons=(f"{request.tool} is not granted to agent {request.ctx.agent_id}",),
             )
         ev = request.approval or {}
+        two_person = (
+            request.side_effect is SideEffect.IRREVERSIBLE
+            and request.ctx.risk_tier is RiskTier.HIGH
+        )
+        if request.side_effect is SideEffect.IRREVERSIBLE and two_person:
+            people = {ev.get("approver"), ev.get("co_approver")}
+            if (
+                ev.get("approved") is True
+                and ev.get("bound") is True
+                and len(people) == 2
+                and not people & {"", None, request.ctx.user_id}
+                and all(
+                    any(str(g).endswith("/two-person-approvers") for g in ev.get(k, ()))
+                    for k in ("approver_groups", "co_approver_groups")
+                )
+            ):
+                return PolicyDecision(
+                    effect=PolicyEffect.ALLOW,
+                    reasons=(f"approved by {ev['approver']} and {ev['co_approver']}",),
+                )
+            return PolicyDecision(
+                effect=PolicyEffect.REQUIRE_APPROVAL,
+                reasons=("high-risk irreversible action: two people must approve",),
+                approvers="group:two-person-approvers",
+            )
         if (
             request.side_effect is SideEffect.IRREVERSIBLE
             and ev.get("approved") is True

@@ -30,6 +30,9 @@ NO_APPROVAL_EVIDENCE: dict[str, Any] = {
     "approved": False,
     "approver": "",
     "approver_groups": [],
+    "co_approver": "",
+    "co_approver_groups": [],
+    "edited": False,
     "bound": False,
 }
 

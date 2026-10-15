@@ -160,9 +160,16 @@ payment(approval, risk) := with_input({
 })
 
 test_bound_approval_from_an_approver_allows_the_payment if {
-	d := tools.decision with input as payment(approved_by("j.smith", ["/acme/approvers"], true), "medium")
+	d := tools.decision with input as payment(approved_by("j.smith", ["/acme/finance-approvers"], true), "medium")
 	d.effect == "allow"
 	d.reasons == ["approved by j.smith (run-1:pay.approval)"]
+}
+
+# Step 28: the tool's own approver group (policy data) applies, not just any approver
+test_payment_needs_the_tools_own_approver_group if {
+	d := tools.decision with input as payment(approved_by("j.smith", ["/acme/approvers"], true), "medium")
+	d.effect == "require_approval"
+	d.approvers == "group:finance-approvers"
 }
 
 test_approval_not_bound_to_these_arguments_still_needs_approval if {
@@ -254,4 +261,35 @@ test_inbound_call_to_a_switched_off_agent_denied if {
 	d := tools.decision with input as inbound with data.agent.config.kill_switch.agents as {"capital-desk": true}
 	d.effect == "deny"
 	"agent capital-desk is disabled (kill switch)" in d.reasons
+}
+
+# ---------------------------------------------------------------- two-person approval (Step 28)
+
+two_person := with_input({
+	"side_effect": "irreversible",
+	"ctx": {"tenant_id": "acme", "user_id": "alice", "agent_id": "payments", "risk_tier": "high"},
+	"approval": {
+		"approved": true, "bound": true, "approval_id": "r:gate",
+		"approver": "bob", "approver_groups": ["/acme/two-person-approvers"],
+		"co_approver": "carol", "co_approver_groups": ["/acme/two-person-approvers"],
+	},
+})
+
+test_two_different_approvers_allow_a_high_risk_irreversible_call if {
+	tools.decision.effect == "allow" with input as two_person
+}
+
+test_one_approver_twice_is_not_two_people if {
+	d := tools.decision with input as object.union(two_person, {"approval": object.union(two_person.approval, {"co_approver": "bob"})})
+	d.effect == "require_approval"
+}
+
+test_the_requester_cannot_be_one_of_the_two if {
+	d := tools.decision with input as object.union(two_person, {"approval": object.union(two_person.approval, {"co_approver": "alice"})})
+	d.effect == "require_approval"
+}
+
+test_both_approvers_must_be_in_the_two_person_group if {
+	d := tools.decision with input as object.union(two_person, {"approval": object.union(two_person.approval, {"co_approver_groups": ["/acme/finance"]})})
+	d.effect == "require_approval"
 }

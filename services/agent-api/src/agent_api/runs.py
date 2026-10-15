@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_compiler.compiler import compile_spec, runtime_for
+from agent_contracts.dummies.safety import InMemoryApprovalGate
 from agent_contracts.interfaces import RuntimeAdapter
 from agent_contracts.models import (
     AuditEvent,
@@ -39,6 +40,7 @@ from agent_contracts.models import (
     RunEventType,
     RunResult,
     RunState,
+    ToolSpec,
 )
 from agent_runtime.approvals import in_group
 from agent_runtime.checkpoints import fork_thread, history
@@ -47,11 +49,14 @@ from agent_runtime.events import current_sink, json_safe
 from agent_runtime.executors import resolve
 from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec, load_spec
+from agent_tools.approvals import RulesApprovalRouter
+from agent_tools.assemble import tool_names
 from agent_tools.authorising import Caller, current_caller
 from agent_tools.identity import subject_token
 
 from agent_api.agui import Translator
 from agent_api.assembly import Assembly
+from agent_api.desk import ApprovalDesk, ApprovalExpiredError
 from agent_api.store import MemoryRunStore, RunStore
 
 
@@ -143,13 +148,22 @@ class ConflictError(ValueError):
 
 class RunManager:
     def __init__(
-        self, agents: Mapping[str, AgentSpec], assembly: Assembly, store: RunStore | None = None
+        self,
+        agents: Mapping[str, AgentSpec],
+        assembly: Assembly,
+        store: RunStore | None = None,
+        desk: ApprovalDesk | None = None,
     ) -> None:
         self.agents = dict(agents)
         self.assembly = assembly
         self.store = store or MemoryRunStore()
         self.runs: dict[str, Run] = {}
         self.idempotency: dict[tuple[str, str, str], tuple[str, str]] = {}
+        # Step 28: routed, timed, audited approvals (in memory unless given a durable gate)
+        self.desk = desk or ApprovalDesk(
+            InMemoryApprovalGate(), RulesApprovalRouter(), assembly.audit
+        )
+        self.tool_specs: dict[str, dict[str, ToolSpec]] = {}  # agent -> tool name -> spec
 
     @classmethod
     def load_agents(cls, directory: str | Path) -> dict[str, AgentSpec]:
@@ -247,6 +261,13 @@ class RunManager:
         self, spec: AgentSpec, plan: ExecutablePlan, journal: RunJournal | None
     ) -> tuple[RuntimeAdapter, str]:
         parts = await self.assembly.build(spec, plan, journal, spec_path=SPEC_PATHS.get(spec.name))
+        registry = getattr(parts.tools, "registry", None)
+        if registry is not None:  # side effects of the agent's tools, for approval routing
+            specs = {t.name: t for t in await registry.list()}
+            names = tool_names(plan)
+            self.tool_specs[spec.name] = specs | {
+                k: specs[v] for k, v in names.items() if v in specs
+            }
         adapter = runtime_for(spec, runner=parts.runner)
         return adapter, await adapter.build(plan)
 
@@ -404,24 +425,98 @@ class RunManager:
 
     async def approve(
         self, run: Run, who: Principal, approved: bool, comment: str | None = None
-    ) -> None:
+    ) -> str:
+        return await self.decide(run, who, "approve" if approved else "reject", None, comment)
+
+    async def decide(
+        self,
+        run: Run,
+        who: Principal,
+        action: str,
+        arguments: dict[str, Any] | None = None,
+        comment: str | None = None,
+    ) -> str:
+        """A reviewer's decision (Step 28): ``approve`` (optionally with edited arguments),
+        ``reject`` or ``escalate``. Returns ``resumed`` or what the approval now waits for."""
         if run.active or run.status != "interrupted":
             raise ConflictError(f"run {run.run_id} is {run.status}, not waiting for an approval")
-        if who.tenant != run.owner.tenant:
-            raise PermissionError("approvers must belong to the run's tenant")
-        if who.user == run.owner.user:
-            raise PermissionError("the requester cannot approve their own run")
-        required = [i.get("approvers") for i in run.interrupts if i.get("reason") == "approval"]
-        if not all(in_group(who.groups, r) for r in required if r):
-            raise PermissionError(f"approver is not in {', '.join(str(r) for r in required)}")
-        decision = {
-            "approved": approved,
-            "by": who.user,
-            "groups": list(who.groups),
-            "at": datetime.now(UTC).isoformat(timespec="seconds"),
-            "comment": comment or "",
-        }
-        self._start(run, run.live().resume(run.handle, run.run_id, decision, run.ctx))
+        item = next((i for i in run.interrupts if i.get("reason") == "approval"), None)
+        if item is None:
+            raise ConflictError("this run is not waiting for an approval")
+        if not item.get("approval_id"):  # paused before it was filed (e.g. recovered): file now
+            await self.desk.open(
+                [item],
+                run.ctx,
+                self.agents[run.agent].risk_tier,
+                self.tool_specs.get(run.agent, {}),
+            )
+        try:
+            verdict = await self.desk.decide(item, run.ctx, who, action, arguments, comment or "")
+        except ApprovalExpiredError:
+            await self.expire(run)
+            raise ConflictError(
+                "the approval expired: the run was cancelled and nothing ran"
+            ) from None
+        if verdict.resume is None:
+            await self.store.save(run.record())
+            return str(verdict.waiting)
+        self._start(run, run.live().resume(run.handle, run.run_id, verdict.resume, run.ctx))
+        return "resumed"
+
+    def inbox(self, who: Principal) -> list[dict[str, Any]]:
+        """Approvals this person may decide: same tenant, in the approver group, not their own."""
+        out = []
+        for run in self.runs.values():
+            if (
+                run.status != "interrupted"
+                or run.owner.tenant != who.tenant
+                or run.owner.user == who.user
+            ):
+                continue
+            for item in run.interrupts:
+                if item.get("reason") == "approval" and in_group(who.groups, item.get("approvers")):
+                    out.append(
+                        {
+                            "run_id": run.run_id,
+                            "agent": run.agent,
+                            "requested_by": run.owner.user,
+                            "proposed": item.get("action"),
+                            "reason": item.get("message"),
+                            "risk": item.get("risk"),
+                            "side_effect": item.get("side_effect"),
+                            "approvers": item.get("approvers"),
+                            "two_person": item.get("two_person"),
+                            "approvals_so_far": [a["by"] for a in item.get("approvals", [])],
+                            "expires_at": item.get("expires_at"),
+                            "escalated": item.get("escalated"),
+                            "routing": item.get("routing"),
+                            "input": run.inputs,
+                        }
+                    )
+        return sorted(out, key=lambda x: str(x["expires_at"]))
+
+    async def sweep_approvals(self) -> list[tuple[str, str]]:
+        """SLA timers: overdue approvals escalate once, then expire (the run is cancelled)."""
+        outcomes = []
+        for run in list(self.runs.values()):
+            if run.status != "interrupted" or run.active:
+                continue
+            for item in [i for i in run.interrupts if i.get("reason") == "approval"]:
+                if self.desk.is_overdue(item):
+                    outcome = await self.desk.overdue(item, run.ctx)
+                    outcomes.append((run.run_id, outcome))
+                    if outcome == "expired":
+                        await self.expire(run)
+                    else:
+                        await self.store.save(run.record())
+                    break
+        return outcomes
+
+    async def expire(self, run: Run) -> None:
+        """Cancel a run whose approval expired. Nothing behind the approval has run."""
+        with contextlib.suppress(KeyError, ConflictError):
+            await run.live().cancel(run.run_id)
+        await self._finish_cancelled(run, reason="approval expired")
 
     async def resume(self, run: Run, who: Principal, payload: dict[str, Any]) -> None:
         if (who.tenant, who.user) != (run.owner.tenant, run.owner.user):
@@ -598,6 +693,13 @@ class RunManager:
                 run.interrupts = (
                     self._interrupts(run, result.state) if run.status == "interrupted" else []
                 )
+                if run.interrupts:  # route, time and file the approvals (Step 28)
+                    await self.desk.open(
+                        run.interrupts,
+                        run.ctx,
+                        self.agents[run.agent].risk_tier,
+                        self.tool_specs.get(run.agent, {}),
+                    )
                 await self._record(
                     run,
                     RunEvent(
@@ -637,13 +739,14 @@ class RunManager:
                 run.active = False
                 run.changed.notify_all()
 
-    async def _finish_cancelled(self, run: Run) -> None:
+    async def _finish_cancelled(self, run: Run, reason: str | None = None) -> None:
         run.status, run.interrupts = "cancelled", []
+        data: dict[str, Any] = {"status": "cancelled"}
+        if reason:
+            data["stop_reason"] = reason
         await self._record(
             run,
-            RunEvent(
-                type=RunEventType.RUN_FINISHED, run_id=run.run_id, data={"status": "cancelled"}
-            ),
+            RunEvent(type=RunEventType.RUN_FINISHED, run_id=run.run_id, data=data),
         )
         await self.store.save(run.record())
 

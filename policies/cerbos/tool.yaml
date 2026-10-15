@@ -21,6 +21,9 @@ resourcePolicy:
         internal: []
         confidential: []
         restricted: ["restricted-readers"]
+      # Step 28: a tool's own approver group (data.json approvals.tools.<tool>.approvers)
+      approval_groups:
+        erp__post_payment: finance-approvers
       constraints:
         erp__post_payment:
           - { argument: amount_aud, max: 10000, risk_tier: medium }
@@ -32,13 +35,26 @@ resourcePolicy:
       cleared: >-
         V.required_groups.exists(r,
           P.attr.groups.exists(g, g.endsWith("/" + r)) || r in P.attr.roles)
-      # Step 15: a bound approval by someone other than the requester, in the approvers group.
+      # Step 15: a bound approval by someone other than the requester, in the approver group
+      # (Step 28: the tool's own group when policy data names one).
       # Written so that a missing or null attribute gives false (the approval rules then apply).
+      approver_group: >-
+        R.id in C.approval_groups ? C.approval_groups[R.id] : "approvers"
       approval_satisfied: >-
         "approval" in R.attr && R.attr.approval != null &&
         R.attr.approval.approved == true && R.attr.approval.bound == true &&
         R.attr.approval.approver != "" && R.attr.approval.approver != R.attr.user_id &&
-        R.attr.approval.approver_groups.exists(g, g.endsWith("/approvers"))
+        R.attr.approval.approver_groups.exists(g, g.endsWith("/" + V.approver_group))
+      # Step 28: two different approvers from the two-person group, neither the requester
+      two_person_satisfied: >-
+        "approval" in R.attr && R.attr.approval != null &&
+        R.attr.approval.approved == true && R.attr.approval.bound == true &&
+        "co_approver" in R.attr.approval && R.attr.approval.co_approver != null &&
+        R.attr.approval.co_approver != "" && R.attr.approval.approver != "" &&
+        R.attr.approval.co_approver != R.attr.approval.approver &&
+        R.attr.approval.approver != R.attr.user_id && R.attr.approval.co_approver != R.attr.user_id &&
+        R.attr.approval.approver_groups.exists(g, g.endsWith("/two-person-approvers")) &&
+        R.attr.approval.co_approver_groups.exists(g, g.endsWith("/two-person-approvers"))
       over_limit: >-
         R.id in C.constraints ? C.constraints[R.id].filter(c,
           c.risk_tier == R.attr.risk_tier && c.argument in R.attr.arguments &&
@@ -154,12 +170,12 @@ resourcePolicy:
         match:
           expr: >-
             R.attr.side_effect == "irreversible" &&
-            (R.attr.risk_tier == "high" || !V.approval_satisfied)
+            (R.attr.risk_tier == "high" ? !V.two_person_satisfied : !V.approval_satisfied)
       output:
         when:
           ruleActivated: >-
             {"approval": "irreversible action", "approvers":
-              R.attr.risk_tier == "high" ? "group:two-person-approvers" : "group:approvers"}
+              R.attr.risk_tier == "high" ? "group:two-person-approvers" : "group:" + V.approver_group}
 
     - name: approval_external_write_medium
       actions: ["call_without_approval"]

@@ -20,3 +20,7 @@ def test_cerbos_constants_match_opa_data() -> None:
     assert sorted(const["kill_agents"]) == sorted(
         a for a, on in data["kill_switch"]["agents"].items() if on
     )
+    assert const["approval_groups"] == {
+        tool: cfg["approvers"].removeprefix("group:")
+        for tool, cfg in data["approvals"]["tools"].items()
+    }

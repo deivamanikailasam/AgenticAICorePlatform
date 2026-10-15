@@ -47,7 +47,7 @@ from agent_contracts.models import (
     Trust,
 )
 
-from agent_runtime.approvals import ApproverNotAllowedError, evidence_for
+from agent_runtime.approvals import ApproverNotAllowedError, edited_arguments, evidence_for
 from agent_runtime.context import LOAD_TOOLS, ContextWindow
 from agent_runtime.executors import render
 from agent_runtime.memory_hooks import RunMemory, tainted
@@ -284,6 +284,9 @@ class AgentLoopExecutor(AgentLoop):
             step, repairs = int(previous["step"]), int(previous["repairs"])
             pending = [ToolCall.model_validate(c) for c in previous["pending"]]
             if isinstance(approval, Mapping) and approval.get("approved"):
+                edited = edited_arguments(approval)
+                if edited is not None and len(pending) == 1:  # the reviewer changed the call
+                    pending = [pending[0].model_copy(update={"arguments": edited})]
                 try:
                     pending = self._with_evidence(node, pending, approval, ctx)
                 except ApproverNotAllowedError as exc:

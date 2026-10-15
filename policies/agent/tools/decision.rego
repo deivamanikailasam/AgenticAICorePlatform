@@ -22,7 +22,7 @@ package agent.tools
 
 import rego.v1
 
-version := "2026-10-15.4"
+version := "2026-10-15.6"
 
 cfg := data.agent.config
 
@@ -90,11 +90,14 @@ approval contains "write in a high-risk agent" if {
 approvers := "group:two-person-approvers" if {
 	input.ctx.risk_tier == "high"
 	input.side_effect == "irreversible"
+} else := cfg.approvals.tools[input.tool].approvers if {
+	cfg.approvals.tools[input.tool].approvers
 } else := "group:approvers"
 
 # A person's decision on this exact call (Step 15): approved, bound by the platform to this
 # tool and these arguments, by someone other than the requester, who is in the policy's
-# approver group. Two-person approval cannot be satisfied by one decision (Step 28).
+# approver group. Two-person approval (Step 28) needs a second, different approver from the
+# same group, neither of them the requester.
 approval_satisfied if {
 	input.approval.approved == true
 	input.approval.bound == true
@@ -105,9 +108,27 @@ approval_satisfied if {
 	endswith(g, sprintf("/%s", [trim_prefix(approvers, "group:")]))
 }
 
+approval_satisfied if {
+	approvers == "group:two-person-approvers"
+	input.approval.approved == true
+	input.approval.bound == true
+	two := {input.approval.approver, input.approval.co_approver}
+	count(two) == 2
+	not input.ctx.user_id in two
+	not "" in two
+	not null in two
+	in_two_person_group(input.approval.approver_groups)
+	in_two_person_group(input.approval.co_approver_groups)
+}
+
+in_two_person_group(groups) if {
+	some g in groups
+	endswith(g, "/two-person-approvers")
+}
+
 # ------------------------------------------------------------------ decision
 
-default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.4"}
+default decision := {"effect": "deny", "reasons": ["no rule allows this call"], "version": "2026-10-15.6"}
 
 decision := {"effect": "deny", "reasons": sort(deny), "version": version} if count(deny) > 0
 

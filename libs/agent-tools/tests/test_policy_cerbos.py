@@ -122,8 +122,15 @@ APPROVED = {
     "approval_id": "run-1:pay.approval",
     "approved": True,
     "approver": "j.smith",
-    "approver_groups": ["/acme/approvers"],
+    "approver_groups": ["/acme/finance-approvers"],
     "bound": True,
+}
+TWO = {
+    **APPROVED,
+    "approver": "bob",
+    "approver_groups": ["/acme/two-person-approvers"],
+    "co_approver": "carol",
+    "co_approver_groups": ["/acme/two-person-approvers"],
 }
 
 PARITY = {
@@ -163,6 +170,26 @@ PARITY = {
         side_effect=SideEffect.IRREVERSIBLE,
         arguments={"amount_aud": 528},
         approval=APPROVED,
+    ),
+    "payment approved by a general approver only": _case(
+        tool="erp__post_payment",
+        side_effect=SideEffect.IRREVERSIBLE,
+        arguments={"amount_aud": 528},
+        approval={**APPROVED, "approver_groups": ["/acme/approvers"]},
+    ),
+    "high-risk payment approved by two people": _case(
+        tool="erp__post_payment",
+        side_effect=SideEffect.IRREVERSIBLE,
+        arguments={"amount_aud": 528},
+        ctx={"risk_tier": RiskTier.HIGH},
+        approval=TWO,
+    ),
+    "high-risk payment approved by one person twice": _case(
+        tool="erp__post_payment",
+        side_effect=SideEffect.IRREVERSIBLE,
+        arguments={"amount_aud": 528},
+        ctx={"risk_tier": RiskTier.HIGH},
+        approval={**TWO, "co_approver": "bob"},
     ),
     "payment approval not bound": _case(
         tool="erp__post_payment",

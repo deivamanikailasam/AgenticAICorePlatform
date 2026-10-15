@@ -41,7 +41,7 @@ resources:
       side_effect: irreversible
       arguments: { amount_aud: 528 }
       user_id: alice
-      approval: { approval_id: "run-1:pay.approval", approved: true, approver: j.smith, approver_groups: ["/acme/approvers"], bound: true }
+      approval: { approval_id: "run-1:pay.approval", approved: true, approver: j.smith, approver_groups: ["/acme/finance-approvers"], bound: true }
   payment_self_approved:
     kind: tool
     id: erp__post_payment

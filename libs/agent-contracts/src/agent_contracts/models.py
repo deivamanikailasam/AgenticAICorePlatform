@@ -90,6 +90,10 @@ class ApprovalEvidence(Frozen):
     tool: str
     arguments_digest: str
     decided_at: datetime | None = None
+    # two-person approval (Step 28): the second, different approver
+    co_approver: str | None = None
+    co_approver_groups: tuple[str, ...] = ()
+    edited: bool = False  # the reviewer changed the arguments; the digest is of the edited ones
 
 
 class ToolCall(Frozen):
