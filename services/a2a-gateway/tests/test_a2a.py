@@ -36,6 +36,7 @@ from a2a.types import (
     Part,
     Role,
     SendMessageRequest,
+    TaskState,
 )
 from a2a.utils.signing import create_signature_verifier
 from a2a_gateway.app import A2aGateway, push_url_validator
@@ -217,10 +218,12 @@ def platform_verifier() -> Any:
     )
 
 
-async def ask(http: httpx.AsyncClient, url: str, text: str, token: str) -> list[Any]:
+async def ask(
+    http: httpx.AsyncClient, url: str, text: str, token: str, streaming: bool = False
+) -> list[Any]:
     client = await create_client(
         url,
-        client_config=ClientConfig(httpx_client=http, streaming=False),
+        client_config=ClientConfig(httpx_client=http, streaming=streaming),
         signature_verifier=platform_verifier(),
     )
     request = SendMessageRequest(
@@ -278,6 +281,28 @@ async def test_push_notifications_only_to_allowlisted_https_hosts() -> None:
     assert not await valid("https://169.254.169.254/latest/meta-data")  # SSRF
     assert not await valid("https://hooks.partner.example.evil.test/")
     assert await valid("http://127.0.0.1:9000/hook")
+
+
+async def test_streaming_reports_the_task_lifecycle(world: World) -> None:
+    responses = await ask(
+        world.http, "http://gw.test/agents/capital-desk", "Capital?", "t-alice", streaming=True
+    )
+    kinds = [r.WhichOneof("payload") for r in responses]
+    states = [
+        TaskState.Name(r.status_update.status.state)
+        for r in responses
+        if r.WhichOneof("payload") == "status_update"
+    ]
+    assert kinds[0] == "task"
+    assert "artifact_update" in kinds
+    assert states[0] == "TASK_STATE_WORKING"
+    assert states[-1] == "TASK_STATE_COMPLETED"
+    artifacts = [
+        r.artifact_update.artifact
+        for r in responses
+        if r.WhichOneof("payload") == "artifact_update"
+    ]
+    assert [p.text for a in artifacts for p in a.parts] == ["Canberra."]
 
 
 # ---------------------------------------------------------------- another framework -> Project A
