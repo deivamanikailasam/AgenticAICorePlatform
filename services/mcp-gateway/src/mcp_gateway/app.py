@@ -183,7 +183,11 @@ class Gateway:
         inner = self.server().streamable_http_app(
             host=s.host,
             auth=AuthSettings(issuer_url=s.issuer, resource_server_url=f"{s.public_url}/mcp"),  # type: ignore[arg-type]
-            token_verifier=KeycloakTokenVerifier(s.issuer, audience=s.audience),
+            token_verifier=KeycloakTokenVerifier(
+                s.issuer,
+                audience=s.audience,
+                jwks_url=f"{s.internal_issuer}/protocol/openid-connect/certs",
+            ),
             transport_security=TransportSecuritySettings(
                 enable_dns_rebinding_protection=True,
                 allowed_hosts=list(s.allowed_hosts),

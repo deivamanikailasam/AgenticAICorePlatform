@@ -31,7 +31,9 @@ def main() -> None:
         exchanger=exchanger,
     )
     manager = RunManager(RunManager.load_agents(settings.agents_dir), assembly)
-    verifier = KeycloakTokenVerifier(settings.issuer, audience=settings.audience)
+    verifier = KeycloakTokenVerifier(
+        settings.issuer, audience=settings.audience, jwks_url=settings.jwks_url
+    )
     uvicorn.run(
         build_app(manager, verifier), host=settings.host, port=settings.port, log_level="info"
     )

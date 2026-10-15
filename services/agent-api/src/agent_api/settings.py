@@ -14,7 +14,15 @@ def _env(name: str, default: str) -> str:
 class Settings:
     host: str = field(default_factory=lambda: _env("AGENT_API_HOST", "127.0.0.1"))
     port: int = field(default_factory=lambda: int(_env("AGENT_API_PORT", "8091")))
+    # the issuer tokens carry (as users' browsers see Keycloak) ...
     issuer: str = field(
+        default_factory=lambda: (
+            f"{_env('P0_KEYCLOAK_PUBLIC_URL', _env('P0_KEYCLOAK_URL', 'http://127.0.0.1:8080'))}"
+            f"/realms/{_env('P0_KEYCLOAK_REALM', 'rag-platform')}"
+        )
+    )
+    # ... and where this service reaches Keycloak (inside the Docker network) for keys and exchange
+    internal_issuer: str = field(
         default_factory=lambda: (
             f"{_env('P0_KEYCLOAK_URL', 'http://127.0.0.1:8080')}/realms/"
             f"{_env('P0_KEYCLOAK_REALM', 'rag-platform')}"
@@ -44,4 +52,8 @@ class Settings:
 
     @property
     def token_url(self) -> str:
-        return f"{self.issuer}/protocol/openid-connect/token"
+        return f"{self.internal_issuer}/protocol/openid-connect/token"
+
+    @property
+    def jwks_url(self) -> str:
+        return f"{self.internal_issuer}/protocol/openid-connect/certs"

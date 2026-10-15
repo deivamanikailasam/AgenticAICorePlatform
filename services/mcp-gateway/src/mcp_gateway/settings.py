@@ -17,9 +17,18 @@ class Settings:
     public_url: str = field(
         default_factory=lambda: _env("MCP_GATEWAY_PUBLIC_URL", "http://127.0.0.1:8090")
     )
+    # the issuer tokens carry (as users' clients see Keycloak) ...
     issuer: str = field(
         default_factory=lambda: (
-            f"{_env('P0_KEYCLOAK_URL', 'http://127.0.0.1:8080')}/realms/{_env('P0_KEYCLOAK_REALM', 'rag-platform')}"
+            f"{_env('P0_KEYCLOAK_PUBLIC_URL', _env('P0_KEYCLOAK_URL', 'http://127.0.0.1:8080'))}"
+            f"/realms/{_env('P0_KEYCLOAK_REALM', 'rag-platform')}"
+        )
+    )
+    # ... and where this service reaches Keycloak (inside the Docker network) for keys and exchange
+    internal_issuer: str = field(
+        default_factory=lambda: (
+            f"{_env('P0_KEYCLOAK_URL', 'http://127.0.0.1:8080')}/realms/"
+            f"{_env('P0_KEYCLOAK_REALM', 'rag-platform')}"
         )
     )
     audience: str = field(default_factory=lambda: _env("MCP_GATEWAY_AUDIENCE", "agent-platform"))
@@ -70,4 +79,4 @@ class Settings:
 
     @property
     def token_url(self) -> str:
-        return f"{self.issuer}/protocol/openid-connect/token"
+        return f"{self.internal_issuer}/protocol/openid-connect/token"

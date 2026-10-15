@@ -23,6 +23,8 @@ x-p0-endpoints: &p0-endpoints
   P0_POSTGRES_DSN: ${P0_POSTGRES_DSN_INTERNAL:-postgresql://agent_health@postgres:5432/postgres}
   P0_VALKEY_URL: redis://valkey:6379/0
   P0_KEYCLOAK_URL: http://keycloak:8080
+  # the issuer in users' tokens (Keycloak as their browsers reach it); VERIFY-ON-MAC
+  P0_KEYCLOAK_PUBLIC_URL: ${P0_KEYCLOAK_PUBLIC_URL:-http://127.0.0.1:8080}
   P0_KEYCLOAK_REALM: ${P0_KEYCLOAK_REALM:-rag-platform}
   P0_OPA_URL: http://opa:8181
   P0_OTEL_HEALTH_URL: http://otel-collector:13133/
