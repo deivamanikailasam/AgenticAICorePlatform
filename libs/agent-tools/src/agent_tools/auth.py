@@ -60,3 +60,16 @@ class KeycloakTokenVerifier:
                 if k in claims
             },
         )
+
+
+def tenant_of(groups: list[str], default: str = "default") -> str:
+    """Tenants are the top level of Keycloak group paths: ``/acme/finance`` → ``acme``.
+
+    VERIFY-ON-MAC: align with Project 0's tenant claim convention if it differs.
+    """
+    tenants = sorted({g.strip("/").split("/")[0] for g in groups if g.strip("/")})
+    if len(tenants) > 1:
+        raise PermissionError(
+            f"user belongs to several tenants ({', '.join(tenants)}); pick one explicitly"
+        )
+    return tenants[0] if tenants else default
