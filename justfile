@@ -91,18 +91,18 @@ provision-artefacts:
 up:
     {{compose}} build
     {{compose}} run --rm agent-health
-    {{compose}} up -d --wait --remove-orphans mcp-gateway agent-api
+    {{compose}} up -d --wait --remove-orphans mcp-gateway agent-api temporal agent-worker
 
 # Durable long runs (Step 19): the Temporal development server on 127.0.0.1:7233 (UI on 8233)
 up-temporal:
-    {{compose}} --profile temporal up -d --wait temporal
+    {{compose}} up -d --wait temporal
 
 # Optional alternative engines (profiles): Cerbos, OpenFGA
 up-alternatives:
     {{compose}} --profile cerbos --profile openfga up -d --wait cerbos openfga
 
 down:
-    {{compose}} --profile cerbos --profile openfga --profile temporal down
+    {{compose}} --profile cerbos --profile openfga down
 
 logs *svc:
     {{compose}} logs -f {{svc}}

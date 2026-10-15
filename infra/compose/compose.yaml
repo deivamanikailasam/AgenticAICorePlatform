@@ -104,12 +104,11 @@ services:
       retries: 20
     restart: unless-stopped
 
-  # Durable long runs (Step 19, ADR 0030): `just up-temporal`. Development server with its state in
+  # Durable long runs (Step 19, ADR 0030): started by `just up` (or alone: `just up-temporal`). Development server with its state in
   # a SQLite file on a volume, so runs survive a server restart. Production: Temporal with
   # Postgres or Temporal Cloud (docs/setup/production.md). Project 0 does not run Temporal.
   temporal:
     image: docker.io/temporalio/temporal:1.9.1@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
-    profiles: [temporal]
     command: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/home/temporal/temporal.db", "--ui-port", "8233"]
     <<: *hardening
     volumes:
@@ -120,6 +119,33 @@ services:
       test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "127.0.0.1:7233"]
       interval: 3s
       retries: 30
+    restart: unless-stopped
+
+  # Step 19: runs the nodes of every `durability: temporal` agent as Temporal activities.
+  agent-worker:
+    build: { context: ../.., dockerfile: infra/compose/service.Dockerfile, args: { PACKAGE: agent-worker }, secrets: [extra_ca] }
+    image: agent-platform/agent-worker:dev
+    command: ["agent-worker"]
+    <<: *hardening
+    environment:
+      <<: *p0-endpoints
+      TEMPORAL_ADDRESS: temporal:7233
+      AGENT_API_AGENTS_DIR: /app/agents
+      AGENT_API_PDP: ${AGENT_API_PDP:-opa}
+      AGENT_CERBOS_URL: http://cerbos:3592
+      AGENT_WORKER_AUDIT_FILE: /tmp/agent-worker-audit.jsonl
+      P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
+      # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
+      SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
+    volumes:
+      - ../../agents:/app/agents:ro
+    depends_on:
+      temporal: { condition: service_healthy }
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket;socket.create_connection(('temporal',7233),2)"]
+      interval: 5s
+      retries: 20
     restart: unless-stopped
 
   # Alternative policy decision point (Step 10, ADR 0020): `docker compose --profile cerbos up`

@@ -1,0 +1,31 @@
+[project]
+name = "agent-worker"
+version = "0.1.0"
+description = "Temporal worker (Step 19): runs the nodes of every `durability: temporal` agent as activities"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "agent-contracts",
+    "agent-spec",
+    "agent-tools",
+    "agent-runtime",
+    "agent-compiler",
+    "agent-api",
+]
+
+[project.scripts]
+agent-worker = "agent_worker.__main__:main"
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+agent-spec = { workspace = true }
+agent-tools = { workspace = true }
+agent-runtime = { workspace = true }
+agent-compiler = { workspace = true }
+agent-api = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_worker"]

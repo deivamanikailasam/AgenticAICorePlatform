@@ -89,10 +89,8 @@ def restart_server() -> None:
     if shutil.which("docker") is None:
         pytest.skip("docker is needed to restart the Temporal server")
     compose = ["docker", "compose", "-f", str(ROOT / "infra/compose/compose.yaml")]
-    subprocess.run([*compose, "--profile", "temporal", "restart", "temporal"], check=True)
-    subprocess.run(
-        [*compose, "--profile", "temporal", "up", "-d", "--wait", "temporal"], check=True
-    )
+    subprocess.run([*compose, "restart", "temporal"], check=True)
+    subprocess.run([*compose, "up", "-d", "--wait", "temporal"], check=True)
 
 
 async def scheduled_nodes(client: Client, run_id: str) -> Counter[str]:
