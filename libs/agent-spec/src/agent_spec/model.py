@@ -108,6 +108,20 @@ class Memory(_Spec):
     long_term: LongTermMemory | None = None
 
 
+class ContextSettings(_Spec):
+    """How each model call's context is built (Step 21)."""
+
+    strategy: Literal["rolling_summary", "trim", "offload_s3"] = "rolling_summary"
+    summariser: Literal["llm", "extractive"] = "llm"
+    # default: three quarters of the model's context window (the rest: tools and the answer)
+    window_tokens: int | None = Field(default=None, ge=256)
+    compact_tool_results_over: int = Field(default=1500, ge=100)
+    # just-in-time tool loading: above this many tools, show the most relevant few and let the
+    # model load others by search
+    jit_tools_over: int = Field(default=20, ge=1)
+    jit_top_k: int = Field(default=8, ge=1)
+
+
 class GuardrailRef(_Spec):
     name: str
     config: dict[str, Any] = Field(default_factory=dict)
@@ -224,6 +238,7 @@ class AgentSpec(_Spec):
     budgets: Budgets
     tools: tuple[ToolRef, ...] = ()
     memory: Memory = Memory()
+    context: ContextSettings = ContextSettings()
     guardrails: tuple[GuardrailRef, ...] = ()
     graph: Graph | None = None
     agents: tuple[SubAgent, ...] = ()

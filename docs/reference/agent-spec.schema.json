@@ -123,6 +123,64 @@
       "title": "Budgets",
       "type": "object"
     },
+    "ContextSettings": {
+      "additionalProperties": false,
+      "description": "How each model call's context is built (Step 21).",
+      "properties": {
+        "compact_tool_results_over": {
+          "default": 1500,
+          "minimum": 100,
+          "title": "Compact Tool Results Over",
+          "type": "integer"
+        },
+        "jit_tools_over": {
+          "default": 20,
+          "minimum": 1,
+          "title": "Jit Tools Over",
+          "type": "integer"
+        },
+        "jit_top_k": {
+          "default": 8,
+          "minimum": 1,
+          "title": "Jit Top K",
+          "type": "integer"
+        },
+        "strategy": {
+          "default": "rolling_summary",
+          "enum": [
+            "rolling_summary",
+            "trim",
+            "offload_s3"
+          ],
+          "title": "Strategy",
+          "type": "string"
+        },
+        "summariser": {
+          "default": "llm",
+          "enum": [
+            "llm",
+            "extractive"
+          ],
+          "title": "Summariser",
+          "type": "string"
+        },
+        "window_tokens": {
+          "anyOf": [
+            {
+              "minimum": 256,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Window Tokens"
+        }
+      },
+      "title": "ContextSettings",
+      "type": "object"
+    },
     "Durability": {
       "enum": [
         "memory",
@@ -656,6 +714,17 @@
       },
       "title": "Components",
       "type": "object"
+    },
+    "context": {
+      "$ref": "#/$defs/ContextSettings",
+      "default": {
+        "compact_tool_results_over": 1500,
+        "jit_tools_over": 20,
+        "jit_top_k": 8,
+        "strategy": "rolling_summary",
+        "summariser": "llm",
+        "window_tokens": null
+      }
     },
     "description": {
       "default": "",

@@ -48,6 +48,7 @@ from agent_contracts.models import (
 )
 
 from agent_runtime.approvals import ApproverNotAllowedError, evidence_for
+from agent_runtime.context import LOAD_TOOLS, ContextWindow
 from agent_runtime.executors import render
 from agent_runtime.memory_hooks import RunMemory, tainted
 
@@ -114,12 +115,14 @@ class AgentLoopExecutor(AgentLoop):
         registry: ToolRegistry,
         names: Mapping[str, str] | None = None,
         memory: RunMemory | None = None,
+        context: ContextWindow | None = None,
     ) -> None:
         self.model = model
         self.tools = tools
         self.registry = registry
         self.names = dict(names or {})  # spec tool name -> registry name
         self.memory = memory  # Step 20: recall before the first call, an episode after the answer
+        self.context = context  # Step 21: what each model call sees (budgets, summaries, JIT tools)
 
     # ------------------------------------------------------------------ setup
 
@@ -150,6 +153,15 @@ class AgentLoopExecutor(AgentLoop):
         return [Message(role=Role.SYSTEM, content=system), Message(role=Role.USER, content=task)]
 
     # ------------------------------------------------------------------ tools
+
+    def _loads_tools(self, call: ToolCall, defs: dict[str, ToolDefinition]) -> bool:
+        """A just-in-time ``load_tools`` call, answered by the context window itself."""
+        return (
+            call.name == LOAD_TOOLS.name
+            and call.name not in defs
+            and self.context is not None
+            and self.context.jit(defs)
+        )
 
     def _check_call(self, call: ToolCall, defs: dict[str, ToolDefinition]) -> str | None:
         if call.name not in defs:
@@ -307,11 +319,19 @@ class AgentLoopExecutor(AgentLoop):
                     {"transcript": [_message_to_json(m) for m in messages], "steps": step},
                 )
             step += 1
+            shown_tools = () if text else tuple(defs.values())
+            shown = messages
+            if self.context is not None:
+                if not text:
+                    shown_tools = tuple(self.context.tools(defs, messages, ctx))
+                window = self.model.capabilities(model_name).context_window
+                budget = self.context.budget(window, shown_tools)
+                shown = await self.context.messages(messages, ctx, budget)
             response = await self.model.chat(
                 ChatRequest(
                     model=model_name,
-                    messages=tuple(messages),
-                    tools=() if text else tuple(defs.values()),
+                    messages=tuple(shown),
+                    tools=shown_tools,
                     temperature=cfg.get("temperature"),
                     metadata={"run_id": ctx.run_id, "node_id": node.id, "step": str(step)},
                 )
@@ -364,6 +384,8 @@ class AgentLoopExecutor(AgentLoop):
                     ]
                     continue
 
+            meta = [c for c in calls if self._loads_tools(c, defs)]
+            calls = [c for c in calls if c not in meta]
             problems = [p for p in (self._check_call(c, defs) for c in calls) if p]
             if problem or problems:
                 repairs += 1
@@ -402,9 +424,11 @@ class AgentLoopExecutor(AgentLoop):
                 }
             token = tainted.set(any(m.trust is Trust.UNTRUSTED for m in messages))
             try:
-                observations = await self._run_calls(node, calls, ctx, step)
+                observations = await self._run_calls(node, calls, ctx, step) if calls else []
             finally:
                 tainted.reset(token)
+            if meta and self.context is not None:
+                observations = [self.context.load(c, defs, ctx) for c in meta] + observations
             if text:
                 observations = [
                     Message(

@@ -30,6 +30,7 @@ The root of ``agent.yaml``.
 | `budgets` | Budgets | yes |  |
 | `tools` | list of ToolRef |  | `[]` |
 | `memory` | Memory |  | `{'short_term': 'checkpoint', 'long_term': None}` |
+| `context` | ContextSettings |  | `{'strategy': 'rolling_summary', 'summariser': 'llm', 'window_tokens': None, 'compact_tool_results_over': 1500, 'jit_tools_over': 20, 'jit_top_k': 8}` |
 | `guardrails` | list of GuardrailRef |  | `[]` |
 | `graph` | Graph or null |  |  |
 | `agents` | list of SubAgent |  | `[]` |
@@ -64,6 +65,19 @@ Limits for one run. Safe by default: steps and wall-clock time are always requir
 | `max_tool_calls` | integer or null |  |  |
 | `max_delegation_depth` | integer |  | `2` |
 | `max_fanout` | integer |  | `8` |
+
+### `ContextSettings`
+
+How each model call's context is built (Step 21).
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `strategy` | `rolling_summary` \| `trim` \| `offload_s3` |  | `rolling_summary` |
+| `summariser` | `llm` \| `extractive` |  | `llm` |
+| `window_tokens` | integer or null |  |  |
+| `compact_tool_results_over` | integer |  | `1500` |
+| `jit_tools_over` | integer |  | `20` |
+| `jit_top_k` | integer |  | `8` |
 
 ### `Durability`
 

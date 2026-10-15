@@ -37,6 +37,7 @@ from agent_contracts.models import (
 from agent_contracts.registry import registry as component_registry
 from agent_runtime.agent_loop import AgentLoopExecutor
 from agent_runtime.agentic_rag import AgenticRagStrategy
+from agent_runtime.context import ContextWindow, ExtractiveSummariser, LlmSummariser, manager_for
 from agent_runtime.executors import (
     LlmNodeExecutor,
     RouterNodeExecutor,
@@ -110,6 +111,7 @@ def executors_for(
     tools: ToolExecutor | None = None,
     spec_path: str | Path | None = None,
     memory: RunMemory | None = None,
+    artefacts: Any = None,
 ) -> dict[NodeKind, NodeExecutor]:
     kinds = {n.kind for n in plan.nodes}
     executors: dict[NodeKind, NodeExecutor] = {}
@@ -146,7 +148,9 @@ def executors_for(
             if any(n.config.get("tools") for n in plan.nodes if n.kind is NodeKind.AGENT):
                 raise LookupError("agent nodes with tools need a tool executor with a registry")
             tools, registry = _no_tools()
-        executors[NodeKind.AGENT] = agent_dispatcher(spec, plan, model, tools, registry, memory)
+        executors[NodeKind.AGENT] = agent_dispatcher(
+            spec, plan, model, tools, registry, memory, context_for(spec, model, artefacts)
+        )
     if NodeKind.SUBPLAN in kinds:
         base = Path(spec_path).parent if spec_path else Path.cwd()
 
@@ -261,6 +265,7 @@ def agent_dispatcher(
     tools: ToolExecutor,
     registry: ToolRegistry,
     memory: RunMemory | None = None,
+    context: ContextWindow | None = None,
 ) -> AgentLoop:
     """The executor for agent nodes: the spec's ReAct engine plus the planning and reflection
     strategies (Step 14), with planner and critic from the spec's components. Long-term memory
@@ -271,14 +276,14 @@ def agent_dispatcher(
     critic_name = spec.components.get("critic", "llm")
 
     def react(m: ModelClient) -> AgentLoop:
-        if engine == "native" and memory is not None:
-            return AgentLoopExecutor(m, tools, registry, names, memory=memory)
+        if engine == "native":
+            return AgentLoopExecutor(m, tools, registry, names, memory=memory, context=context)
         loop = _create("agent_loop", engine, model=m, tools=tools, registry=registry, names=names)
         assert isinstance(loop, AgentLoop)
         return loop
 
     def native(m: ModelClient) -> AgentLoop:  # strategies' sub-steps use the native loop
-        return AgentLoopExecutor(m, tools, registry, names)
+        return AgentLoopExecutor(m, tools, registry, names, context=context)
 
     def planner(m: ModelClient) -> Planner:
         return _create("planner", planner_name, model=m)  # type: ignore[no-any-return]
@@ -298,6 +303,23 @@ def agent_dispatcher(
             ),
             "agentic_rag": AgenticRagStrategy(**common),
         }
+    )
+
+
+def context_for(spec: AgentSpec, model: ModelClient, artefacts: Any = None) -> ContextWindow:
+    """The context policy of the spec's agent nodes (Step 21, ``context:`` in agent.yaml)."""
+    cfg = spec.context
+    summariser: Any = LlmSummariser(model) if cfg.summariser == "llm" else ExtractiveSummariser()
+    collaborators: dict[str, Any] = {"summariser": summariser}
+    if cfg.strategy == "offload_s3":
+        if artefacts is None:
+            raise LookupError(
+                f"spec '{spec.name}': context strategy offload_s3 needs an artefact store"
+            )
+        collaborators["artefacts"] = artefacts
+    manager = manager_for(cfg.model_dump(), **collaborators)
+    return ContextWindow(
+        manager, cfg.window_tokens, jit_over=cfg.jit_tools_over, jit_top_k=cfg.jit_top_k
     )
 
 

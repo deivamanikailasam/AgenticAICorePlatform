@@ -230,7 +230,7 @@ class TextOnlyStandIn(GoldenStandIn):
     async def chat(self, request: ChatRequest) -> ChatResponse:
         self.requests.append(request)
         last = request.messages[-1]
-        if last.content.startswith("Observation"):
+        if "Observation from" in last.content:  # delimited as untrusted data (Step 21)
             text = f"Final Answer: {last.content}"
         else:
             case = next(c for c in CASES if c["question"] in last.content)

@@ -29,6 +29,7 @@ budgets therefore keep a safety margin below the model's window.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Mapping, Sequence
@@ -36,7 +37,16 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from agent_contracts.interfaces import ContextManager, ModelClient
-from agent_contracts.models import ChatRequest, ContextSection, Message, Role, RunContext, Trust
+from agent_contracts.models import (
+    ChatRequest,
+    ContextSection,
+    Message,
+    Role,
+    RunContext,
+    ToolCall,
+    ToolDefinition,
+    Trust,
+)
 
 ORDER = ("system", "tools", "memory", "summary", "history", "retrieved", "user", "work")
 SHARES: Mapping[str, float] = {
@@ -444,3 +454,108 @@ def manager_for(
         compact_over_tokens=int(cfg.get("compact_tool_results_over", 1500)),
         **collaborators,
     )
+
+
+# ---------------------------------------------------------------- per-run windows and JIT tools
+
+LOAD_TOOLS = ToolDefinition(
+    name="load_tools",
+    description=(
+        "Find more tools you are allowed to use. Describe what you need; matching tools become "
+        "available from your next step."
+    ),
+    parameters={
+        "type": "object",
+        "properties": {"query": {"type": "string", "minLength": 2}},
+        "required": ["query"],
+        "additionalProperties": False,
+    },
+)
+WORD = re.compile(r"[a-z0-9]+")
+
+
+def _words(text: str) -> set[str]:
+    return {w for w in WORD.findall(text.lower()) if len(w) > 2}
+
+
+def rank_tools(defs: Sequence[ToolDefinition], query: str) -> list[ToolDefinition]:
+    """Tools ordered by word overlap between ``query`` and each tool's name and description."""
+    q = _words(query)
+    scored = [
+        (len(q & _words(f"{d.name.replace('_', ' ')} {d.description}")), i, d)
+        for i, d in enumerate(defs)
+    ]
+    return [d for score, _, d in sorted(scored, key=lambda t: (-t[0], t[1]))]
+
+
+class ContextWindow:
+    """The context policy of one agent node: builds the messages and the tool list for each
+    model call. Keeps per-run state (rolling summary, loaded tools); the run's full transcript
+    is never changed, only what the model is shown."""
+
+    def __init__(
+        self,
+        manager: PlatformContextManager,
+        window_tokens: int | None = None,
+        jit_over: int = 20,
+        jit_top_k: int = 8,
+        reserve_tokens: int = 1024,
+    ) -> None:
+        self.manager = manager
+        self.window_tokens = window_tokens
+        self.jit_over = jit_over
+        self.jit_top_k = jit_top_k
+        self.reserve = reserve_tokens
+        self.states: dict[str, ContextState] = {}
+        self.loaded: dict[str, set[str]] = {}
+
+    def jit(self, defs: Mapping[str, ToolDefinition]) -> bool:
+        return len(defs) > self.jit_over
+
+    def tools(
+        self, defs: Mapping[str, ToolDefinition], transcript: Sequence[Message], ctx: RunContext
+    ) -> list[ToolDefinition]:
+        """All tools for small sets; for large ones the most relevant few, the ones already
+        used or loaded in this run, and ``load_tools``."""
+        if not self.jit(defs):
+            return list(defs.values())
+        used = {c.name for m in transcript for c in m.tool_calls}
+        keep = used | self.loaded.get(ctx.run_id, set())
+        query = " ".join(
+            m.content for m in transcript if m.role is Role.USER and m.trust is not Trust.UNTRUSTED
+        )[-2000:]
+        ranked = [d for d in rank_tools(list(defs.values()), query) if d.name not in keep]
+        chosen = [defs[n] for n in sorted(keep) if n in defs] + ranked[: self.jit_top_k]
+        return [*chosen, LOAD_TOOLS]
+
+    def load(self, call: ToolCall, defs: Mapping[str, ToolDefinition], ctx: RunContext) -> Message:
+        """Answer a ``load_tools`` call: the best matches join this run's tool list."""
+        found = rank_tools(list(defs.values()), str(call.arguments.get("query", "")))[
+            : self.jit_top_k
+        ]
+        self.loaded.setdefault(ctx.run_id, set()).update(d.name for d in found)
+        listing = [{"name": d.name, "description": d.description} for d in found]
+        return Message(
+            role=Role.TOOL,
+            name=LOAD_TOOLS.name,
+            tool_call_id=call.id,
+            content=json.dumps({"loaded": listing}),
+            trust=Trust.TRUSTED,
+        )
+
+    def budget(self, model_window: int, tools: Sequence[ToolDefinition]) -> int:
+        window = self.window_tokens or int(model_window * 0.75)
+        tool_tokens = sum((len(json.dumps(d.model_dump())) + 3) // 4 for d in tools)
+        return max(256, window - tool_tokens - self.reserve)
+
+    async def messages(
+        self, transcript: Sequence[Message], ctx: RunContext, budget_tokens: int
+    ) -> list[Message]:
+        state = self.states.setdefault(self._key(transcript, ctx), ContextState())
+        return await self.manager.window(transcript, budget_tokens, ctx, state)
+
+    @staticmethod
+    def _key(transcript: Sequence[Message], ctx: RunContext) -> str:
+        """One state per transcript: strategies run several loops in the same run."""
+        first = next((m.content for m in transcript if m.role is Role.USER), "")
+        return f"{ctx.run_id}|{hashlib.sha256(first.encode()).hexdigest()[:16]}"
