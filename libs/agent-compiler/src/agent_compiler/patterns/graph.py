@@ -51,6 +51,8 @@ class GraphPatternBuilder(PatternBuilder):
             if kind is NodeKind.AGENT and not self.allow_agent_nodes:
                 raise ValueError(f"node {raw['id']}: agent nodes need pattern 'hybrid'")
             config = {k: raw[k] for k in NODE_FIELDS if raw.get(k) not in (None, (), [], {})}
+            if "compensation" in config:
+                config["compensation"] = f"{prefix}{config['compensation']}"
             nodes.append(PlanNode(id=f"{prefix}{raw['id']}", kind=kind, config=config))
         edges = tuple(
             PlanEdge(
@@ -58,7 +60,10 @@ class GraphPatternBuilder(PatternBuilder):
             )
             for e in section.get("edges", ())
         )
-        ids = [n.id for n in nodes]
+        compensators = {
+            f"{prefix}{raw['compensation']}" for raw in section["nodes"] if raw.get("compensation")
+        }
+        ids = [n.id for n in nodes if n.id not in compensators]
         has_incoming = {e.target for e in edges}
         entry = (
             f"{prefix}{section['entry']}"

@@ -78,6 +78,18 @@ def _graph_issues(spec: AgentSpec, graph: Graph) -> list[SpecIssue]:
     nodes = {n.id: n for n in graph.nodes}
     for dup in sorted({i for i in ids if ids.count(i) > 1}):
         issues.append(SpecIssue("graph.nodes", f"node id '{dup}' is used more than once"))
+    # compensation nodes run only when the saga unwinds: never a start, never "unreachable",
+    # and they take no edges (Step 12)
+    compensators = {n.compensation for n in graph.nodes if n.compensation}
+    for i, e in enumerate(graph.edges):
+        for end in (e.source, e.target):
+            if end in compensators:
+                issues.append(
+                    SpecIssue(
+                        f"graph.edges[{i}]",
+                        f"node '{end}' is a compensation step and cannot have edges",
+                    )
+                )
 
     out: dict[str, list[str]] = defaultdict(list)
     incoming: dict[str, int] = defaultdict(int)
@@ -105,7 +117,7 @@ def _graph_issues(spec: AgentSpec, graph: Graph) -> list[SpecIssue]:
             issues.append(SpecIssue("graph.entry", f"entry node '{entry}' does not exist"))
             return issues
     else:
-        roots = [n for n in ids if incoming[n] == 0]
+        roots = [n for n in ids if incoming[n] == 0 and n not in compensators]
         if len(roots) != 1:
             issues.append(
                 SpecIssue(
@@ -125,7 +137,7 @@ def _graph_issues(spec: AgentSpec, graph: Graph) -> list[SpecIssue]:
             seen.add(n)
             stack.extend(out[n])
     for n in ids:
-        if n not in seen:
+        if n not in seen and n not in compensators:
             issues.append(
                 SpecIssue("graph.nodes", f"node '{n}' can never run (not reachable from '{entry}')")
             )

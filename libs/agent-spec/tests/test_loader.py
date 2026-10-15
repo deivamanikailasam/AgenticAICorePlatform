@@ -148,3 +148,15 @@ def test_cli_validate(capsys: pytest.CaptureFixture[str]) -> None:
     out = capsys.readouterr().out
     assert "FAIL" in out
     assert "error:" in out
+
+
+def test_compensation_steps_take_no_edges() -> None:
+    base = (ROOT / "agents/hello-workflow/agent.yaml").read_text()
+    text = base.replace(
+        "    - { id: greet, type: function, fn: hello }",
+        "    - { id: greet, type: function, fn: hello, compensation: undo }\n"
+        "    - { id: undo, type: function, fn: hello }\n"
+        '  edges: ["greet -> undo"]',
+    )
+    with pytest.raises(SpecError, match="compensation step and cannot have edges"):
+        load_spec_text(text)
