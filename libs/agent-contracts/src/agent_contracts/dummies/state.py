@@ -15,6 +15,7 @@ from agent_contracts.models import (
     RunResult,
     RunState,
     RunStatus,
+    utcnow,
 )
 
 
@@ -189,11 +190,39 @@ class DeferredDurableExecutor(_AsyncioDurable):
 
 
 def _visible(item: MemoryItem, scope: MemoryScope) -> bool:
-    if item.scope.tenant_id != scope.tenant_id:
-        return False
-    if scope.user_id and item.scope.user_id not in (None, scope.user_id):
-        return False
-    return not (scope.agent_id and item.scope.agent_id not in (None, scope.agent_id))
+    expired = item.expires_at is not None and item.expires_at <= utcnow()
+    return scope.sees(item.scope) and not expired
+
+
+def _about(item: MemoryItem, tenant_id: str, user_id: str) -> bool:
+    return item.scope.tenant_id == tenant_id and user_id in (
+        item.scope.user_id,
+        item.provenance.subject_user_id,
+    )
+
+
+def _latest(items: Sequence[MemoryItem]) -> list[MemoryItem]:
+    """Only the newest version of each procedural key."""
+    newest: dict[tuple[str, str | None, str | None, str], int] = {}
+    for i in items:
+        if i.key:
+            k = (i.scope.tenant_id, i.scope.user_id, i.scope.agent_id, i.key)
+            newest[k] = max(newest.get(k, 0), i.version)
+    return [
+        i
+        for i in items
+        if not i.key
+        or i.version == newest[(i.scope.tenant_id, i.scope.user_id, i.scope.agent_id, i.key)]
+    ]
+
+
+def next_version(items: Sequence[MemoryItem], item: MemoryItem) -> MemoryItem:
+    if not item.key:
+        return item
+    same = [
+        i.version for i in items if i.key == item.key and i.scope == item.scope and i.id != item.id
+    ]
+    return item.model_copy(update={"version": max(same, default=0) + 1})
 
 
 def _score(query: str, item: MemoryItem) -> float:
@@ -208,7 +237,7 @@ class InMemoryMemoryStore(MemoryStore):
         self._items: dict[str, MemoryItem] = {}
 
     async def put(self, item: MemoryItem) -> str:
-        self._items[item.id] = item
+        self._items[item.id] = next_version(list(self._items.values()), item)
         return item.id
 
     async def get(self, scope: MemoryScope, item_id: str) -> MemoryItem | None:
@@ -218,8 +247,7 @@ class InMemoryMemoryStore(MemoryStore):
     async def search(self, scope: MemoryScope, query: str, k: int = 5) -> Sequence[MemoryItem]:
         scored = [
             i.model_copy(update={"score": _score(query, i)})
-            for i in self._items.values()
-            if _visible(i, scope)
+            for i in _latest([i for i in self._items.values() if _visible(i, scope)])
         ]
         scored = [i for i in scored if (i.score or 0) > 0]
         return sorted(scored, key=lambda i: i.score or 0, reverse=True)[:k]
@@ -232,11 +260,7 @@ class InMemoryMemoryStore(MemoryStore):
         return False
 
     async def erase_subject(self, tenant_id: str, user_id: str) -> int:
-        doomed = [
-            k
-            for k, i in self._items.items()
-            if i.scope.tenant_id == tenant_id and i.scope.user_id == user_id
-        ]
+        doomed = [k for k, i in self._items.items() if _about(i, tenant_id, user_id)]
         for k in doomed:
             del self._items[k]
         return len(doomed)
@@ -257,6 +281,7 @@ class SqliteMemoryStore(MemoryStore):
         return [MemoryItem.model_validate_json(r[0]) for r in cur.fetchall()]
 
     async def put(self, item: MemoryItem) -> str:
+        item = next_version(self._all(item.scope.tenant_id), item)
         self._db.execute(
             "insert or replace into memory values (?,?,?,?)",
             (item.id, item.scope.tenant_id, item.scope.user_id, item.model_dump_json()),
@@ -272,8 +297,7 @@ class SqliteMemoryStore(MemoryStore):
     async def search(self, scope: MemoryScope, query: str, k: int = 5) -> Sequence[MemoryItem]:
         hits = [
             i.model_copy(update={"score": _score(query, i)})
-            for i in self._all(scope.tenant_id)
-            if _visible(i, scope)
+            for i in _latest([i for i in self._all(scope.tenant_id) if _visible(i, scope)])
         ]
         hits = [i for i in hits if (i.score or 0) > 0]
         return sorted(hits, key=lambda i: (-(i.score or 0), i.created_at))[:k]
@@ -286,9 +310,10 @@ class SqliteMemoryStore(MemoryStore):
         return True
 
     async def erase_subject(self, tenant_id: str, user_id: str) -> int:
-        cur = self._db.execute("delete from memory where tenant=? and user=?", (tenant_id, user_id))
+        doomed = [i.id for i in self._all(tenant_id) if _about(i, tenant_id, user_id)]
+        self._db.executemany("delete from memory where id=?", [(d,) for d in doomed])
         self._db.commit()
-        return cur.rowcount
+        return len(doomed)
 
 
 mark_dummies(globals())

@@ -8,6 +8,7 @@ from agent_contracts.interfaces import ContextManager, MemoryPolicy
 from agent_contracts.models import (
     ContextSection,
     MemoryItem,
+    MemoryKind,
     MemoryWriteDecision,
     Message,
     Role,
@@ -25,6 +26,10 @@ class ValidateRedactMemoryPolicy(MemoryPolicy):
         if item.provenance.trust is Trust.UNTRUSTED and not item.provenance.validated:
             return MemoryWriteDecision(
                 allowed=False, reasons=("untrusted content must be validated before storing",)
+            )
+        if item.kind is MemoryKind.PROCEDURAL and item.provenance.trust is Trust.UNTRUSTED:
+            return MemoryWriteDecision(
+                allowed=False, reasons=("instructions are never learned from untrusted content",)
             )
         redacted = PHONE.sub("[PHONE]", EMAIL.sub("[EMAIL]", item.content))
         reasons = ("redacted personal data",) if redacted != item.content else ()

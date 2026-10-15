@@ -358,9 +358,20 @@ class MemoryKind(StrEnum):
 
 
 class MemoryScope(Frozen):
+    """Who a memory belongs to. An item is visible to a query only when each of the item's
+    non-empty fields equals the query's: tenant-wide items (no user) are visible to every user of
+    the tenant, a user's items only to that user, an agent's items only to that agent."""
+
     tenant_id: str
     user_id: str | None = None
     agent_id: str | None = None
+
+    def sees(self, item_scope: MemoryScope) -> bool:
+        return (
+            item_scope.tenant_id == self.tenant_id
+            and item_scope.user_id in (None, self.user_id)
+            and item_scope.agent_id in (None, self.agent_id)
+        )
 
 
 class Provenance(Frozen):
@@ -368,6 +379,8 @@ class Provenance(Frozen):
     trust: Trust
     run_id: str | None = None
     validated: bool = False
+    # whose personal data this came from, when that is not the item's own user (right to erasure)
+    subject_user_id: str | None = None
 
 
 class MemoryItem(Frozen):
@@ -378,6 +391,10 @@ class MemoryItem(Frozen):
     provenance: Provenance
     confidence: float = Field(default=1.0, ge=0, le=1)
     expires_at: datetime | None = None
+    # procedural memory is versioned like prompts: items sharing a key are versions, and search
+    # returns only the newest; the store assigns the version
+    key: str | None = None
+    version: int = Field(default=1, ge=1)
     score: float | None = None  # filled in by search
     created_at: datetime = Field(default_factory=utcnow)
 
