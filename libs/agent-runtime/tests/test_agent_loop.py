@@ -21,6 +21,7 @@ from agent_contracts.models import (
     Trust,
 )
 from agent_contracts.testing import ctx
+from agent_contracts.testing.agent_loop import AgentLoopContract
 from agent_runtime.agent_loop import AgentLoopExecutor, MalformedResponseError, parse_text_react
 from agent_runtime.nodes import StopRun
 from agent_tools.authorising import AuthorisingToolExecutor
@@ -270,3 +271,8 @@ async def test_rejected_approval_is_reported_to_the_model_and_nothing_runs() -> 
     assert done["answer"] == "not paid"
     assert writer.calls == []
     assert "rejected" in model.requests[-1].messages[-1].content
+
+
+class TestNativeLoopContract(AgentLoopContract):
+    def make(self, model: Any, tools: Any, registry: Any) -> AgentLoopExecutor:
+        return AgentLoopExecutor(model, tools, registry)

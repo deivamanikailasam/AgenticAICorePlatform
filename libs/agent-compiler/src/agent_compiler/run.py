@@ -14,7 +14,13 @@ from pathlib import Path
 from typing import Any
 
 from agent_contracts.dummies.runtime import BUILTIN_FUNCTIONS
-from agent_contracts.interfaces import ModelClient, RuntimeAdapter, ToolExecutor, ToolRegistry
+from agent_contracts.interfaces import (
+    AgentLoop,
+    ModelClient,
+    RuntimeAdapter,
+    ToolExecutor,
+    ToolRegistry,
+)
 from agent_contracts.models import (
     ExecutablePlan,
     NodeKind,
@@ -23,7 +29,7 @@ from agent_contracts.models import (
     RunResult,
     RunStatus,
 )
-from agent_runtime.agent_loop import AgentLoopExecutor
+from agent_contracts.registry import registry as component_registry
 from agent_runtime.executors import (
     LlmNodeExecutor,
     RouterNodeExecutor,
@@ -105,7 +111,23 @@ def executors_for(
             if any(n.config.get("tools") for n in plan.nodes if n.kind is NodeKind.AGENT):
                 raise LookupError("agent nodes with tools need a tool executor with a registry")
             tools, registry = _no_tools()
-        executors[NodeKind.AGENT] = AgentLoopExecutor(model, tools, registry, tool_names(plan))
+        engine = spec.components.get("agent_loop", "native")
+        try:
+            loop = component_registry.create(
+                "agent_loop",
+                engine,
+                model=model,
+                tools=tools,
+                registry=registry,
+                names=tool_names(plan),
+            )
+        except KeyError:
+            installed = ", ".join(component_registry.names("agent_loop")) or "none"
+            raise LookupError(
+                f"agent loop engine '{engine}' is not installed (installed: {installed})"
+            ) from None
+        assert isinstance(loop, AgentLoop)
+        executors[NodeKind.AGENT] = loop
     if NodeKind.SUBPLAN in kinds:
         base = Path(spec_path).parent if spec_path else Path.cwd()
 

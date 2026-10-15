@@ -9,6 +9,7 @@ from typing import Any
 from agent_contracts import registry
 from agent_contracts.interfaces import INTERFACES
 from agent_contracts.testing import contracts as C  # noqa: N812
+from agent_contracts.testing.agent_loop import AgentLoopContract
 
 CONTRACTS: dict[str, type] = {
     "model_client": C.ModelClientContract,
@@ -16,6 +17,7 @@ CONTRACTS: dict[str, type] = {
     "tool_registry": C.ToolRegistryContract,
     "tool_executor": C.ToolExecutorContract,
     "code_sandbox": C.CodeSandboxContract,
+    "agent_loop": AgentLoopContract,
     "pattern_builder": C.PatternBuilderContract,
     "runtime_adapter": C.RuntimeAdapterContract,
     "checkpointer": C.CheckpointerContract,
@@ -50,6 +52,10 @@ def _dummy_names(slot: str) -> list[str]:
 def _factory(slot: str, name: str) -> Any:
     if slot == "tool_executor":
         return lambda self, reg: registry.create(slot, name, registry=reg)
+    if slot == "agent_loop":
+        return lambda self, model, tools, reg: registry.create(
+            slot, name, model=model, tools=tools, registry=reg
+        )
     if slot == "durable_executor":
         return lambda self, workflows: registry.create(slot, name, workflows=workflows)
     return lambda self: registry.create(slot, name)

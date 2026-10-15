@@ -19,6 +19,7 @@ dependencies = [
 "runtime_adapter.langgraph" = "agent_runtime.adapters.langgraph:LangGraphAdapter"
 "runtime_adapter.agent_framework" = "agent_runtime.adapters.agent_framework:AgentFrameworkAdapter"
 "runtime_adapter.crewai" = "agent_runtime.adapters.stubs:CrewAIAdapter"
+"agent_loop.native" = "agent_runtime.agent_loop:AgentLoopExecutor"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }

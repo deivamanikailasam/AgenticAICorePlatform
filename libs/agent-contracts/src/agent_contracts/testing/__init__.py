@@ -12,8 +12,9 @@ Each contract is a plain pytest class; subclasses provide ``make`` (some contrac
 collaborators such as a tool registry or workflow table).
 """
 
+from agent_contracts.testing.agent_loop import AgentLoopContract
 from agent_contracts.testing.contracts import *  # noqa: F403
 from agent_contracts.testing.contracts import __all__
 from agent_contracts.testing.workflow import WORKFLOW_FUNCTIONS, WorkflowRuntimeContract
 
-__all__ = [*__all__, "WORKFLOW_FUNCTIONS", "WorkflowRuntimeContract"]
+__all__ = [*__all__, "AgentLoopContract", "WORKFLOW_FUNCTIONS", "WorkflowRuntimeContract"]

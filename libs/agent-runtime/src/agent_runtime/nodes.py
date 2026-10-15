@@ -27,22 +27,13 @@ from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_contracts.interfaces import StopRun
 from agent_contracts.models import ExecutablePlan, NodeKind, PlanNode, RunContext
 
 NodeFn = Callable[[dict[str, Any]], Any | Awaitable[Any]]
 #: Runs a non-function node: (node, values, ctx) -> value; raise to fail; return
 #: {"_outcome": ...} to choose a branch.
 NodeExecutor = Callable[[PlanNode, dict[str, Any], RunContext], Awaitable[Any]]
-
-
-class StopRun(Exception):  # noqa: N818 - a control signal, not an error
-    """Raised by a node that hit a limit (``max_steps`` in an agent loop, a budget): the run ends
-    with status ``stopped`` and keeps its partial state, unless a ``stopped`` edge handles it."""
-
-    def __init__(self, reason: str, partial: Any = None) -> None:
-        super().__init__(reason)
-        self.reason = reason
-        self.partial = partial
 
 
 @dataclass(frozen=True)

@@ -63,6 +63,8 @@ agent-components = "agent_contracts.registry:main"
 "simulator.patient_user" = "agent_contracts.dummies.evals:PatientUserSimulator"
 "code_sandbox.unavailable" = "agent_contracts.dummies.sandbox:UnavailableSandbox"
 "code_sandbox.scripted" = "agent_contracts.dummies.sandbox:ScriptedSandbox"
+"agent_loop.minimal" = "agent_contracts.dummies.agent_loop:MinimalReactLoop"
+"agent_loop.single_shot" = "agent_contracts.dummies.agent_loop:SingleShotToolLoop"
 
 [build-system]
 requires = ["hatchling==1.32.4"]

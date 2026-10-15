@@ -45,6 +45,7 @@ from agent_contracts.models import (
     ModelCapabilities,
     Plan,
     PlanFragment,
+    PlanNode,
     PolicyDecision,
     PolicyInput,
     RouteDecision,
@@ -351,6 +352,32 @@ class LoopDetector(Component):
     def reset(self, run_id: str) -> None: ...
 
 
+class StopRun(Exception):  # noqa: N818 - a control signal, not an error
+    """Raised by a node that hit a limit (``max_steps`` in an agent loop, a budget): the run ends
+    with status ``stopped`` and keeps its partial state, unless a ``stopped`` edge handles it."""
+
+    def __init__(self, reason: str, partial: Any = None) -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.partial = partial
+
+
+class AgentLoop(Component):
+    """Runs one agent's think-act loop for an AGENT plan node (Step 13).
+
+    Built with the platform's model client, tool executor and tool registry
+    (``model=, tools=, registry=, names=``), so model access and tool policy stay the
+    platform's whichever engine runs the loop. Returns ``{"answer": ..., "steps": n}``, or
+    ``{"_outcome": "needs_approval", ...}`` to pause for an approval; raises ``StopRun`` at the
+    step limit.
+    """
+
+    slot = "agent_loop"
+
+    @abstractmethod
+    async def __call__(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> Any: ...
+
+
 class CodeSandbox(Component):
     """Runs model-written code isolated from the host: no network, capped resources (Step 9)."""
 
@@ -456,6 +483,7 @@ INTERFACES: dict[str, type[Component]] = {
         ToolRegistry,
         ToolExecutor,
         CodeSandbox,
+        AgentLoop,
         PatternBuilder,
         RuntimeAdapter,
         Checkpointer,
