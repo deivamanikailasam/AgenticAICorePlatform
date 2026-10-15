@@ -1,5 +1,8 @@
 """``${VAR}``, ``${VAR:-default}`` and ``${env:VAR}`` substitution, and secret references.
 
+Lower-case references such as ``${validate.total}`` are run values for node templates and are
+left for the executors (environment variable names are upper case).
+
 Secret references (``${secret:<path>#<key>}``) are *never* resolved by the loader. They stay as
 text and are resolved at tool-call time from OpenBao (Step 29), so a secret can never end up in a
 prompt, a trace or the compiled plan. They are only allowed under ``tools[].config``.
@@ -16,13 +19,15 @@ from agent_spec.errors import SpecIssue
 TOKEN = re.compile(r"\$\{(?P<body>[^}]+)\}")
 SECRET = re.compile(r"^secret:(?P<path>[A-Za-z0-9_./-]+)#(?P<key>[A-Za-z0-9_.-]+)$")
 VAR = re.compile(r"^(?:env:)?(?P<name>[A-Z_][A-Z0-9_]*)(?::-(?P<default>.*))?$")
+# ``${validate.total}``: a run value read by the node executors at run time, not by the loader
+RUN_VALUE = re.compile(r"^[a-z][a-z0-9_]*(?:\.[A-Za-z0-9_]+)*$")
 
 
 def _interpolate_str(text: str, env: Mapping[str, str], path: str, issues: list[SpecIssue]) -> str:
     def replace(m: re.Match[str]) -> str:
         body = m["body"]
-        if SECRET.match(body):
-            return m.group(0)  # kept verbatim; checked by placement rules
+        if SECRET.match(body) or RUN_VALUE.match(body):
+            return m.group(0)  # kept verbatim: secrets by placement rules, run values at run time
         var = VAR.match(body)
         if not var:
             issues.append(

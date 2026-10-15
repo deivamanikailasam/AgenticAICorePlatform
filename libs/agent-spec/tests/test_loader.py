@@ -93,6 +93,15 @@ def test_env_interpolation_and_missing_variables() -> None:
         load_spec_text(text, env={})
 
 
+def test_run_value_references_are_left_for_the_executors() -> None:
+    base = (ROOT / "agents/hello-workflow/agent.yaml").read_text()
+    text = base.replace("description: Greets", "description: ${validate.total} ${GREETING} Greets")
+    spec = load_spec_text(text, env={"GREETING": "Hi."})
+    assert spec.description.startswith("${validate.total} Hi. Greets")
+    with pytest.raises(SpecError, match="cannot understand"):
+        load_spec_text(base.replace("description: Greets", "description: ${Bad-Name}"), env={})
+
+
 def test_cycle_with_loop_bound_is_allowed() -> None:
     text = """
 spec_version: 1
