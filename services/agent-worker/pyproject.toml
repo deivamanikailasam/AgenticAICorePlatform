@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Temporal worker (Step 19): runs the nodes of every `durability: temporal` agent as activities"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "agent-audit",
     "agent-contracts",
     "agent-spec",
     "agent-tools",
@@ -16,6 +17,7 @@ dependencies = [
 agent-worker = "agent_worker.__main__:main"
 
 [tool.uv.sources]
+agent-audit = { workspace = true }
 agent-contracts = { workspace = true }
 agent-spec = { workspace = true }
 agent-tools = { workspace = true }

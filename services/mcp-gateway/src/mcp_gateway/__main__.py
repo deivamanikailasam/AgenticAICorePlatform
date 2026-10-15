@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 
 import uvicorn
-from agent_contracts.dummies.observability import JsonlAuditSink
+from agent_audit.factory import audit_sink_from_env
 from agent_contracts.interfaces import PolicyDecisionPoint
 from agent_spec.platform import load_platform
 from agent_tools import pdp_factory
@@ -32,8 +32,9 @@ def build_pdp(settings: Settings) -> PolicyDecisionPoint:
 
 def main() -> None:
     settings = Settings()
-    # Audit goes to a local hash-chained JSONL file until Step 31 adds the Project 0 audit adapter.
-    audit = JsonlAuditSink(os.environ.get("MCP_GATEWAY_AUDIT_FILE", "/tmp/mcp-gateway-audit.jsonl"))  # noqa: S108
+    # Step 31: the shared hash-chained Postgres trail (AGENT_AUDIT_DSN), else a local file (dev)
+    local = os.environ.get("MCP_GATEWAY_AUDIT_FILE", "/tmp/mcp-gateway-audit.jsonl")  # noqa: S108
+    audit = audit_sink_from_env(local)
     gateway = Gateway(settings, load_platform(), build_pdp(settings), audit)
     uvicorn.run(gateway.app(), host=settings.host, port=settings.port, log_level="info")
 

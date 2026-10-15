@@ -29,6 +29,7 @@ version = "0.1.0"
 source = { editable = "services/a2a-gateway" }
 dependencies = [
     { name = "a2a-sdk", extra = ["http-server", "signing"] },
+    { name = "agent-audit" },
     { name = "agent-contracts" },
     { name = "agent-spec" },
     { name = "agent-tools" },
@@ -41,6 +42,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", extras = ["http-server", "signing"], specifier = "==1.2.1" },
+    { name = "agent-audit", editable = "libs/agent-audit" },
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-spec", editable = "libs/agent-spec" },
     { name = "agent-tools", editable = "libs/agent-tools" },
@@ -444,6 +446,7 @@ version = "0.1.0"
 source = { editable = "services/agent-worker" }
 dependencies = [
     { name = "agent-api" },
+    { name = "agent-audit" },
     { name = "agent-compiler" },
     { name = "agent-contracts" },
     { name = "agent-runtime" },
@@ -454,6 +457,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agent-api", editable = "services/agent-api" },
+    { name = "agent-audit", editable = "libs/agent-audit" },
     { name = "agent-compiler", editable = "libs/agent-compiler" },
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-runtime", editable = "libs/agent-runtime" },
@@ -1327,6 +1331,7 @@ name = "mcp-gateway"
 version = "0.1.0"
 source = { editable = "services/mcp-gateway" }
 dependencies = [
+    { name = "agent-audit" },
     { name = "agent-contracts" },
     { name = "agent-spec" },
     { name = "agent-tools" },
@@ -1337,6 +1342,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agent-audit", editable = "libs/agent-audit" },
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-spec", editable = "libs/agent-spec" },
     { name = "agent-tools", editable = "libs/agent-tools" },

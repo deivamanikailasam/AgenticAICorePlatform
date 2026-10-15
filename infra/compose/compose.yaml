@@ -66,6 +66,8 @@ services:
       MCP_GATEWAY_PUBLIC_URL: ${MCP_GATEWAY_PUBLIC_URL:-http://127.0.0.1:8090}
       MCP_GATEWAY_ALLOWED_HOSTS: 127.0.0.1:*,localhost:*,mcp-gateway:*
       MCP_GATEWAY_AUDIT_FILE: /tmp/mcp-gateway-audit.jsonl
+      # Step 31: the shared hash-chained audit trail (else the local file above, dev only)
+      AGENT_AUDIT_DSN: ${AGENT_AUDIT_DSN_INTERNAL:-}
       P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
       # which policy decision point decides tool calls: opa (default, Project 0's OPA) | cerbos,
       # optionally with OpenFGA relationship checks: opa+openfga | cerbos+openfga
@@ -98,6 +100,8 @@ services:
       AGENT_API_PORT: "8091"
       AGENT_API_AGENTS_DIR: /app/agents
       AGENT_API_AUDIT_FILE: /tmp/agent-api-audit.jsonl
+      # Step 31: the shared hash-chained audit trail (else the local file above, dev only)
+      AGENT_AUDIT_DSN: ${AGENT_AUDIT_DSN_INTERNAL:-}
       AGENT_API_PDP: ${AGENT_API_PDP:-opa}
       # Step 25: dev | staging | prod (staging and prod run only approved agents). The registry
       # is Postgres when AGENT_DB_DSN is set, else a local file (dev only)
@@ -140,6 +144,8 @@ services:
       A2A_PUBLIC_URL: ${A2A_PUBLIC_URL:-http://127.0.0.1:8092}
       A2A_GATEWAY_AGENTS_DIR: /app/agents
       A2A_GATEWAY_AUDIT_FILE: /tmp/a2a-gateway-audit.jsonl
+      # Step 31: the shared hash-chained audit trail (else the local file above, dev only)
+      AGENT_AUDIT_DSN: ${AGENT_AUDIT_DSN_INTERNAL:-}
       A2A_GATEWAY_PDP: ${A2A_GATEWAY_PDP:-opa}
       AGENT_API_URL: http://agent-api:8091
       AGENT_CERBOS_URL: http://cerbos:3592
@@ -189,6 +195,8 @@ services:
       AGENT_REGISTRY_FILE: /tmp/agents.db
       AGENT_CERBOS_URL: http://cerbos:3592
       AGENT_WORKER_AUDIT_FILE: /tmp/agent-worker-audit.jsonl
+      # Step 31: the shared hash-chained audit trail (else the local file above, dev only)
+      AGENT_AUDIT_DSN: ${AGENT_AUDIT_DSN_INTERNAL:-}
       P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
       # Step 29: with the runtime's AppRole set, secrets come from OpenBao and each agent acts
       # as its own identity; without it (dev/CI), the env var below and the platform identity

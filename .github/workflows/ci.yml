@@ -64,6 +64,8 @@ jobs:
           export P0_POSTGRES_DSN_INTERNAL=postgresql://agent_health:standin-only@postgres:5432/postgres
           # long-term memory (Step 20) of the services' agents lives in the agent database
           export AGENT_DB_DSN_INTERNAL=postgresql://agent_app:standin-only@postgres:5432/agent
+          # Step 31: the services write the shared hash-chained audit trail
+          export AGENT_AUDIT_DSN_INTERNAL=$AGENT_DB_DSN_INTERNAL
           just health
           just provision
           just migrate

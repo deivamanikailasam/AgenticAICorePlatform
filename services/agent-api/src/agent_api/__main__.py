@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 
 import uvicorn
-from agent_contracts.dummies.observability import JsonlAuditSink
+from agent_audit.factory import audit_sink_from_env
 from agent_contracts.dummies.safety import InMemoryApprovalGate
 from agent_contracts.interfaces import Checkpointer
 from agent_runtime.approval_store import PostgresApprovalGate
@@ -42,8 +42,8 @@ def durability(settings: Settings) -> tuple[Checkpointer | None, RunStore | None
 def main() -> None:
     settings = Settings()
     checkpointer, store = durability(settings)
-    # Audit goes to a local hash-chained JSONL file until Step 31 adds the Project 0 audit adapter.
-    audit = JsonlAuditSink(settings.audit_file)
+    # Step 31: the shared hash-chained Postgres trail (AGENT_AUDIT_DSN), else a local file (dev)
+    audit = audit_sink_from_env(settings.audit_file)
     # Step 29: per-agent identities, secrets from OpenBao and call-time tool credentials
     identity = identity_from_env(settings)
     # Step 30: GenAI spans to the collector (no content); to Langfuse with redacted content

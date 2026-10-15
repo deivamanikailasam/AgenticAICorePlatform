@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 import uvicorn
-from agent_contracts.dummies.observability import JsonlAuditSink
+from agent_audit.factory import audit_sink_from_env
 from agent_spec import load_spec
 from agent_spec.platform import load_platform
 from agent_tools import pdp_factory
@@ -43,7 +43,7 @@ def build(settings: Settings) -> A2aGateway:
         jwks_url=f"{settings.internal_issuer}/protocol/openid-connect/certs",
     )
     # Audit goes to a local hash-chained JSONL file until Step 31 adds the Project 0 adapter.
-    inbound = Inbound(verifier, pdp, JsonlAuditSink(settings.audit_file), published)
+    inbound = Inbound(verifier, pdp, audit_sink_from_env(settings.audit_file), published)
     return A2aGateway(
         specs,
         publish,

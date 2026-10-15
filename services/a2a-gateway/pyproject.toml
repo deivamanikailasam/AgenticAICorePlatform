@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "A2A gateway (Step 24): publishes chosen agents as A2A v1.x agents with signed Agent Cards"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "agent-audit",
     "agent-contracts",
     "agent-spec",
     "agent-tools",
@@ -19,6 +20,7 @@ dependencies = [
 a2a-gateway = "a2a_gateway.__main__:main"
 
 [tool.uv.sources]
+agent-audit = { workspace = true }
 agent-contracts = { workspace = true }
 agent-spec = { workspace = true }
 agent-tools = { workspace = true }

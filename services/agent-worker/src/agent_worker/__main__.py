@@ -17,7 +17,7 @@ from agent_api.registry import registry_gate
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
 from agent_api.telemetry import setup_from_env
-from agent_contracts.dummies.observability import JsonlAuditSink
+from agent_audit.factory import audit_sink_from_env
 from agent_runtime.models.ledger import PostgresUsageLedger
 from agent_runtime.temporal.runtime import TemporalRuntime
 from agent_spec.platform import load_platform
@@ -49,7 +49,7 @@ async def run() -> None:
     await setup_from_env("agent-worker", identity.secrets)
     platform = load_platform()
     gateway_keys = await load_gateway_keys(platform, identity.secrets, settings.environment)
-    audit = JsonlAuditSink(
+    audit = audit_sink_from_env(
         os.environ.get("AGENT_WORKER_AUDIT_FILE", "/tmp/agent-worker-audit.jsonl")  # noqa: S108
     )
     # Step 25: teams run by the worker delegate only to approved agents in staging and prod

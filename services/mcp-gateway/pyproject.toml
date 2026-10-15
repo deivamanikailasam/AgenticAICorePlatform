@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Platform MCP server: platform tools, rag-core search and allowlisted external servers behind Keycloak auth, OPA and audit"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "agent-audit",
     "agent-contracts",
     "agent-spec",
     "agent-tools",
@@ -16,6 +17,7 @@ dependencies = [
 mcp-gateway = "mcp_gateway.__main__:main"
 
 [tool.uv.sources]
+agent-audit = { workspace = true }
 agent-contracts = { workspace = true }
 agent-spec = { workspace = true }
 agent-tools = { workspace = true }
