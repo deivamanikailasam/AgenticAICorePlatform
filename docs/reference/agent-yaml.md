@@ -38,6 +38,7 @@ The root of ``agent.yaml``.
 | `team` | TeamSettings |  | `{'max_turns': 12, 'max_depth': 3, 'max_failures': 2, 'entry': None, 'handoffs': {}, 'speaker': 'round_robin', 'selector_model': 'planner', 'stop_phrase': 'TERMINATE', 'answer_from': None, 'history_messages': 20, 'items': 'items', 'mapper': None, 'reducer': None, 'concurrency': 4, 'max_items': 100, 'debaters': [], 'judge': None}` |
 | `components` | object |  |  |
 | `evals` | Evals or null |  |  |
+| `review` | ReviewSettings |  | `{'sample_rate': 0.0, 'reviewers': 'group:qa-reviewers'}` |
 | `interop` | Interop |  | `{'a2a_publish': False, 'mcp_publish': False}` |
 | `labels` | object |  |  |
 
@@ -183,6 +184,15 @@ One of: `function`, `llm`, `tool`, `agent`, `router`, `approval`, `subgraph`, `j
 Every value of ``pattern:``; each maps to a PatternBuilder (Steps 4, 12-16, 22-23).
 
 One of: `workflow`, `state_machine`, `prompt_chain`, `router`, `react`, `plan_execute`, `rewoo`, `reflection`, `evaluator_optimiser`, `agentic_rag`, `supervisor`, `hierarchical`, `handoff`, `group_chat`, `map_reduce`, `debate`, `hybrid`
+
+### `ReviewSettings`
+
+Review-after (Step 28): a sample of finished runs goes to people for quality review.
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `sample_rate` | number |  | `0.0` |
+| `reviewers` | string |  | `group:qa-reviewers` |
 
 ### `RiskTier`
 

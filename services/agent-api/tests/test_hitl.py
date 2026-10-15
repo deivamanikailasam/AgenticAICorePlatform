@@ -28,7 +28,10 @@ USERS = {
     "t-lead": ("lee", ["/acme/approval-leads", "/acme/approvers"]),
     "t-bob": ("bob", ["/acme/two-person-approvers"]),
     "t-dana": ("dana", ["/acme/two-person-approvers"]),
+    "t-quinn": ("quinn", ["/acme/qa-reviewers"]),
+    "t-olga": ("olga", ["/acme/ops"]),  # has the operator role
 }
+ROLES = {"t-olga": ["operator"]}
 
 SPEC = """
 spec_version: 1
@@ -64,7 +67,11 @@ class Verifier:
             client_id="t",
             scopes=[],
             expires_at=None,
-            claims={"preferred_username": user, "groups": groups},
+            claims={
+                "preferred_username": user,
+                "groups": groups,
+                "realm_access": {"roles": ROLES.get(token, [])},
+            },
         )
 
 
@@ -104,7 +111,7 @@ class Clock:
 
 
 class World:
-    def __init__(self, risk: str = "medium", gated: bool = True) -> None:
+    def __init__(self, risk: str = "medium", gated: bool = True, review: str = "") -> None:
         self.payments: list[dict[str, Any]] = []
         self.audit = MemoryAuditSink()
         self.clock = Clock()
@@ -131,6 +138,7 @@ class World:
         text = SPEC.replace("RISK", risk).replace("APPROVAL", GATED if gated else "")
         if risk == "high":
             text += "evals: { suite: hitl }\n"
+        text += review
         spec = load_spec_text(text)
         desk = ApprovalDesk(
             InMemoryApprovalGate(), RulesApprovalRouter(), self.audit, clock=self.clock
@@ -280,3 +288,57 @@ async def test_high_risk_irreversible_needs_two_different_approvers() -> None:
     assert w.payments == [{"amount_aud": 42.0}]
     pay = next(c for c in await w.audited("tool.call") if c["tool"] == "pay")
     assert pay["approver"] == "bob"
+
+
+async def test_review_after_samples_finished_runs_for_people_to_check() -> None:
+    w = World(review="review: { sample_rate: 1.0, reviewers: group:qa-reviewers }\n")
+    async with w.client() as c:
+        run = await w.start(c)
+        await decide(c, run, "t-jsmith", decision="approve")
+        await w.manager.wait_idle(run)
+        queue = (await c.get("/v1/reviews", headers=auth("t-quinn"))).json()["reviews"]
+        assert [r["run_id"] for r in queue] == [run.run_id]
+        assert queue[0]["output"] == {"paid": 42.0}
+        assert (await c.get("/v1/reviews", headers=auth("t-alice"))).json()["reviews"] == []
+        bad = await c.post(
+            f"/v1/reviews/{run.run_id}", json={"verdict": "ok"}, headers=auth("t-alice")
+        )
+        assert bad.status_code == 403
+        done = await c.post(
+            f"/v1/reviews/{run.run_id}",
+            json={"verdict": "issue", "note": "wrong supplier"},
+            headers=auth("t-quinn"),
+        )
+        assert done.json()["status"] == "issue"
+    assert (await w.audited("review.completed"))[0]["verdict"] == "issue"
+
+
+def test_sampling_is_deterministic_and_close_to_the_rate() -> None:
+    picks = [RunManager.sampled(f"run-{i}", 0.1) for i in range(2000)]
+    assert picks == [RunManager.sampled(f"run-{i}", 0.1) for i in range(2000)]
+    assert 0.07 < sum(picks) / len(picks) < 0.13  # 2,000 ids, 10% target
+
+
+async def test_an_operator_takes_over_a_paused_run_and_finishes_it() -> None:
+    w = World()
+    async with w.client() as c:
+        run = await w.start(c)
+        assert (
+            await c.post(f"/v1/runs/{run.run_id}/takeover", json={}, headers=auth("t-carol"))
+        ).status_code == 404
+        resp = await c.post(
+            f"/v1/runs/{run.run_id}/takeover",
+            json={"answer": "Paid manually by phone", "note": "supplier portal down"},
+            headers=auth("t-olga"),
+        )
+        assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "taken_over"
+    assert body["handover"]["pending"][0]["action"] == {
+        "tool": "pay",
+        "arguments": {"amount_aud": 42.0},
+    }
+    assert w.payments == [], "the agent's pending action never ran"
+    finished = [e for e in run.events if e["type"] == "RUN_FINISHED"][-1]
+    assert finished["result"]["output"]["answer"] == "Paid manually by phone"
+    assert (await w.audited("run.taken_over"))[0]["by"] == "olga"

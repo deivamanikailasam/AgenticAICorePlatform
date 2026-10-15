@@ -278,6 +278,13 @@ class TeamSettings(_Spec):
     judge: str | None = None
 
 
+class ReviewSettings(_Spec):
+    """Review-after (Step 28): a sample of finished runs goes to people for quality review."""
+
+    sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    reviewers: Annotated[str, Field(pattern=PRINCIPAL)] = "group:qa-reviewers"
+
+
 class Evals(_Spec):
     suite: str
     gates: str = "default"
@@ -312,6 +319,7 @@ class AgentSpec(_Spec):
     team: TeamSettings = TeamSettings()
     components: dict[str, str] = Field(default_factory=dict)  # slot -> registered name
     evals: Evals | None = None
+    review: ReviewSettings = ReviewSettings()
     interop: Interop = Interop()
     labels: dict[str, str] = Field(default_factory=dict)
 

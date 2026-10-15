@@ -164,6 +164,7 @@ class RunManager:
             InMemoryApprovalGate(), RulesApprovalRouter(), assembly.audit
         )
         self.tool_specs: dict[str, dict[str, ToolSpec]] = {}  # agent -> tool name -> spec
+        self.reviews: dict[str, dict[str, Any]] = {}  # run id -> review-after item (Step 28)
 
     @classmethod
     def load_agents(cls, directory: str | Path) -> dict[str, AgentSpec]:
@@ -179,6 +180,8 @@ class RunManager:
     def _visible(self, run: Run, who: Principal) -> bool:
         if (who.tenant, who.user) == (run.owner.tenant, run.owner.user):
             return True
+        if who.tenant == run.owner.tenant and self.TAKEOVER_ROLE in who.roles:
+            return True  # operators may see and take over runs of their tenant (Step 28)
         return who.tenant == run.owner.tenant and any(
             in_group(who.groups, i.get("approvers")) for i in run.interrupts if i.get("approvers")
         )
@@ -512,6 +515,111 @@ class RunManager:
                     break
         return outcomes
 
+    # ------------------------------------------------------------ review-after (Step 28)
+
+    @staticmethod
+    def sampled(run_id: str, rate: float) -> bool:
+        """Deterministic sampling: the same run is always in or out of the sample."""
+        digest = int(hashlib.sha256(run_id.encode()).hexdigest()[:8], 16)
+        return digest / 0xFFFFFFFF < rate
+
+    async def _sample_for_review(self, run: Run, output: Any) -> None:
+        settings = self.agents[run.agent].review
+        if settings.sample_rate <= 0 or not self.sampled(run.run_id, settings.sample_rate):
+            return
+        self.reviews[run.run_id] = {
+            "run_id": run.run_id,
+            "agent": run.agent,
+            "tenant": run.owner.tenant,
+            "requested_by": run.owner.user,
+            "input": run.inputs,
+            "output": json_safe(output),
+            "reviewers": settings.reviewers,
+            "status": "pending",
+        }
+        await self._audit_event("review.sampled", run.ctx, {"reviewers": settings.reviewers})
+
+    def review_queue(self, who: Principal) -> list[dict[str, Any]]:
+        return [
+            r
+            for r in self.reviews.values()
+            if r["status"] == "pending"
+            and r["tenant"] == who.tenant
+            and r["requested_by"] != who.user
+            and in_group(who.groups, r["reviewers"])
+        ]
+
+    async def review(
+        self, run_id: str, who: Principal, verdict: str, note: str = ""
+    ) -> dict[str, Any]:
+        item = self.reviews.get(run_id)
+        if item is None or item["tenant"] != who.tenant:
+            raise KeyError(run_id)
+        if not in_group(who.groups, item["reviewers"]) or item["requested_by"] == who.user:
+            raise PermissionError(f"reviewer is not in {item['reviewers']}")
+        if verdict not in ("ok", "issue"):
+            raise ValueError("verdict must be ok or issue")
+        if item["status"] != "pending":
+            raise ConflictError(f"run {run_id} was already reviewed")
+        item.update(status=verdict, reviewed_by=who.user, note=note)
+        run = self.runs.get(run_id)
+        if run is not None:
+            await self._audit_event(
+                "review.completed", run.ctx, {"verdict": verdict, "by": who.user, "note": note}
+            )
+        return item
+
+    # ------------------------------------------------------------ take-over (Step 28)
+
+    TAKEOVER_ROLE = "operator"
+
+    async def take_over(
+        self, run: Run, who: Principal, answer: Any = None, note: str = ""
+    ) -> dict[str, Any]:
+        """A person takes the work from the agent: the agent stops (nothing pending runs), the
+        person gets the run's state, and may finish it with their own answer."""
+        approver = any(
+            in_group(who.groups, i.get("approvers")) for i in run.interrupts if i.get("approvers")
+        )
+        if who.tenant != run.owner.tenant or not (self.TAKEOVER_ROLE in who.roles or approver):
+            raise PermissionError("taking over needs the operator role or the run's approver group")
+        if run.status not in ("interrupted", "running", "pending"):
+            raise ConflictError(f"run {run.run_id} is {run.status}; nothing to take over")
+        if run.task is not None and not run.task.done():
+            run.task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await run.task
+        state: dict[str, Any] = {}
+        with contextlib.suppress(Exception):
+            current = await run.live().get_state(run.run_id)
+            state = json_safe(current.values)
+            await run.live().cancel(run.run_id)
+        handover = {"state": state, "pending": run.interrupts, "input": run.inputs}
+        run.status, run.interrupts = "taken_over", []
+        output = {"answer": answer, "by": who.user, "note": note} if answer is not None else None
+        await self._record(
+            run,
+            RunEvent(
+                type=RunEventType.RUN_FINISHED,
+                run_id=run.run_id,
+                data={
+                    "status": "taken_over",
+                    "output": output,
+                    "stop_reason": f"taken over by {who.user}",
+                },
+            ),
+        )
+        await self.store.save(run.record())
+        await self._audit_event(
+            "run.taken_over",
+            run.ctx,
+            {"by": who.user, "note": note, "answered": answer is not None},
+        )
+        return handover
+
+    async def _audit_event(self, kind: str, ctx: RunContext, payload: dict[str, Any]) -> None:
+        await self.assembly.audit.append(AuditEvent(type=kind, ctx=ctx, payload=payload))
+
     async def expire(self, run: Run) -> None:
         """Cancel a run whose approval expired. Nothing behind the approval has run."""
         with contextlib.suppress(KeyError, ConflictError):
@@ -680,6 +788,8 @@ class RunManager:
                 )
                 result = await budgets.finish(spec, run.ctx, result, summariser)
             run.status = result.status.value
+            if run.status == "succeeded":
+                await self._sample_for_review(run, result.output)
             if run.status == "failed":
                 await self._record(
                     run,

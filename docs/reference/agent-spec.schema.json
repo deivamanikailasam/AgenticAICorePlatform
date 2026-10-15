@@ -637,6 +637,27 @@
       "title": "Pattern",
       "type": "string"
     },
+    "ReviewSettings": {
+      "additionalProperties": false,
+      "description": "Review-after (Step 28): a sample of finished runs goes to people for quality review.",
+      "properties": {
+        "reviewers": {
+          "default": "group:qa-reviewers",
+          "pattern": "^(group|user|role):[a-zA-Z0-9._@-]+$",
+          "title": "Reviewers",
+          "type": "string"
+        },
+        "sample_rate": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Sample Rate",
+          "type": "number"
+        }
+      },
+      "title": "ReviewSettings",
+      "type": "object"
+    },
     "RiskTier": {
       "enum": [
         "low",
@@ -1085,6 +1106,13 @@
     },
     "pattern": {
       "$ref": "#/$defs/Pattern"
+    },
+    "review": {
+      "$ref": "#/$defs/ReviewSettings",
+      "default": {
+        "reviewers": "group:qa-reviewers",
+        "sample_rate": 0.0
+      }
     },
     "risk_tier": {
       "$ref": "#/$defs/RiskTier"

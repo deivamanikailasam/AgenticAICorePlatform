@@ -171,6 +171,27 @@ def build_app(
     async def inbox(request: Request, who: Principal) -> Response:
         return JSONResponse({"approvals": manager.inbox(who)})
 
+    async def reviews(request: Request, who: Principal) -> Response:
+        return JSONResponse({"reviews": manager.review_queue(who)})
+
+    async def review(request: Request, who: Principal) -> Response:
+        data = await body(request)
+        item = await manager.review(
+            request.path_params["run_id"],
+            who,
+            str(data.get("verdict")),
+            str(data.get("note") or ""),
+        )
+        return JSONResponse(item)
+
+    async def takeover(request: Request, who: Principal) -> Response:
+        run = manager.get(request.path_params["run_id"], who)
+        data = await body(request)
+        handover = await manager.take_over(
+            run, who, data.get("answer"), str(data.get("note") or "")
+        )
+        return JSONResponse({**run.summary(), "handover": handover})
+
     async def resume(request: Request, who: Principal) -> Response:
         run = manager.get(request.path_params["run_id"], who)
         await manager.resume(run, who, await body(request))
@@ -276,6 +297,9 @@ def build_app(
             Route("/v1/runs/{run_id}/events", guarded(events)),
             Route("/v1/runs/{run_id}/approvals", guarded(approvals), methods=["POST"]),
             Route("/v1/approvals", guarded(inbox)),
+            Route("/v1/reviews", guarded(reviews)),
+            Route("/v1/reviews/{run_id}", guarded(review), methods=["POST"]),
+            Route("/v1/runs/{run_id}/takeover", guarded(takeover), methods=["POST"]),
             Route("/v1/runs/{run_id}/resume", guarded(resume), methods=["POST"]),
             Route("/v1/runs/{run_id}/cancel", guarded(cancel), methods=["POST"]),
             Route("/v1/threads", guarded(threads)),
