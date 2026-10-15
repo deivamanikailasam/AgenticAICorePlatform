@@ -689,3 +689,77 @@ class SandboxResult(Frozen):
     )  # name -> base64 content (outputs in /work/out)
     reasons: tuple[str, ...] = ()
     engine: str = ""
+
+
+# ---------------------------------------------------------------- agent registry (Step 25)
+
+
+class AgentStatus(StrEnum):
+    DRAFT = "draft"
+    APPROVED = "approved"
+    DEPRECATED = "deprecated"
+    RETIRED = "retired"
+
+
+#: allowed lifecycle moves; anything else is refused (retired is final)
+AGENT_TRANSITIONS: dict[AgentStatus, frozenset[AgentStatus]] = {
+    AgentStatus.DRAFT: frozenset({AgentStatus.APPROVED, AgentStatus.RETIRED}),
+    AgentStatus.APPROVED: frozenset({AgentStatus.DEPRECATED, AgentStatus.RETIRED}),
+    AgentStatus.DEPRECATED: frozenset({AgentStatus.APPROVED, AgentStatus.RETIRED}),
+    AgentStatus.RETIRED: frozenset(),
+}
+
+
+class AgentRecord(Frozen):
+    """One version of one agent in the catalogue: who owns it, what it can touch, its state."""
+
+    name: str
+    version: str
+    owner: str
+    description: str = ""
+    risk_tier: RiskTier = RiskTier.LOW
+    autonomy: str = "workflow"
+    pattern: str = "workflow"
+    tools: tuple[str, ...] = ()
+    agents: tuple[str, ...] = ()  # team members (specs it delegates to)
+    eval_status: str = "not_run"  # set by the eval gates (Step 34)
+    card: dict[str, Any] = Field(default_factory=dict)
+    spec_hash: str = ""  # a version's content may not change once registered
+    status: AgentStatus = AgentStatus.DRAFT
+    status_reason: str = ""
+    updated_by: str = ""
+    updated_at: datetime = Field(default_factory=utcnow)
+    expires_at: datetime | None = None  # approval lapses then (ASI10: owner and expiry)
+
+    def runnable(self, at: datetime | None = None) -> bool:
+        """Approved and not past its expiry."""
+        now = at or utcnow()
+        return self.status is AgentStatus.APPROVED and (
+            self.expires_at is None or self.expires_at > now
+        )
+
+
+class AgentStatusChange(Frozen):
+    name: str
+    version: str
+    from_status: AgentStatus | None
+    to_status: AgentStatus
+    by: str
+    reason: str = ""
+    at: datetime = Field(default_factory=utcnow)
+
+
+def check_agent_transition(current: AgentStatus, target: AgentStatus, by: str) -> None:
+    """Raise ``ValueError`` unless ``current → target`` is an allowed move made by someone."""
+    if not by.strip():
+        raise ValueError("a lifecycle change needs the person or process making it ('by')")
+    if target not in AGENT_TRANSITIONS[current]:
+        allowed = ", ".join(sorted(s.value for s in AGENT_TRANSITIONS[current])) or "none"
+        raise ValueError(
+            f"cannot move an agent from {current.value} to {target.value} (allowed: {allowed})"
+        )
+
+
+def agent_version_key(version: str) -> tuple[int, ...]:
+    core = version.split("-", 1)[0]
+    return tuple(int(p) if p.isdigit() else 0 for p in core.split("."))

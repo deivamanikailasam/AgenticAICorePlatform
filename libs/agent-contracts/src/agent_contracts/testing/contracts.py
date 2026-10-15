@@ -54,6 +54,7 @@ from agent_contracts.models import (
 )
 
 __all__ = [
+    "AgentRegistryContract",
     "ApprovalGateContract",
     "AuditSinkContract",
     "BudgetControllerContract",
@@ -988,3 +989,87 @@ class CodeSandboxContract(_Contract):
         )
         assert result.truncated
         assert len(result.stdout) <= 4096
+
+
+# ---------------------------------------------------------------- agent registry (Step 25)
+
+
+def agent_record(name: str = "triage", version: str = "1.0.0", **kw: Any) -> Any:
+    from agent_contracts.models import AgentRecord
+
+    return AgentRecord(
+        name=name, version=version, owner="team-a", spec_hash=kw.pop("spec_hash", "h1"), **kw
+    )
+
+
+class AgentRegistryContract(_Contract):
+    interface = I.AgentRegistry
+
+    async def test_new_versions_start_as_draft_and_newest_wins(self) -> None:
+        from agent_contracts.models import AgentStatus
+
+        reg = self.make()
+        first = await reg.register(agent_record(status=AgentStatus.APPROVED))  # status ignored
+        assert first.status is AgentStatus.DRAFT
+        await reg.register(agent_record(version="1.10.0", spec_hash="h2"))
+        await reg.register(agent_record(version="1.2.0", spec_hash="h3"))
+        assert (await reg.get("triage")).version == "1.10.0"
+        assert (await reg.get("triage", "1.2.0")).spec_hash == "h3"
+        assert [r.version for r in await reg.list()] == ["1.0.0", "1.2.0", "1.10.0"]
+
+    async def test_same_version_with_changed_content_is_refused(self) -> None:
+        reg = self.make()
+        await reg.register(agent_record())
+        again = await reg.register(agent_record())  # same content: idempotent
+        assert again.version == "1.0.0"
+        with pytest.raises(ValueError, match="new version"):
+            await reg.register(agent_record(spec_hash="changed"))
+
+    async def test_unknown_agent_raises_key_error(self) -> None:
+        reg = self.make()
+        with pytest.raises(KeyError):
+            await reg.get("nope")
+        with pytest.raises(KeyError):
+            await reg.get("nope", "1.0.0")
+
+    async def test_lifecycle_moves_are_checked_and_recorded(self) -> None:
+        from datetime import timedelta
+
+        from agent_contracts.models import AgentStatus, utcnow
+
+        reg = self.make()
+        await reg.register(agent_record())
+        with pytest.raises(ValueError, match="by"):
+            await reg.set_status("triage", "1.0.0", AgentStatus.APPROVED, by=" ")
+        with pytest.raises(ValueError, match="draft to deprecated"):
+            await reg.set_status("triage", "1.0.0", AgentStatus.DEPRECATED, by="carol")
+        later = utcnow() + timedelta(days=90)
+        approved = await reg.set_status(
+            "triage",
+            "1.0.0",
+            AgentStatus.APPROVED,
+            by="carol",
+            reason="evals pass",
+            expires_at=later,
+        )
+        assert approved.runnable()
+        assert not approved.runnable(at=later + timedelta(seconds=1))  # approval lapses
+        await reg.set_status("triage", "1.0.0", AgentStatus.DEPRECATED, by="carol")
+        await reg.set_status("triage", "1.0.0", AgentStatus.RETIRED, by="carol")
+        with pytest.raises(ValueError, match="allowed: none"):
+            await reg.set_status("triage", "1.0.0", AgentStatus.APPROVED, by="carol")
+        moves = [(h.from_status, h.to_status, h.by) for h in await reg.history("triage", "1.0.0")]
+        assert moves[1:] == [
+            (AgentStatus.DRAFT, AgentStatus.APPROVED, "carol"),
+            (AgentStatus.APPROVED, AgentStatus.DEPRECATED, "carol"),
+            (AgentStatus.DEPRECATED, AgentStatus.RETIRED, "carol"),
+        ]
+        assert moves[0][0] is None
+        assert await reg.list() == []
+        assert [r.status for r in await reg.list(include_retired=True)] == [AgentStatus.RETIRED]
+
+    async def test_eval_status_is_kept(self) -> None:
+        reg = self.make()
+        await reg.register(agent_record())
+        await reg.set_eval_status("triage", "1.0.0", "passed")
+        assert (await reg.get("triage")).eval_status == "passed"

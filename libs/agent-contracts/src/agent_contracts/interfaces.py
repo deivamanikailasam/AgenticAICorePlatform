@@ -17,6 +17,9 @@ from contextlib import AbstractContextManager
 from typing import Any, ClassVar
 
 from agent_contracts.models import (
+    AgentRecord,
+    AgentStatus,
+    AgentStatusChange,
     ApprovalDecision,
     ApprovalRecord,
     ApprovalRequest,
@@ -460,6 +463,45 @@ class TelemetryEmitter(Component):
     ) -> None: ...
 
 
+class AgentRegistry(Component):
+    """The catalogue of agents and their lifecycle (Step 25)."""
+
+    slot = "agent_registry"
+
+    @abstractmethod
+    async def register(self, record: AgentRecord) -> AgentRecord:
+        """Add a version as ``draft``. Registering the same name and version again returns the
+        stored record when ``spec_hash`` matches and raises ``ValueError`` when it differs (a
+        changed agent needs a new version)."""
+
+    @abstractmethod
+    async def get(self, name: str, version: str | None = None) -> AgentRecord:
+        """That version, or the newest version when ``version`` is None. ``KeyError`` if unknown."""
+
+    @abstractmethod
+    async def list(self, include_retired: bool = False) -> Sequence[AgentRecord]:
+        """Every version, sorted by name then version."""
+
+    @abstractmethod
+    async def set_status(
+        self,
+        name: str,
+        version: str,
+        status: AgentStatus,
+        by: str,
+        reason: str = "",
+        expires_at: Any = None,
+    ) -> AgentRecord:
+        """Move along ``AGENT_TRANSITIONS``; ``ValueError`` for any other move or an empty ``by``.
+        Every change is kept in the history."""
+
+    @abstractmethod
+    async def set_eval_status(self, name: str, version: str, eval_status: str) -> AgentRecord: ...
+
+    @abstractmethod
+    async def history(self, name: str, version: str) -> Sequence[AgentStatusChange]: ...
+
+
 class AuditSink(Component):
     """Hash-chained, append-only audit events (Step 31)."""
 
@@ -523,6 +565,7 @@ INTERFACES: dict[str, type[Component]] = {
         Critic,
         TelemetryEmitter,
         AuditSink,
+        AgentRegistry,
         Evaluator,
         Simulator,
     )

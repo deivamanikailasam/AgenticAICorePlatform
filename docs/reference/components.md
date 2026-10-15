@@ -13,6 +13,8 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | agent_loop | openai_agents | implemented | `agent_runtime.engines.openai_agents:OpenAIAgentsLoopExecutor` |  |
 | agent_loop | pydantic_ai | implemented | `agent_runtime.engines.pydantic_ai:PydanticAILoopExecutor` |  |
 | agent_loop | single_shot | dummy | `agent_contracts.dummies.agent_loop:SingleShotToolLoop` | Same loop with a step limit of at most three model turns (a cheap, impatient agent). |
+| agent_registry | memory | implemented | `agent_contracts.dummies.registry:InMemoryAgentRegistry` | Records in a dictionary keyed by (name, version). |
+| agent_registry | sqlite | implemented | `agent_contracts.dummies.registry:SqliteAgentRegistry` | The same behaviour, persisted to a SQLite file (local development: ``just agents`` |
 | approval_gate | memory | dummy | `agent_contracts.dummies.safety:InMemoryApprovalGate` | Approval requests in a dictionary. |
 | approval_gate | ttl | dummy | `agent_contracts.dummies.safety:TtlApprovalGate` | Like ``memory`` but every request without an expiry gets a default one (SLA timer). |
 | audit_sink | jsonl | dummy | `agent_contracts.dummies.observability:JsonlAuditSink` | Hash-chained records appended to a JSON Lines file (a temp file by default). |
