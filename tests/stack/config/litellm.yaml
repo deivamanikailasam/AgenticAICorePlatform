@@ -4,6 +4,8 @@ model_list:
     litellm_params: { model: openai/fake-fast, api_key: none, mock_response: "stand-in fast" }
   - model_name: local-qwen-quality
     litellm_params: { model: openai/fake-quality, api_key: none, mock_response: "stand-in quality" }
+  - model_name: local-qwen-json
+    litellm_params: { model: openai/fake-json, api_key: none, mock_response: '{"answer": "stand-in", "confidence": 0.9}' }
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/DATABASE_URL

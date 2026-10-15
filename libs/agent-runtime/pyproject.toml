@@ -1,0 +1,25 @@
+[project]
+name = "agent-runtime"
+version = "0.1.0"
+description = "Model access through the gateway (Step 5) and runtime adapters (Step 11)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "agent-contracts",
+    "agent-spec",
+    "httpx>=0.28.1,<0.29",
+    "jsonschema>=4.26.0,<5",
+]
+
+[project.entry-points."agent_platform.components"]
+"model_client.litellm" = "agent_runtime.models.gateway:GatewayModelClient"
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+agent-spec = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_runtime"]

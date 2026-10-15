@@ -7,6 +7,7 @@ members = [
     "agent-compiler",
     "agent-contracts",
     "agent-platform",
+    "agent-runtime",
     "agent-spec",
 ]
 
@@ -96,6 +97,25 @@ dev = [
     { name = "ruff", specifier = "==0.17.0" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
     { name = "types-pyyaml", specifier = ">=6.0.12" },
+]
+
+[[package]]
+name = "agent-runtime"
+version = "0.1.0"
+source = { editable = "libs/agent-runtime" }
+dependencies = [
+    { name = "agent-contracts" },
+    { name = "agent-spec" },
+    { name = "httpx" },
+    { name = "jsonschema" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-spec", editable = "libs/agent-spec" },
+    { name = "httpx", specifier = ">=0.28.1,<0.29" },
+    { name = "jsonschema", specifier = ">=4.26.0,<5" },
 ]
 
 [[package]]
