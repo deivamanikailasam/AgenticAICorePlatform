@@ -112,7 +112,7 @@ class LangGraphAdapter(RuntimeAdapter):
 
         async def body(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
             ctx = config["configurable"]["agent_ctx"]
-            if node.kind is NodeKind.APPROVAL and runner.replay is None:
+            if node.kind is NodeKind.APPROVAL and not runner.replays(node.id):
                 payload = interrupt({"node": node.id, **node.config})
                 result: NodeOutcome = runner.record(ctx, node.id, approval_outcome(payload))
             else:

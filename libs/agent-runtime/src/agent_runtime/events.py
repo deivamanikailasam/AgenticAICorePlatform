@@ -58,7 +58,12 @@ async def emit(type_: RunEventType, run_id: str, node_id: str | None = None, **d
 
 
 class EventingNodeRunner(NodeRunner):
+    """Node events for live work only: nodes answered from a journal (a replay or a resume after
+    a crash) are not reported again."""
+
     async def run(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> NodeOutcome:
+        if self.replays(node.id):
+            return await super().run(node, values, ctx)
         await emit(RunEventType.NODE_STARTED, ctx.run_id, node.id, kind=node.kind.value)
         result = await super().run(node, values, ctx)
         await emit(

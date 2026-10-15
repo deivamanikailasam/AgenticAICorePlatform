@@ -17,6 +17,8 @@ every engine:
 * **journal and replay** (Step 12): every node result is recorded per run, in order of
   occurrence. A runner built with ``replay=journal`` returns the recorded results instead of
   executing anything, so a replay takes exactly the same path with no model or tool calls.
+  With ``resume=True`` (Step 18) it replays what the journal holds and then runs live, which is
+  how a run continues after its worker died: completed nodes, writes included, are not repeated.
 """
 
 from __future__ import annotations
@@ -53,6 +55,9 @@ class RunJournal:
 
     def record(self, node_id: str, outcome: NodeOutcome) -> None:
         self.entries.setdefault(node_id, []).append(outcome)
+
+    def remaining(self, node_id: str) -> int:
+        return len(self.entries.get(node_id, [])) - self._cursor.get(node_id, 0)
 
     def next(self, node_id: str) -> NodeOutcome:
         i = self._cursor.get(node_id, 0)
@@ -92,11 +97,19 @@ class NodeRunner:
         functions: Mapping[str, NodeFn] | None = None,
         executors: Mapping[NodeKind, NodeExecutor] | None = None,
         replay: RunJournal | None = None,
+        resume: bool = False,
     ) -> None:
         self.functions = dict(functions or {})
         self.executors = dict(executors or {})
         self.replay = replay
+        self.resume = resume  # replay what the journal holds, then run live (Step 18)
         self.journals: dict[str, RunJournal] = {}
+
+    def replays(self, node_id: str) -> bool:
+        """Whether this node's next result comes from the journal rather than from running it."""
+        if self.replay is None:
+            return False
+        return not self.resume or self.replay.remaining(node_id) > 0
 
     def journal(self, run_id: str) -> RunJournal:
         return self.journals.setdefault(run_id, RunJournal(run_id))
@@ -116,7 +129,7 @@ class NodeRunner:
         return await executor(node, values, ctx)
 
     async def run(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> NodeOutcome:
-        if self.replay is not None:
+        if self.replay is not None and self.replays(node.id):
             try:
                 result = self.replay.next(node.id)
             except LookupError as exc:

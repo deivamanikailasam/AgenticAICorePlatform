@@ -127,7 +127,7 @@ class _PlanExecutor(Executor):
 class _ApprovalExecutor(_PlanExecutor):
     @handler
     async def on_step(self, message: Step, ctx: WorkflowContext[Step]) -> None:
-        if self.runner.replay is not None:  # a replay answers from the journal, never asks again
+        if self.runner.replays(self.node.id):  # a replay answers from the journal, never asks again
             await self._execute(ctx)
             return
         await ctx.request_info({"node": self.node.id, **self.node.config}, dict)
