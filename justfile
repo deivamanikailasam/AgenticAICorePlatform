@@ -81,6 +81,7 @@ provision-artefacts:
 up:
     {{compose}} build
     {{compose}} run --rm agent-health
+    {{compose}} up -d --wait --remove-orphans mcp-gateway
 
 down:
     {{compose}} down

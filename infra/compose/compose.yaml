@@ -12,6 +12,12 @@ secrets:
   extra_ca:
     file: ${EXTRA_CA_BUNDLE:-./no-extra-ca.pem}
 
+x-hardening: &hardening
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  tmpfs: ["/tmp:size=64m"]
+
 x-p0-endpoints: &p0-endpoints
   P0_LITELLM_URL: http://litellm:4000
   P0_POSTGRES_DSN: ${P0_POSTGRES_DSN_INTERNAL:-postgresql://agent_health@postgres:5432/postgres}
@@ -32,3 +38,28 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     mem_limit: 128m
+
+  # The platform MCP server (Step 8): platform tools, rag-core search and allowlisted external
+  # servers behind Keycloak auth, OPA and audit.
+  mcp-gateway:
+    build: { context: ../.., dockerfile: infra/compose/service.Dockerfile, args: { PACKAGE: mcp-gateway }, secrets: [extra_ca] }
+    image: agent-platform/mcp-gateway:dev
+    command: ["mcp-gateway"]
+    <<: *hardening
+    environment:
+      <<: *p0-endpoints
+      MCP_GATEWAY_HOST: 0.0.0.0
+      MCP_GATEWAY_PORT: "8090"
+      MCP_GATEWAY_PUBLIC_URL: ${MCP_GATEWAY_PUBLIC_URL:-http://127.0.0.1:8090}
+      MCP_GATEWAY_ALLOWED_HOSTS: 127.0.0.1:*,localhost:*,mcp-gateway:*
+      MCP_GATEWAY_AUDIT_FILE: /tmp/mcp-gateway-audit.jsonl
+      P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
+      # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
+      SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
+    ports: ["127.0.0.1:8090:8090"]
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8090/healthz')"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
