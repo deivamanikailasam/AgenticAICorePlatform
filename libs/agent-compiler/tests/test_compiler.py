@@ -124,3 +124,40 @@ async def test_run_emits_genai_spans() -> None:
     assert node.parent is not None
     assert node.parent.span_id == root.context.span_id
     assert format(root.context.trace_id, "032x") == trace_id
+
+
+def test_capability_check_refuses_model_without_tool_calling() -> None:
+    from datetime import date
+
+    from agent_compiler.compiler import check_capabilities
+    from agent_contracts.models import ModelCapabilities
+    from agent_spec.platform import Currency, Models, PlatformConfig
+
+    roles = {
+        r: "small" for r in ("default", "planner", "executor", "router", "judge", "summariser")
+    }
+    weak = PlatformConfig(
+        models=Models(roles=roles, capabilities={"small": ModelCapabilities(tool_calling=False)}),
+        currency=Currency(usd_to_aud=1.5, source="t", as_of=date(2026, 10, 1)),
+    )
+    spec = load_spec(ROOT / "agents/invoice-triage/agent.yaml")
+    with pytest.raises(
+        CompileError, match="node 'resolve_exceptions' uses tools but model 'local-qwen-quality'"
+    ):
+        check_capabilities(spec, weak)
+    strong = weak.model_copy(
+        update={
+            "models": Models(
+                roles=roles,
+                capabilities={"local-qwen-quality": ModelCapabilities(tool_calling=True)},
+            )
+        }
+    )
+    check_capabilities(spec, strong)
+
+
+def test_compile_with_platform_records_alias_per_role() -> None:
+    from agent_spec.platform import load_platform
+
+    plan = compile_spec(load_spec(HELLO), platform=load_platform())
+    assert plan.metadata["model_aliases"]["planner"] == "local-qwen-quality"

@@ -17,7 +17,8 @@ from agent_contracts.interfaces import PatternBuilder, RuntimeAdapter
 from agent_contracts.models import ExecutablePlan, NodeKind, PlanEdge, PlanFragment, PlanNode
 from agent_contracts.registry import Registry
 from agent_contracts.registry import registry as default_registry
-from agent_spec.model import AgentSpec
+from agent_spec.model import AgentSpec, NodeType
+from agent_spec.platform import PlatformConfig
 
 PLANNED_IN = {
     "prompt_chain": 15,
@@ -128,8 +129,32 @@ def plan_hash(plan: ExecutablePlan) -> str:
     return hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
 
 
-def compile_spec(spec: AgentSpec, reg: Registry | None = None) -> ExecutablePlan:
+def check_capabilities(spec: AgentSpec, platform: PlatformConfig) -> None:
+    """Refuse a model that lacks tool calling for any node that uses tools (Step 5)."""
+    problems = []
+    for node in spec.graph.nodes if spec.graph else ():
+        if node.type not in (NodeType.AGENT, NodeType.LLM) or not node.tools:
+            continue
+        role = node.model or "default"
+        alias = platform.alias_for(role, spec.models)
+        if not platform.capabilities(alias).tool_calling:
+            problems.append(
+                f"node '{node.id}' uses tools but model '{alias}' (role '{role}') has no tool calling"
+            )
+    if not spec.graph and spec.tools:
+        alias = platform.alias_for("default", spec.models)
+        if not platform.capabilities(alias).tool_calling:
+            problems.append(f"spec uses tools but default model '{alias}' has no tool calling")
+    if problems:
+        raise CompileError("; ".join(problems))
+
+
+def compile_spec(
+    spec: AgentSpec, reg: Registry | None = None, platform: PlatformConfig | None = None
+) -> ExecutablePlan:
     reg = reg or default_registry
+    if platform is not None:
+        check_capabilities(spec, platform)
     frag = _builder(reg, spec.pattern.value).build(_section(spec), "")
     frag = _insert_approvals(_expand_agents(reg, frag, spec), spec)
     _validate(frag)
@@ -150,6 +175,11 @@ def compile_spec(spec: AgentSpec, reg: Registry | None = None) -> ExecutablePlan
         "runtime": spec.runtime.model_dump(mode="json"),
         "budgets": spec.budgets.model_dump(mode="json"),
         "models": dict(spec.models),
+        "model_aliases": {
+            r: platform.alias_for(r, spec.models) for r in {*spec.models, *platform.models.roles}
+        }
+        if platform is not None
+        else {},
         "tools": [
             {
                 "name": t.name,
