@@ -79,6 +79,7 @@ class _Run:
     outcomes: dict[str, str] = field(default_factory=dict)
     order: list[str] = field(default_factory=list)
     failed: dict[str, str] = field(default_factory=dict)
+    stopped: dict[str, str] = field(default_factory=dict)
     pending: dict[str, str] = field(default_factory=dict)  # request id -> approval node id
     error: str | None = None
     stop_reason: str | None = None
@@ -103,11 +104,14 @@ class _PlanExecutor(Executor):
         if result.outcome == "error" and not next_targets(self.plan, node_id, "error"):
             run.failed[node_id] = result.error or "failed"
             return
+        if result.outcome == "stopped" and not next_targets(self.plan, node_id, "stopped"):
+            run.stopped[node_id] = result.error or "stopped"
+            return
         await ctx.send_message(Step(node_id, result.outcome))
 
     async def _execute(self, ctx: WorkflowContext[Step]) -> None:
-        if self.run.failed:
-            return  # another branch already failed the run
+        if self.run.failed or self.run.stopped:
+            return  # another branch already ended the run
         values = {"input": self.run.inputs, **self.run.values}
         await self._finish(await self.runner.run(self.node, values, self.run.ctx), ctx)
 
@@ -234,6 +238,9 @@ class AgentFrameworkAdapter(RuntimeAdapter):
                 run.status = RunStatus.FAILED
                 run.error = "; ".join(f"{k}: {v}" for k, v in run.failed.items())
                 await self._compensate(run, queue)
+            elif run.stopped:
+                run.status = RunStatus.STOPPED
+                run.stop_reason = "; ".join(f"{k}: {v}" for k, v in run.stopped.items())
             else:
                 run.status = RunStatus.SUCCEEDED
         except asyncio.CancelledError:

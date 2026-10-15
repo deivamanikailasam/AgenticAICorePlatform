@@ -35,6 +35,16 @@ NodeFn = Callable[[dict[str, Any]], Any | Awaitable[Any]]
 NodeExecutor = Callable[[PlanNode, dict[str, Any], RunContext], Awaitable[Any]]
 
 
+class StopRun(Exception):  # noqa: N818 - a control signal, not an error
+    """Raised by a node that hit a limit (``max_steps`` in an agent loop, a budget): the run ends
+    with status ``stopped`` and keeps its partial state, unless a ``stopped`` edge handles it."""
+
+    def __init__(self, reason: str, partial: Any = None) -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.partial = partial
+
+
 @dataclass(frozen=True)
 class NodeOutcome:
     outcome: str
@@ -137,6 +147,10 @@ class NodeRunner:
             result = await (asyncio.wait_for(call, float(timeout)) if timeout else call)
         except TimeoutError:
             return NodeOutcome("error", {"error": f"timed out after {timeout}s"}, "timeout")
+        except StopRun as stop:
+            return NodeOutcome(
+                "stopped", {"stopped": stop.reason, "partial": stop.partial}, stop.reason
+            )
         except Exception as exc:
             message = f"{type(exc).__name__}: {exc}"
             return NodeOutcome("error", {"error": message}, message)

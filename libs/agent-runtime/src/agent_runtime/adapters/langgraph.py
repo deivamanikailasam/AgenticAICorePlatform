@@ -69,6 +69,9 @@ class GraphState(TypedDict, total=False):
     outcomes: Annotated[dict[str, str], _merge]
     order: Annotated[list[str], operator.add]
     failed: Annotated[dict[str, str], _merge]  # node id -> error, when no edge handles it
+    stopped: Annotated[
+        dict[str, str], _merge
+    ]  # node id -> reason (a limit), when no edge handles it
 
 
 @dataclass
@@ -105,6 +108,7 @@ class LangGraphAdapter(RuntimeAdapter):
     def _node_fn(self, plan: ExecutablePlan, node: PlanNode) -> Any:
         runner = self.runner
         has_error_route = bool(next_targets(plan, node.id, "error"))
+        has_stop_route = bool(next_targets(plan, node.id, "stopped"))
 
         async def body(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
             ctx = config["configurable"]["agent_ctx"]
@@ -121,13 +125,15 @@ class LangGraphAdapter(RuntimeAdapter):
             }
             if result.outcome == "error" and not has_error_route:
                 update["failed"] = {node.id: result.error or "failed"}
+            if result.outcome == "stopped" and not has_stop_route:
+                update["stopped"] = {node.id: result.error or "stopped"}
             return update
 
         return body
 
     def _router(self, plan: ExecutablePlan, node_id: str) -> Any:
         def route(state: GraphState) -> list[str] | str:
-            if state.get("failed"):
+            if state.get("failed") or state.get("stopped"):
                 return END
             targets = next_targets(plan, node_id, state.get("outcomes", {}).get(node_id, "ok"))
             return targets or END
@@ -260,6 +266,9 @@ class LangGraphAdapter(RuntimeAdapter):
         elif failed:
             run.status = RunStatus.FAILED
             run.error = "; ".join(f"{k}: {v}" for k, v in failed.items())
+        elif run.state.get("stopped"):
+            run.status = RunStatus.STOPPED
+            run.stop_reason = "; ".join(f"{k}: {v}" for k, v in run.state["stopped"].items())
         else:
             run.status = RunStatus.SUCCEEDED
 
