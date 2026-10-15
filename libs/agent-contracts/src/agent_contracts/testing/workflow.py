@@ -260,3 +260,43 @@ class WorkflowRuntimeContract(RuntimeAdapterContract):
         b = await rt.invoke(handle, {"x": 1}, ctx())
         assert a.output == b.output
         assert a.state.values.keys() == b.state.values.keys()
+
+
+# ---------------------------------------------------------------- saga helpers (Step 12)
+
+#: what the saga functions did, in order; tests clear it first
+SAGA_LOG: list[str] = []
+
+
+def reserve(state: dict[str, Any]) -> str:
+    SAGA_LOG.append("reserve")
+    return "reserved"
+
+
+def charge(state: dict[str, Any]) -> str:
+    SAGA_LOG.append("charge")
+    return "charged"
+
+
+def ship(state: dict[str, Any]) -> str:
+    SAGA_LOG.append("ship")
+    raise RuntimeError("courier unavailable")
+
+
+def release(state: dict[str, Any]) -> str:
+    SAGA_LOG.append(f"release (undoing {state['compensating']})")
+    return "released"
+
+
+def refund(state: dict[str, Any]) -> str:
+    SAGA_LOG.append(f"refund (undoing {state['compensating']})")
+    return "refunded"
+
+
+async def slow_half_second(state: dict[str, Any]) -> str:
+    await asyncio.sleep(0.5)
+    return "late"
+
+
+def long_or_short(state: dict[str, Any]) -> str:
+    return "long" if state["count"]["words"] > 3 else "short"

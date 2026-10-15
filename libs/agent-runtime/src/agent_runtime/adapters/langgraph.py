@@ -52,6 +52,7 @@ from agent_runtime.nodes import (
     NodeOutcome,
     NodeRunner,
     approval_outcome,
+    compensate,
     max_steps,
     next_targets,
     run_output,
@@ -91,8 +92,9 @@ class LangGraphAdapter(RuntimeAdapter):
         functions: Mapping[str, NodeFn] | None = None,
         executors: Mapping[NodeKind, NodeExecutor] | None = None,
         checkpointer: BaseCheckpointSaver[Any] | None = None,
+        runner: NodeRunner | None = None,
     ) -> None:
-        self.runner = NodeRunner(functions, executors)
+        self.runner = runner or NodeRunner(functions, executors)
         self.checkpointer = checkpointer or InMemorySaver()
         self._plans: dict[str, ExecutablePlan] = {}
         self._graphs: dict[str, Any] = {}
@@ -105,11 +107,11 @@ class LangGraphAdapter(RuntimeAdapter):
         has_error_route = bool(next_targets(plan, node.id, "error"))
 
         async def body(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
-            if node.kind is NodeKind.APPROVAL:
+            ctx = config["configurable"]["agent_ctx"]
+            if node.kind is NodeKind.APPROVAL and runner.replay is None:
                 payload = interrupt({"node": node.id, **node.config})
-                result: NodeOutcome = approval_outcome(payload)
+                result: NodeOutcome = runner.record(ctx, node.id, approval_outcome(payload))
             else:
-                ctx = config["configurable"]["agent_ctx"]
                 values = {"input": state.get("input", {}), **state.get("values", {})}
                 result = await runner.run(node, values, ctx)
             update: dict[str, Any] = {
@@ -196,6 +198,8 @@ class LangGraphAdapter(RuntimeAdapter):
                             )
                         )
             await self._settle(run, interrupted)
+            if run.status is RunStatus.FAILED:
+                await self._compensate(run, queue)
         except GraphRecursionError:
             await self._settle(run, False)
             run.status = RunStatus.STOPPED
@@ -221,6 +225,30 @@ class LangGraphAdapter(RuntimeAdapter):
                     )
                 )
             await queue.put(_DONE)
+
+    async def _compensate(self, run: _Run, queue: asyncio.Queue[RunEvent | object]) -> None:
+        plan = self._plans[run.handle]
+        values = {"input": run.state.get("input", {}), **run.state.get("values", {})}
+        undone = await compensate(
+            plan,
+            self.runner,
+            values,
+            run.state.get("order", []),
+            run.state.get("outcomes", {}),
+            run.ctx,
+        )
+        for comp_id, result in undone:
+            run.state.setdefault("values", {})[comp_id] = result.value
+            await queue.put(
+                RunEvent(
+                    type=RunEventType.NODE_FINISHED,
+                    run_id=run.ctx.run_id,
+                    node_id=comp_id,
+                    data={"outcome": result.outcome, "compensation": True},
+                )
+            )
+        if undone:
+            run.error = f"{run.error}; compensated: {', '.join(c for c, _ in undone)}"
 
     async def _settle(self, run: _Run, interrupted: bool) -> None:
         snapshot = await self._graphs[run.handle].aget_state(self._config(run))

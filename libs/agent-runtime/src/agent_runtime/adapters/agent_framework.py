@@ -53,6 +53,7 @@ from agent_runtime.nodes import (
     NodeOutcome,
     NodeRunner,
     approval_outcome,
+    compensate,
     max_steps,
     next_targets,
     run_output,
@@ -122,13 +123,17 @@ class _PlanExecutor(Executor):
 class _ApprovalExecutor(_PlanExecutor):
     @handler
     async def on_step(self, message: Step, ctx: WorkflowContext[Step]) -> None:
+        if self.runner.replay is not None:  # a replay answers from the journal, never asks again
+            await self._execute(ctx)
+            return
         await ctx.request_info({"node": self.node.id, **self.node.config}, dict)
 
     @response_handler
     async def on_response(
         self, original: dict[str, Any], response: dict[str, Any], ctx: WorkflowContext[Step]
     ) -> None:
-        await self._finish(approval_outcome(response), ctx)
+        result = self.runner.record(self.run.ctx, self.node.id, approval_outcome(response))
+        await self._finish(result, ctx)
 
 
 def _condition(condition: str | None) -> Any:
@@ -143,8 +148,9 @@ class AgentFrameworkAdapter(RuntimeAdapter):
         self,
         functions: Mapping[str, NodeFn] | None = None,
         executors: Mapping[NodeKind, NodeExecutor] | None = None,
+        runner: NodeRunner | None = None,
     ) -> None:
-        self.runner = NodeRunner(functions, executors)
+        self.runner = runner or NodeRunner(functions, executors)
         self._plans: dict[str, ExecutablePlan] = {}
         self._runs: dict[str, _Run] = {}
 
@@ -227,6 +233,7 @@ class AgentFrameworkAdapter(RuntimeAdapter):
             elif run.failed:
                 run.status = RunStatus.FAILED
                 run.error = "; ".join(f"{k}: {v}" for k, v in run.failed.items())
+                await self._compensate(run, queue)
             else:
                 run.status = RunStatus.SUCCEEDED
         except asyncio.CancelledError:
@@ -253,6 +260,23 @@ class AgentFrameworkAdapter(RuntimeAdapter):
                     )
                 )
             await queue.put(None)
+
+    async def _compensate(self, run: _Run, queue: asyncio.Queue[RunEvent | None]) -> None:
+        plan = self._plans[run.handle]
+        values = {"input": run.inputs, **run.values}
+        undone = await compensate(plan, self.runner, values, run.order, run.outcomes, run.ctx)
+        for comp_id, result in undone:
+            run.values[comp_id] = result.value
+            await queue.put(
+                RunEvent(
+                    type=RunEventType.NODE_FINISHED,
+                    run_id=run.ctx.run_id,
+                    node_id=comp_id,
+                    data={"outcome": result.outcome, "compensation": True},
+                )
+            )
+        if undone:
+            run.error = f"{run.error}; compensated: {', '.join(c for c, _ in undone)}"
 
     async def _drive(self, run: _Run, kwargs: dict[str, Any]) -> AsyncIterator[RunEvent]:
         queue: asyncio.Queue[RunEvent | None] = asyncio.Queue()
