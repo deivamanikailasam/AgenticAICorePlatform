@@ -45,6 +45,11 @@ Search company documents. Returns passages with citations. Only documents the us
         "sql"
       ],
       "default": "naive"
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
     }
   },
   "required": [

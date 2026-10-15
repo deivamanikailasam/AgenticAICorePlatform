@@ -124,7 +124,7 @@ async def test_users_only_see_documents_they_may_read(gateway: tuple[str, Path])
     _, bob = await _search(url, "bob")
     assert bob == ["eng-001"], "engineering user sees engineering documents only"
     _, gina = await _search(url, "gina")
-    assert gina == ["glx-001"], "another tenant's user sees only her tenant's documents"
+    assert gina == ["glx-001"], "another tenant's user sees only their tenant's documents"
 
 
 async def test_calls_without_a_token_are_rejected(gateway: tuple[str, Path]) -> None:
@@ -153,3 +153,32 @@ async def test_every_call_is_policy_checked_and_audited(gateway: tuple[str, Path
     assert last["payload"]["tool"] == "rag-core__search"
     assert last["ctx"]["tenant_id"] == "acme"
     assert all(e["prev_hash"] for e in events)
+
+
+async def test_another_tenants_data_is_denied_and_audited(gateway: tuple[str, Path]) -> None:
+    """Step 10 "Done when": alice (tenant acme) asks for tenant globex's documents."""
+    url, audit = gateway
+    before = len(audit.read_text().splitlines()) if audit.exists() else 0
+    http = httpx2.AsyncClient(
+        headers={"Authorization": f"Bearer {user_token('alice')}"}, timeout=30
+    )
+    async with http, Client(streamable_http_client(url, http_client=http)) as client:
+        result = await client.call_tool(
+            "rag-core__search", {"query": "salaries", "tenant_id": "globex"}
+        )
+        same_tenant = await client.call_tool(
+            "rag-core__search", {"query": "refund", "tenant_id": "acme"}
+        )
+    assert result.is_error
+    assert "cross-tenant access" in result.content[0].text  # type: ignore[union-attr]
+    assert not same_tenant.is_error, same_tenant.content
+    new = [json.loads(line)["event"] for line in audit.read_text().splitlines()[before:]]
+    denied = [e for e in new if e["type"] == "policy.decision"]
+    assert len(denied) == 1
+    assert denied[0]["ctx"]["user_id"] == "alice"
+    assert denied[0]["ctx"]["tenant_id"] == "acme"
+    assert denied[0]["payload"]["decision"] == "deny"
+    assert denied[0]["payload"]["reasons"] == ["cross-tenant access"]
+    assert denied[0]["payload"]["tool"] == "rag-core__search"
+    executed = [e for e in new if e["type"] == "tool.call"]
+    assert len(executed) == 1, "only the same-tenant call ran"

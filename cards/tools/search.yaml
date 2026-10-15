@@ -35,6 +35,10 @@ input_schema:
       - graph
       - sql
       default: naive
+    tenant_id:
+      type: string
+      minLength: 1
+      maxLength: 64
   required:
   - query
   additionalProperties: false

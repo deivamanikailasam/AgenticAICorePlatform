@@ -53,6 +53,9 @@ class RagCoreSearchTool(Tool):
                     "query": {"type": "string", "minLength": 1, "maxLength": 1000},
                     "k": {"type": "integer", "minimum": 1, "maximum": 20, "default": 5},
                     "architecture": {"type": "string", "enum": ARCHITECTURES, "default": "naive"},
+                    # optional: whose corpus. Policy denies any tenant but the caller's (Step 10);
+                    # rag-core itself takes the tenant from the exchanged token, so it is not sent.
+                    "tenant_id": {"type": "string", "minLength": 1, "maxLength": 64},
                 },
                 "required": ["query"],
                 "additionalProperties": False,
