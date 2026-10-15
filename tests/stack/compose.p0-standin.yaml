@@ -100,18 +100,26 @@ services:
   # PII detection and redaction (Project 0 runs Presidio; Step 27). 2.2.362 released 2026-03-15.
   presidio-analyzer:
     image: mcr.microsoft.com/presidio-analyzer:2.2.362@sha256:286e3fa7f3a7426e775e8564fe1870f1ba8f999d3ab8bbb8cc46a44355d9d6e9
+    # gunicorn 25.1.0 (both images): the master's control-socket thread can deadlock the worker
+    # it forks, which then never boots (CI runs 49, 50, 56); the socket isn't needed here
+    entrypoint: ["gunicorn"]
+    command: ["--no-control-socket", "-w", "1", "-b", "0.0.0.0:3000", "app:create_app()"]
     ports: ["127.0.0.1:5002:3000"]
     mem_limit: 2g
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:3000/health')\""]
       interval: 5s
       retries: 60
-      # the worker loads a large spaCy model; on a busy CI runner that can take minutes, and
-      # failures while starting must not count (CI run 50 marked it unhealthy at 5 minutes)
+      # the worker loads a large spaCy model, which can take minutes on a busy CI runner;
+      # failures while starting must not count
       start_period: 600s
 
   presidio-anonymizer:
     image: mcr.microsoft.com/presidio-anonymizer:2.2.362@sha256:a10a12a2a613d13cf29d3ad3641e3258444dd8c90403dd644a0a114c472c2483
+    # gunicorn 25.1.0 (both images): the master's control-socket thread can deadlock the worker
+    # it forks, which then never boots (CI runs 49, 50, 56); the socket isn't needed here
+    entrypoint: ["gunicorn"]
+    command: ["--no-control-socket", "-w", "1", "-b", "0.0.0.0:3000", "app:create_app()"]
     ports: ["127.0.0.1:5001:3000"]
     mem_limit: 512m
     healthcheck:
