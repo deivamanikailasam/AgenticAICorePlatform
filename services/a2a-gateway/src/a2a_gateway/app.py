@@ -42,7 +42,7 @@ from starlette.applications import Starlette
 from starlette.datastructures import Headers
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.routing import BaseRoute, Route
+from starlette.routing import BaseRoute, Mount, Route
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from a2a_gateway.cards import agent_card, signed
@@ -149,10 +149,20 @@ class A2aGateway:
     def routes(self) -> list[BaseRoute]:
         routes: list[BaseRoute] = [Route("/healthz", _health), Route("/", self._index)]
         for name, handler in self.handlers.items():
-            root = f"/agents/{name}"
-            routes += create_agent_card_routes(self.cards[name], card_url=f"{root}{CARD}")
-            routes += create_jsonrpc_routes(handler, f"{root}/jsonrpc")
-            routes += create_rest_routes(handler, path_prefix=f"{root}/rest")
+            # each agent in its own mount, so no route of one agent can match another's path;
+            # the SDK's path-tenant mount (``/{tenant}``) is dropped: the tenant comes from the
+            # verified token, never from the URL
+            rest = [
+                r
+                for r in create_rest_routes(handler, path_prefix="/rest")
+                if getattr(r, "path", "") != "/{tenant}"
+            ]
+            agent_routes = [
+                *create_agent_card_routes(self.cards[name], card_url=CARD),
+                *create_jsonrpc_routes(handler, "/jsonrpc"),
+                *rest,
+            ]
+            routes.append(Mount(f"/agents/{name}", routes=agent_routes))
         return routes
 
     def app(self) -> ASGIApp:

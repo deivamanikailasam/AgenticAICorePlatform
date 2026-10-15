@@ -40,6 +40,9 @@ def finish_of(sse: str) -> dict[str, Any]:
         event = json.loads(line[6:])
         if event.get("type") == "RUN_FINISHED":
             last = dict(event.get("result") or {})
+            outcome = event.get("outcome")
+            if isinstance(outcome, dict) and outcome.get("interrupts"):
+                last["interrupts"] = outcome["interrupts"]
         elif event.get("type") == "RUN_ERROR":
             last = {"status": "failed", "error": event.get("message")}
     return last
@@ -74,8 +77,14 @@ class RunApiExecutor(AgentExecutor):
         result = finish_of(events.text)
         status = result.get("status")
         if status == "interrupted":
-            waiting = ", ".join(str(i.get("reason", "?")) for i in result.get("interrupts") or [])
-            await updater.requires_input(new_text_message(f"waiting for {waiting or 'input'}"))
+            waiting = "; ".join(
+                str(i.get("message") or i.get("reason") or "?")
+                for i in result.get("interrupts") or []
+            )
+            # approvals are given in the platform (run API or its UI), never by the A2A caller
+            await updater.requires_input(
+                new_text_message(f"waiting for approval or input: {waiting or 'pending'}")
+            )
         elif status == "succeeded":
             await updater.add_artifact([Part(text=answer_text(result))], name="answer")
             await updater.complete()

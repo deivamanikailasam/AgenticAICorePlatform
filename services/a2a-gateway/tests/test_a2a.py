@@ -142,6 +142,26 @@ graph:
     - { id: answer, type: llm, config: { template: "Answer briefly: ${input.task}" } }
 """
 
+GATED = """
+spec_version: 1
+name: gated-desk
+version: 0.1.0
+owner: agent-platform
+description: Adds numbers, only after a person approves.
+risk_tier: low
+autonomy: workflow
+pattern: workflow
+runtime: { adapter: langgraph, durability: memory }
+budgets: { max_steps: 5, max_wall_seconds: 20 }
+interop: { a2a_publish: true }
+tools:
+  - ref: local://platform/calculator
+    approval: { required: true, approvers: "group:approvers" }
+graph:
+  nodes:
+    - { id: add, type: tool, tool: calculator, config: { args: { expression: "1+1" } } }
+"""
+
 PRIVATE = DESK.replace("name: capital-desk", "name: internal-desk").replace(
     "interop: { a2a_publish: true }\n", ""
 )
@@ -192,9 +212,9 @@ class World:
 
 @pytest.fixture
 async def world() -> AsyncIterator[World]:
-    api_app, _ = project_a_api([DESK, PRIVATE])
+    api_app, _ = project_a_api([DESK, PRIVATE, GATED])
     pdp, audit = Pdp(), MemoryAuditSink()
-    specs = {s.name: s for s in map(load_spec_text, [DESK, PRIVATE])}
+    specs = {s.name: s for s in map(load_spec_text, [DESK, PRIVATE, GATED])}
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=api_app), base_url="http://api.test"
     ) as api:
@@ -238,7 +258,7 @@ async def ask(
 
 async def test_only_agents_that_opt_in_are_published_with_signed_cards(world: World) -> None:
     index = (await world.http.get("/")).json()
-    assert [a["name"] for a in index["agents"]] == ["capital-desk"]
+    assert [a["name"] for a in index["agents"]] == ["capital-desk", "gated-desk"]
     card = (await world.http.get("/agents/capital-desk/.well-known/agent-card.json")).json()
     assert card["signatures"], "the card must be signed"
     assert {i["protocolBinding"] for i in card["supportedInterfaces"]} == {"JSONRPC", "HTTP+JSON"}
@@ -268,7 +288,7 @@ async def test_calls_need_a_token_and_policy_and_a_published_agent(world: World)
     assert rest.status_code == 401
     inbound = [p for p in world.pdp.seen if p.action == "a2a.inbound"]
     assert inbound
-    assert all(p.allowed_tools == ("capital-desk",) for p in inbound)
+    assert {p.allowed_tools for p in inbound} == {("capital-desk", "gated-desk")}
     assert [
         r.event.payload["effect"] for r in await world.audit.read() if r.event.type == "a2a.inbound"
     ] == ["deny"]
@@ -303,6 +323,22 @@ async def test_streaming_reports_the_task_lifecycle(world: World) -> None:
         if r.WhichOneof("payload") == "artifact_update"
     ]
     assert [p.text for a in artifacts for p in a.parts] == ["Canberra."]
+
+
+async def test_a_run_waiting_for_approval_is_input_required(world: World) -> None:
+    responses = await ask(world.http, "http://gw.test/agents/gated-desk", "Add", "t-alice")
+    task = next(r.task for r in responses if r.WhichOneof("payload") == "task")
+    assert TaskState.Name(task.status.state) == "TASK_STATE_INPUT_REQUIRED"
+    assert "Approve calculator?" in task.status.message.parts[0].text
+    assert not task.artifacts
+
+
+async def test_each_agent_answers_only_on_its_own_path(world: World) -> None:
+    for name in ("capital-desk", "gated-desk"):
+        card = (await world.http.get(f"/agents/{name}/.well-known/agent-card.json")).json()
+        assert card["name"] == name
+    routes = [getattr(r, "path", "") for r in world.gateway.routes()]
+    assert "/{tenant}" not in routes
 
 
 # ---------------------------------------------------------------- another framework -> Project A
