@@ -13,10 +13,18 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent_compiler.run import executors_for, functions_for
-from agent_contracts.interfaces import AuditSink, ModelClient, PolicyDecisionPoint, ToolExecutor
+from agent_contracts.interfaces import (
+    AuditSink,
+    Checkpointer,
+    ModelClient,
+    PolicyDecisionPoint,
+    ToolExecutor,
+)
 from agent_contracts.models import ExecutablePlan
+from agent_runtime.durable import CheckpointingNodeRunner
 from agent_runtime.events import EventingNodeRunner, EventingToolExecutor, StreamingModelClient
 from agent_runtime.models.gateway import GatewayModelClient
+from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec
 from agent_spec.platform import PlatformConfig
 from agent_tools.assemble import grants_for
@@ -29,6 +37,12 @@ from agent_tools.ragcore import RagCoreSearchTool
 from agent_tools.registry import InMemoryToolRegistry
 
 ModelFactory = Callable[[AgentSpec], ModelClient]
+
+
+class DurableEventingNodeRunner(EventingNodeRunner, CheckpointingNodeRunner):
+    """Live events and a checkpoint after every node (events are not repeated on resume)."""
+
+
 RegistryFactory = Callable[[AgentSpec], Awaitable[InMemoryToolRegistry]]
 
 
@@ -50,7 +64,9 @@ class Assembly:
         exchanger: TokenExchanger | None = None,
         model_factory: ModelFactory | None = None,
         registry_factory: RegistryFactory | None = None,
+        checkpointer: Checkpointer | None = None,
     ) -> None:
+        self.checkpointer = checkpointer
         self.platform = platform
         self.pdp = pdp
         self.audit = audit
@@ -80,7 +96,9 @@ class Assembly:
             await self.pool.register_all(registry, server)  # refuses servers off the allowlist
         return registry
 
-    async def build(self, spec: AgentSpec, plan: ExecutablePlan) -> Assembled:
+    async def build(
+        self, spec: AgentSpec, plan: ExecutablePlan, journal: RunJournal | None = None
+    ) -> Assembled:
         registry = await self.registry_factory(spec)
         tools = EventingToolExecutor(
             AuthorisingToolExecutor(
@@ -94,7 +112,14 @@ class Assembly:
         model = StreamingModelClient(self.model_factory(spec))
         functions = functions_for(plan)
         executors: dict[Any, Any] = executors_for(spec, plan, functions, model=model, tools=tools)
-        return Assembled(model, tools, EventingNodeRunner(functions, executors))
+        runner: EventingNodeRunner
+        if self.checkpointer is not None:
+            runner = DurableEventingNodeRunner(
+                functions, executors, journal, True, checkpointer=self.checkpointer
+            )
+        else:
+            runner = EventingNodeRunner(functions, executors)
+        return Assembled(model, tools, runner)
 
     async def aclose(self) -> None:
         await self.pool.aclose()

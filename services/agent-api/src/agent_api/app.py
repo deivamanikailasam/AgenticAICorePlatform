@@ -12,6 +12,8 @@
 ``POST /v1/runs/{id}/resume``              answer a non-approval interrupt (owner only)
 ``POST /v1/runs/{id}/cancel``              cancel (owner only)
 ``GET  /v1/threads``                       the caller's threads and their runs
+``GET  /v1/threads/{id}/checkpoints``      time travel: a thread's checkpoints
+``POST /v1/threads/{id}/fork``             time travel: continue from an earlier checkpoint
 =========================================  ==============================================
 
 Every call needs a bearer token verified against Keycloak (issuer, signature, expiry,
@@ -20,6 +22,7 @@ audience). The WebSocket takes its token in the first message, so tokens never a
 
 from __future__ import annotations
 
+import contextlib
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from importlib import resources
@@ -162,6 +165,17 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
     async def threads(request: Request, who: Principal) -> Response:
         return JSONResponse({"threads": manager.threads(who)})
 
+    async def checkpoints(request: Request, who: Principal) -> Response:
+        thread = request.path_params["thread_id"]
+        return JSONResponse({"checkpoints": await manager.checkpoints(thread, who)})
+
+    async def fork(request: Request, who: Principal) -> Response:
+        data = await body(request)
+        if not isinstance(data.get("checkpoint_id"), str):
+            raise ValueError("'checkpoint_id' is required")
+        run = await manager.fork(request.path_params["thread_id"], data["checkpoint_id"], who)
+        return JSONResponse(run.summary(), 201)
+
     async def socket(ws: WebSocket) -> None:
         await ws.accept()
         try:
@@ -194,7 +208,13 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
     async def health(request: Request) -> Response:
         return JSONResponse({"status": "ok"})
 
+    @contextlib.asynccontextmanager
+    async def lifespan(app: Starlette) -> AsyncIterator[None]:
+        await manager.recover()  # Step 18: runs survive a restart
+        yield
+
     return Starlette(
+        lifespan=lifespan,
         routes=[
             Route("/", page),
             Route("/healthz", health),
@@ -206,6 +226,8 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
             Route("/v1/runs/{run_id}/resume", guarded(resume), methods=["POST"]),
             Route("/v1/runs/{run_id}/cancel", guarded(cancel), methods=["POST"]),
             Route("/v1/threads", guarded(threads)),
+            Route("/v1/threads/{thread_id}/checkpoints", guarded(checkpoints)),
+            Route("/v1/threads/{thread_id}/fork", guarded(fork), methods=["POST"]),
             WebSocketRoute("/v1/runs/{run_id}/ws", socket),
-        ]
+        ],
     )

@@ -1,5 +1,7 @@
 """The run API (Step 17): AG-UI over SSE and WebSocket, runs, approvals from verified tokens."""
 
+import asyncio
+import contextlib
 import json
 from collections.abc import AsyncIterator
 from typing import Any
@@ -91,14 +93,34 @@ class Pay(CalculatorTool):
         return {"paid": arguments["amount_aud"]}
 
 
+class CountingCalculator(CalculatorTool):
+    def __init__(self, calls: list[dict[str, Any]]) -> None:
+        self.calls = calls
+
+    async def invoke(self, arguments: Any, ctx: Any) -> Any:
+        self.calls.append(dict(arguments))
+        return await super().invoke(arguments, ctx)
+
+
 class World:
-    def __init__(self) -> None:
-        self.payments: list[dict[str, Any]] = []
+    """One API process. Worlds built with the same ``store`` and ``checkpointer`` (and the same
+    ``payments``/``sums`` lists, standing in for the outside world) simulate a restart."""
+
+    def __init__(
+        self,
+        store: Any = None,
+        checkpointer: Any = None,
+        model: Any = None,
+        payments: list[dict[str, Any]] | None = None,
+        sums: list[dict[str, Any]] | None = None,
+    ) -> None:
+        self.payments = payments if payments is not None else []
+        self.sums = sums if sums is not None else []
         self.audit = MemoryAuditSink()
 
         async def registry(spec: Any) -> InMemoryToolRegistry:
             reg = InMemoryToolRegistry()
-            await reg.register(CalculatorTool())
+            await reg.register(CountingCalculator(self.sums))
             await reg.register(Pay(self.payments))
             return reg
 
@@ -106,13 +128,17 @@ class World:
             load_platform(),
             RulesPolicyDecisionPoint(),
             self.audit,
-            model_factory=lambda spec: ScriptedModelClient(
-                [Message(role=Role.ASSISTANT, content="The total is 42.")]
+            model_factory=model
+            or (
+                lambda spec: ScriptedModelClient(
+                    [Message(role=Role.ASSISTANT, content="The total is 42.")]
+                )
             ),
             registry_factory=registry,
+            checkpointer=checkpointer,
         )
         spec = load_spec_text(SPEC)
-        self.manager = RunManager({spec.name: spec}, assembly)
+        self.manager = RunManager({spec.name: spec}, assembly, store)
         self.app = build_app(self.manager, Verifier())
 
 
@@ -322,3 +348,115 @@ async def test_the_page_uses_only_ag_ui_events(world: tuple[World, httpx.AsyncCl
     ):
         assert event in html
     assert "?token=" not in html, "tokens never go in URLs"
+
+
+# ---------------------------------------------------------------- durability (Step 18)
+
+
+def durable_world(previous: World | None = None, **kw: Any) -> World:
+    from agent_api.store import MemoryRunStore
+    from agent_contracts.dummies.state import InMemoryCheckpointer
+
+    if previous is None:
+        return World(store=MemoryRunStore(), checkpointer=InMemoryCheckpointer(), **kw)
+    return World(
+        store=previous.manager.store,
+        checkpointer=previous.manager.assembly.checkpointer,
+        payments=previous.payments,
+        sums=previous.sums,
+        **kw,
+    )
+
+
+def client_for(w: World) -> httpx.AsyncClient:
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=w.app), base_url="http://api.test")
+
+
+async def test_a_paused_run_survives_a_restart_and_can_be_approved() -> None:
+    before = durable_world()
+    async with client_for(before) as client:
+        run = await start(client)
+        first = await stream(client, run["run_id"])
+    after = durable_world(before)  # the process restarts: new manager, same store and checkpoints
+    actions = await after.manager.recover()
+    assert actions == [f"{run['run_id']}: waiting for approval again"]
+    async with client_for(after) as client:
+        state = (await client.get(f"/v1/runs/{run['run_id']}", headers=auth("t-alice"))).json()
+        assert state["status"] == "interrupted"
+        assert state["events"] == len(first), "nothing was emitted again"
+        resp = await client.post(
+            f"/v1/runs/{run['run_id']}/approvals", json={"approved": True}, headers=auth("t-jsmith")
+        )
+        assert resp.status_code == 202, resp.text
+        rest = await stream(client, run["run_id"], after=first[-1][0])
+    assert rest[-1][1]["outcome"]["type"] == "success"
+    assert after.payments == [{"amount_aud": 42.0}]
+    assert len(after.sums) == 1, "the calculator step before the restart was not repeated"
+
+
+class Stuck(ScriptedModelClient):
+    """A model that never answers: the worker 'dies' while this step is running."""
+
+    async def chat(self, request: Any) -> Any:
+        await asyncio.Event().wait()
+
+
+async def test_a_running_run_resumes_from_its_last_checkpoint_after_a_restart() -> None:
+    before = durable_world(model=lambda spec: Stuck())
+    async with client_for(before) as client:
+        run = await start(client)
+    run_obj = before.manager.runs[run["run_id"]]
+    for _ in range(100):
+        if any(e["type"] == "STEP_STARTED" and e["stepName"] == "explain" for e in run_obj.events):
+            break
+        await asyncio.sleep(0.02)
+    assert run_obj.task is not None
+    from agent_api.store import MemoryRunStore
+
+    class Gone(MemoryRunStore):  # a dead process writes nothing more
+        async def save(self, record: Any) -> None:
+            return None
+
+        async def append(self, run_id: str, index: int, event: Any) -> None:
+            return None
+
+    shared = before.manager.store
+    before.manager.store = Gone()
+    run_obj.task.cancel()  # the worker dies mid-step; the shared store still says "running"
+    with contextlib.suppress(asyncio.CancelledError):
+        await run_obj.task
+    before.manager.store = shared
+    after = durable_world(before)
+    assert await after.manager.recover() == [f"{run['run_id']}: resumed from checkpoints"]
+    await after.manager.wait_idle(after.manager.runs[run["run_id"]])
+    assert after.manager.runs[run["run_id"]].status == "interrupted"
+    assert len(after.sums) == 1, "the completed tool step was answered from its checkpoint"
+
+
+async def test_fork_from_an_earlier_checkpoint_continues_without_repeating_it() -> None:
+    w = durable_world()
+    async with client_for(w) as client:
+        run = await start(client)
+        await stream(client, run["run_id"])
+        cps = (
+            await client.get(f"/v1/threads/{run['thread_id']}/checkpoints", headers=auth("t-alice"))
+        ).json()["checkpoints"]
+        assert [c["node_id"] for c in cps] == ["total", "explain"]
+        assert (
+            await client.get(
+                f"/v1/threads/{run['thread_id']}/checkpoints", headers=auth("t-mallory")
+            )
+        ).status_code == 404
+        forked = await client.post(
+            f"/v1/threads/{run['thread_id']}/fork",
+            json={"checkpoint_id": cps[0]["checkpoint_id"]},
+            headers=auth("t-alice"),
+        )
+        assert forked.status_code == 201, forked.text
+        new = forked.json()
+        assert new["thread_id"] != run["thread_id"]
+        events = await stream(client, new["run_id"])
+    steps = [e["stepName"] for _, e in events if e["type"] == "STEP_STARTED"]
+    assert steps == ["explain"], "the forked run picks up after the chosen checkpoint"
+    assert events[-1][1]["outcome"]["type"] == "interrupt"
+    assert len(w.sums) == 1

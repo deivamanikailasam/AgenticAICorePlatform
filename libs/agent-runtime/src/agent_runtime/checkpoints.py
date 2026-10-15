@@ -47,6 +47,16 @@ class FieldCipher:
     def _aad(cp: Checkpoint) -> bytes:
         return f"{cp.tenant_id}|{cp.thread_id}|{cp.checkpoint_id}".encode()
 
+    def seal_value(self, value: Any, context: str) -> str:
+        """Any JSON value as one ciphertext bound to ``context`` (e.g. ``run|<id>|event|3``)."""
+        nonce = os.urandom(12)
+        plain = json.dumps(value, default=str).encode()
+        return base64.b64encode(nonce + self._aead.encrypt(nonce, plain, context.encode())).decode()
+
+    def open_value(self, sealed: str, context: str) -> Any:
+        raw = base64.b64decode(sealed)
+        return json.loads(self._aead.decrypt(raw[:12], raw[12:], context.encode()))
+
     def seal(self, cp: Checkpoint) -> dict[str, Any]:
         out = dict(cp.state)
         for name in self.fields:

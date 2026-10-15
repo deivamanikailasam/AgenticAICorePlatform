@@ -46,6 +46,14 @@ class Settings:
             "AGENT_PLATFORM_CLIENT_SECRET", "${secret:keycloak/agent-platform#client_secret}"
         )
     )
+    # Step 18: where runs and checkpoints live: memory (one process) | postgres (the agent DB)
+    store: str = field(default_factory=lambda: _env("AGENT_API_STORE", "memory"))
+    db_dsn: str = field(default_factory=lambda: _env("AGENT_DB_DSN", ""))
+    checkpoint_key: str = field(
+        default_factory=lambda: _env(
+            "AGENT_CHECKPOINT_KEY", "${secret:agent-platform/checkpoints#key}"
+        )
+    )
     audit_file: str = field(
         default_factory=lambda: _env("AGENT_API_AUDIT_FILE", "/tmp/agent-api-audit.jsonl")  # noqa: S108
     )
