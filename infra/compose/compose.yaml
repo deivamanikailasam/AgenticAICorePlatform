@@ -85,6 +85,10 @@ services:
       AGENT_API_AGENTS_DIR: /app/agents
       AGENT_API_AUDIT_FILE: /tmp/agent-api-audit.jsonl
       AGENT_API_PDP: ${AGENT_API_PDP:-opa}
+      # Step 25: dev | staging | prod (staging and prod run only approved agents). The registry
+      # is Postgres when AGENT_DB_DSN is set, else a local file (dev only)
+      AGENT_ENV: ${AGENT_ENV:-dev}
+      AGENT_REGISTRY_FILE: /tmp/agents.db
       # Step 18: memory (default) | postgres (runs and encrypted checkpoints in the agent DB)
       AGENT_API_STORE: ${AGENT_API_STORE:-memory}
       # the agent database: durable runs (Step 18) and agents' long-term memory (Step 20)
@@ -164,6 +168,8 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       AGENT_API_AGENTS_DIR: /app/agents
       AGENT_API_PDP: ${AGENT_API_PDP:-opa}
+      AGENT_ENV: ${AGENT_ENV:-dev}
+      AGENT_REGISTRY_FILE: /tmp/agents.db
       AGENT_CERBOS_URL: http://cerbos:3592
       AGENT_WORKER_AUDIT_FILE: /tmp/agent-worker-audit.jsonl
       P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}

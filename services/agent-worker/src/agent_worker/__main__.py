@@ -12,6 +12,7 @@ import os
 from typing import Any
 
 from agent_api.assembly import Assembly
+from agent_api.registry import registry_gate
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
 from agent_contracts.dummies.observability import JsonlAuditSink
@@ -43,12 +44,18 @@ async def run() -> None:
     exchanger = TokenExchanger(
         settings.token_url, settings.client_id, settings.client_secret, EnvSecretResolver()
     )
+    audit = JsonlAuditSink(
+        os.environ.get("AGENT_WORKER_AUDIT_FILE", "/tmp/agent-worker-audit.jsonl")  # noqa: S108
+    )
+    # Step 25: teams run by the worker delegate only to approved agents in staging and prod
+    gate = await registry_gate(settings.environment, audit, who="agent-worker")
     assembly = Assembly(
         load_platform(),
         build_pdp(settings.pdp, opa_url=settings.opa_url, cerbos_url=settings.cerbos_url),
-        JsonlAuditSink(os.environ.get("AGENT_WORKER_AUDIT_FILE", "/tmp/agent-worker-audit.jsonl")),  # noqa: S108
+        audit,
         rag_core_url=settings.rag_core_url,
         exchanger=exchanger,
+        admit=gate.refusal,
     )
     runtime = TemporalRuntime(artefacts=await artefacts())
     handles = await serve(runtime, assembly, RunManager.load_agents(settings.agents_dir))

@@ -7,9 +7,6 @@ import asyncio
 import uvicorn
 from agent_contracts.dummies.observability import JsonlAuditSink
 from agent_contracts.interfaces import Checkpointer
-from agent_registry.factory import open_registry
-from agent_registry.gate import ApprovedOnly
-from agent_registry.sync import sync
 from agent_runtime.checkpoints import FieldCipher, PostgresCheckpointer
 from agent_spec.platform import load_platform
 from agent_tools.auth import KeycloakTokenVerifier
@@ -19,6 +16,7 @@ from agent_tools.secrets import EnvSecretResolver
 
 from agent_api.app import build_app
 from agent_api.assembly import Assembly
+from agent_api.registry import registry_gate
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
 from agent_api.store import PostgresRunStore, RunStore
@@ -45,16 +43,8 @@ def main() -> None:
     )
     # Step 25: every deployed spec is in the registry (new versions as draft); in staging and
     # prod only approved versions run or are delegated to
-    registry, where = open_registry()
     agents = RunManager.load_agents(settings.agents_dir)
-    for result in asyncio.run(sync(registry, agents.values(), by="agent-api")):
-        if result.outcome.startswith("refused"):
-            print(f"registry: {result.name}@{result.version} {result.outcome}")
-    gate = ApprovedOnly(registry, settings.environment, audit)
-    print(
-        f"registry: {where}; environment {settings.environment}"
-        f"{' (approved agents only)' if gate.enforced else ''}"
-    )
+    gate = asyncio.run(registry_gate(settings.environment, audit, agents))
     assembly = Assembly(
         load_platform(),
         build_pdp(settings.pdp, opa_url=settings.opa_url, cerbos_url=settings.cerbos_url),
