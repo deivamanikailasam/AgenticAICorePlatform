@@ -163,8 +163,11 @@ class RetryPolicy(Frozen):
 class ToolSpec(Frozen):
     """The typed description of a tool (Step 6 extends the registry around it)."""
 
-    name: str = Field(pattern=r"^[a-zA-Z0-9_.:/-]{1,128}$")
+    name: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")  # what the model sees (OpenAI/MCP-safe)
     version: str = "1.0.0"
+    ref: str | None = (
+        None  # where it comes from: local://platform/calculator, mcp://erp/get_invoice …
+    )
     description: str = ""
     input_schema: dict[str, Any] = Field(default_factory=lambda: {"type": "object"})
     output_schema: dict[str, Any] | None = None
