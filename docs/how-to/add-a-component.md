@@ -6,8 +6,10 @@
    ```python
    from agent_contracts.interfaces import Checkpointer
 
+
    class RedisCheckpointer(Checkpointer):
        """Checkpoints in Valkey (dev only)."""
+
        ...
    ```
 
@@ -15,6 +17,7 @@
 
    ```python
    from agent_contracts.testing import CheckpointerContract
+
 
    class TestRedisCheckpointer(CheckpointerContract):
        def make(self):
