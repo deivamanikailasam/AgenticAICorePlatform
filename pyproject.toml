@@ -21,6 +21,7 @@ dev = [
     "respx>=0.23.1,<0.24",
     "pre-commit>=4.7.0,<5",
     "types-pyyaml>=6.0.12",
+    "types-jsonschema>=4.26.0.20261006",
 ]
 
 [tool.uv]

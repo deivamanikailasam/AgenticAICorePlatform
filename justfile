@@ -97,3 +97,7 @@ with-secrets *cmd:
 # Encrypt secrets/dev.env into secrets/dev.enc.env with Project 0's age key
 secrets-init:
     ./scripts/secrets_init.sh
+
+# List every registered component (the switchable parts)
+components *args:
+    uv run agent-components {{args}}
