@@ -8,10 +8,13 @@ dependencies = [
     "agent-spec",
     "httpx>=0.28.1,<0.29",
     "jsonschema>=4.26.0,<5",
+    # exact pins with a 14-day cooldown (ADR 0022): langgraph 1.2.12 was released 2026-09-21
+    "langgraph==1.2.12",
 ]
 
 [project.entry-points."agent_platform.components"]
 "model_client.litellm" = "agent_runtime.models.gateway:GatewayModelClient"
+"runtime_adapter.langgraph" = "agent_runtime.adapters.langgraph:LangGraphAdapter"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }

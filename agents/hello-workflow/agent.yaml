@@ -1,4 +1,4 @@
-# The smallest useful spec: a one-node deterministic workflow (Step 4 runs it end to end).
+# The smallest useful spec: a one-node deterministic workflow on the default LangGraph adapter.
 spec_version: 1
 name: hello-workflow
 version: 0.1.0
@@ -7,7 +7,7 @@ description: Greets the caller. Proves spec -> compiler -> runtime -> trace.
 risk_tier: low
 autonomy: workflow
 pattern: workflow
-runtime: { adapter: sequential, durability: memory }
+runtime: { adapter: langgraph, durability: memory }
 budgets: { max_steps: 5, max_wall_seconds: 10 }
 graph:
   nodes:

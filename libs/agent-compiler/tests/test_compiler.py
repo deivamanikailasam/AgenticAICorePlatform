@@ -96,7 +96,7 @@ def test_agent_nodes_expand_and_irreversible_tools_get_approval() -> None:
 
 
 def test_unknown_runtime_adapter() -> None:
-    spec = load_spec_text(HELLO.read_text().replace("adapter: sequential", "adapter: warp-drive"))
+    spec = load_spec_text(HELLO.read_text().replace("adapter: langgraph", "adapter: warp-drive"))
     with pytest.raises(CompileError, match="runtime adapter 'warp-drive' is not installed"):
         runtime_for(spec)
 
