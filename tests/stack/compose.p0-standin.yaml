@@ -52,6 +52,7 @@ services:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
       interval: 5s
       retries: 40
+      start_period: 300s
 
   openbao:
     # Dev mode: in-memory, auto-unsealed, root token below. Stand-in only (Project 0 runs the
@@ -105,6 +106,9 @@ services:
       test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:3000/health')\""]
       interval: 5s
       retries: 60
+      # the worker loads a large spaCy model; on a busy CI runner that can take minutes, and
+      # failures while starting must not count (CI run 50 marked it unhealthy at 5 minutes)
+      start_period: 600s
 
   presidio-anonymizer:
     image: mcr.microsoft.com/presidio-anonymizer:2.2.362@sha256:a10a12a2a613d13cf29d3ad3641e3258444dd8c90403dd644a0a114c472c2483
@@ -277,6 +281,7 @@ services:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/public/health | grep -q OK"]
       interval: 5s
       retries: 60
+      start_period: 600s
 
   qdrant:
     image: docker.io/qdrant/qdrant:v1.19.1@sha256:12364fe851b9f17356fc88189fc06d1b521262e04659ec7345975b00c9246a10
