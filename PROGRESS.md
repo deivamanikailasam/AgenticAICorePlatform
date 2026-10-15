@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 16 · Agentic RAG (next)
+**Current step:** 17 · Run API and streaming (next)
 
 ## Environment note (read first)
 
@@ -35,13 +35,14 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 13 Single tool-calling agent | done | ReAct loop: parallel reads, ordered writes, untrusted observations, bounded repairs, schema repair, `stopped` at max_steps, approval pause/resume, text ReAct fallback; agent_loop slot with native, OpenAI Agents SDK 0.22.3 and Pydantic AI 2.52.0 engines (contract); 8/8 golden tasks (stand-in model) on 3 engines × 2 adapters | golden tasks with the real local model (`-m mac`); Google ADK via A2A in Step 21 |
 | 14 Planning and reflection | done | plan_execute (re-plan on failure), rewoo (2 model calls), reflection (self-critique), evaluator_optimiser (judge, best candidate) as pattern builders; planner.llm / critic.llm pass their contracts; one model-call cap per node; all 5 patterns solve the 3 reference tasks on both adapters with a stand-in model, metered | `just compare-patterns` with the real local model (numbers: dataset 3 tasks, model alias) |
 | 15 Routing, chaining and hybrid | done | LLM, embedding and rules routers (contract; from agent.yaml on both adapters; confidence fallback); embedder slot with gateway embedder; validation gates and `prompt_chain` / `router` patterns; routing harness over 48 labelled cases (mechanics); approval evidence bound to the call, accepted by OPA (28 tests), Cerbos (12) and rules; invoice-triage reference app end to end on both adapters with the demo ERP over MCP (12 tests) | `just eval-routing` accuracy (dataset 48 cases, model aliases); `just demo-invoice-triage` with the real model; `local-embed` alias |
+| 16 Agentic RAG | done | `pattern: agentic_rag`: retrieve decision, hops with `#Q` references, allowed architectures, citations only from retrieved passages, grounding check with corrective re-retrieval; golden set (10 questions, 10 documents) runs in naive and agentic modes on both adapters with no access violations (offline double, stand-in model); real Keycloak token exchange: each user cites only their documents | `just eval-agentic-rag` (agentic vs naive; corpus ingested into rag-core; real model); rag-core answer endpoint as baseline if it exists |
 
 ## Next
 
-- Step 16: agentic RAG — an agent that decides whether, what and how to retrieve from `rag-core`
-  through MCP (decomposition, multi-hop, grounding self-check, corrective re-retrieval,
-  citations), selecting rag-core architectures per call; multi-hop golden questions vs Project
-  0's naive RAG on the same set.
+- Step 17: run API and streaming — `agent-api`: create run, stream events, get state, cancel,
+  resume, list threads, submit approval; AG-UI events over SSE; idempotent run creation; the
+  approver taken from a verified token (open issue 8); a minimal page with live tool calls and an
+  approval button using only AG-UI events.
 
 ## Open issues
 

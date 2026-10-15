@@ -45,3 +45,6 @@ Every term used in this repository, in plain English. Grows with each step.
 | Embedding | A list of numbers representing a text's meaning, so similar texts can be found by comparing numbers |
 | Validation gate | A check on a step's output before the next step uses it; failures are sent back for a retry |
 | Approval evidence | A person's decision attached to one exact action (tool and arguments), checked by policy before the action runs |
+| Multi-hop retrieval | Answering by chaining searches, where a later search uses what an earlier one found |
+| Grounding | Every claim in an answer is supported by the passages it cites |
+| Naive RAG | One search, then one answer from what came back |
