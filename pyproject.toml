@@ -1,0 +1,59 @@
+[project]
+name = "agent-platform"
+version = "0.1.0"
+description = "Agentic AI Core Platform (Project A): workspace root"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "Proprietary" }
+dependencies = [
+    "httpx>=0.28.1,<0.29",
+    "psycopg[binary]>=3.3.6,<4",
+    "redis>=8.1.0,<9",
+    "pyyaml>=6.0.3,<7",
+]
+
+[dependency-groups]
+dev = [
+    "ruff==0.17.0",
+    "mypy==2.4.0",
+    "pytest>=9.1.1,<10",
+    "pytest-asyncio>=1.4.0,<2",
+    "respx>=0.23.1,<0.24",
+    "pre-commit>=4.7.0,<5",
+    "types-pyyaml>=6.0.12",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["libs/*", "services/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["templates"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC", "N", "PT"]
+ignore = ["S101"]  # assert is how pytest works
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "S603", "S607"]
+"**/tests/**" = ["S105", "S106", "S108", "S603", "S607"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+exclude = ["/tests/"]
+namespace_packages = true
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-q -m 'not integration' --strict-markers"
+markers = [
+    "integration: needs the Project 0 services (or the stand-in stack) running",
+]
+testpaths = ["tests", "libs", "services"]

@@ -1,0 +1,31 @@
+# Local hooks only: they run the same pinned tools as `just check`, with no extra downloads.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff lint
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: secret-scan
+        name: secret scan
+        entry: uv run python -m scripts.check_secrets
+        language: system
+        pass_filenames: false
+      - id: compose-check
+        name: compose security defaults
+        entry: uv run python -m scripts.check_compose
+        language: system
+        files: ^(infra/compose|tests/stack)/.*\.ya?ml$
+        pass_filenames: false
+      - id: yaml
+        name: yaml parses
+        entry: uv run python -c "import sys,yaml;[list(yaml.safe_load_all(open(f))) for f in sys.argv[1:]]"
+        language: system
+        types: [yaml]
+        exclude: ^templates/
