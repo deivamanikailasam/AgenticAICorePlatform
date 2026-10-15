@@ -23,3 +23,4 @@ ADR supersedes it.
 | [0015](0015-model-access-per-role.md) | Model access per role via the gateway; httpx; AUD conversion | 5 |
 | [0016](0016-tool-registry-executor-idempotency.md) | Postgres tool registry, one executor, Valkey idempotency, S3 spill | 6 |
 | [0017](0017-mcp-client.md) | MCP client: allowlist, negotiation fallback, trust, OAuth, task-owned connections | 7 |
+| [0018](0018-platform-mcp-gateway.md) | Platform MCP gateway: Keycloak, OPA per call, token exchange, audit | 8 |

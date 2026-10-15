@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 8 · Platform MCP server (next)
+**Current step:** 9 · Sandboxed code execution (next)
 
 ## Environment note (read first)
 
@@ -27,14 +27,14 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 5 Model access per role | done | roles resolve (unit + stand-in); tools, structured output with repair, streaming, retries; AUD cost per run/role; capability check in client and compiler | structured output on both real local Qwen models (`-m mac`); capability table vs model cards |
 | 6 Tool contract and registry | done | invalid args rejected before execution; duplicate key returns first result (memory + Valkey, race-safe); tool cards generated; Postgres registry contract; S3 spill (stand-in) | registry/idempotency/S3 against Project 0 services |
 | 7 MCP client | done | filesystem (stdio, 2025-11-25) + OAuth HTTP server (2026-07-28) discovered, called, traced, audited; unlisted refused (client + compiler) | against Project 0 Keycloak; audit into Project 0's log (Step 31) |
+| 8 Platform MCP server | done | gateway with Keycloak auth + OPA per call + audit; alice/bob/gina see only permitted docs via token exchange (stand-in + rag-core double); hardened container via `just up` | real rag-core API shape; Project 0 realm group claims, token exchange, downstream clients; OPA bundle loading |
 
 ## Next
 
-- Step 8: `services/mcp-gateway` exposing platform tools and `rag-core/search` as MCP tools with
-  Keycloak auth and OPA on every call, proxying allowlisted external servers; an external MCP
-  client calls `rag-core/search` with a user token and sees only permitted documents.
-  `rag-core` itself is Project 0 code (not reachable here): a stand-in search backend will be
-  needed for CI, with the real call VERIFY-ON-MAC.
+- Step 9: `services/sandbox-runner`: model-written code in a disposable, network-off,
+  CPU/memory/time-capped container with gVisor (runsc), files in/out via S3, no host mounts; a fork
+  bomb, a network call and a 10-minute loop contained and reported. gVisor availability in this
+  container must be checked; Firecracker/Kata are documented alternatives.
 
 ## Open issues
 
@@ -44,4 +44,5 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 2 | Commits unsigned; re-sign or accept when merging | owner |
 | 3 | `secrets/dev.enc.env` must be created on the Mac with Project 0's age key | owner |
 | 5 | Commit `0f13265` (Step 2 docs) failed CI on Markdown formatting; fixed in `1094c58`. Commits are now made only after `just check` passes on the exact staged tree | done |
+| 6 | CI run 9 (Step 7 docs commit) failed: two test modules each set the global OTel tracer provider. Fixed in `88b6b10` (shared fixture) | done |
 | 4 | LiteLLM key values from provisioning must be moved into OpenBao (automated in Step 29) | Step 29 |
