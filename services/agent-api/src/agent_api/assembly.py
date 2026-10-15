@@ -2,8 +2,10 @@
 the event-emitting node runner and the runtime adapter.
 
 Tools come from the spec's refs: ``local://platform/<tool>`` (built-in tools),
-``mcp://rag-core/search`` (rag-core on behalf of the user) and ``mcp://<server>/<tool>`` for
-servers on the platform's MCP allowlist. Anything else is refused when the run is created.
+``mcp://rag-core/search`` (rag-core on behalf of the user), ``mcp://<server>/<tool>`` for
+servers on the platform's MCP allowlist and ``a2a://<agent>`` for remote A2A agents on the
+platform's A2A allowlist (Step 24: their signed Agent Card is checked before the first call).
+Anything else is refused when the run is created.
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import httpx
 from agent_compiler.run import executors_for, functions_for
 from agent_contracts.interfaces import (
     AuditSink,
@@ -33,6 +36,7 @@ from agent_runtime.models.gateway import GatewayModelClient
 from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec
 from agent_spec.platform import PlatformConfig
+from agent_tools.a2a import A2aRemoteAgentTool
 from agent_tools.assemble import grants_for
 from agent_tools.authorising import AuthorisingToolExecutor, delegation_authoriser
 from agent_tools.builtin import BUILTIN_TOOLS
@@ -41,6 +45,7 @@ from agent_tools.identity import TokenExchanger
 from agent_tools.mcp import McpClientPool
 from agent_tools.ragcore import RagCoreSearchTool
 from agent_tools.registry import InMemoryToolRegistry
+from agent_tools.secrets import EnvSecretResolver, SecretResolver
 
 ModelFactory = Callable[[AgentSpec], ModelClient]
 MemoryFactory = Callable[[AgentSpec], Awaitable[MemoryService | None]]
@@ -74,7 +79,11 @@ class Assembly:
         registry_factory: RegistryFactory | None = None,
         checkpointer: Checkpointer | None = None,
         memory_factory: MemoryFactory | None = None,
+        secrets: SecretResolver | None = None,
+        a2a_transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        self.secrets = secrets or EnvSecretResolver()
+        self.a2a_transport = a2a_transport
         self.checkpointer = checkpointer
         self.memory_factory = memory_factory or self.memory
         self._memories: dict[str, MemoryService | None] = {}
@@ -103,6 +112,17 @@ class Assembly:
                 await registry.register(RagCoreSearchTool(self.rag_core_url, self.exchanger))
             elif scheme == "mcp":
                 servers.add(rest.partition("/")[0])
+            elif scheme == "a2a":
+                remote = self.platform.a2a.agent(rest.partition("/")[0])
+                if remote is None:
+                    raise LookupError(
+                        f"A2A agent {rest} is not on the platform allowlist (a2a.agents)"
+                    )
+                await registry.register(
+                    A2aRemoteAgentTool(
+                        remote, self.secrets, self.exchanger, transport=self.a2a_transport
+                    )
+                )
             else:
                 raise LookupError(f"tool {tool.ref} is not available through the run API")
         for server in sorted(servers):

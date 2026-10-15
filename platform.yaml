@@ -42,3 +42,14 @@ mcp:
       trusted: false
       side_effects: { read_text_file: read, read_file: read, list_directory: read, search_files: read, get_file_info: read }
       allowed_tools: [read_text_file, list_directory, search_files, get_file_info]
+
+# Step 24: A2A. `publish` is how the a2a-gateway serves agents whose spec sets
+# interop.a2a_publish; `agents` is the allowlist of remote A2A agents a spec may call as
+# a2a://<name>. Each remote agent's Agent Card must be signed by one of its pinned keys.
+a2a:
+  publish:
+    base_url: ${A2A_PUBLIC_URL:-http://127.0.0.1:8092}
+    key_id: agent-platform-1
+    signing_key: ${secret:agent-platform/a2a#signing_key}
+    push_allowed_hosts: []
+  agents: []

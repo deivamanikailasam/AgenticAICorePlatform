@@ -1,5 +1,138 @@
 {
   "$defs": {
+    "A2a": {
+      "additionalProperties": false,
+      "properties": {
+        "agents": {
+          "items": {
+            "$ref": "#/$defs/A2aAgent"
+          },
+          "title": "Agents",
+          "type": "array"
+        },
+        "publish": {
+          "$ref": "#/$defs/A2aPublish",
+          "default": {
+            "base_url": "http://127.0.0.1:8092",
+            "key_id": "agent-platform-1",
+            "push_allowed_hosts": [],
+            "signing_key": "${secret:agent-platform/a2a#signing_key}"
+          }
+        }
+      },
+      "title": "A2a",
+      "type": "object"
+    },
+    "A2aAgent": {
+      "additionalProperties": false,
+      "description": "One allowlisted remote A2A agent (Step 24). Agents not listed here are refused, and a\nlisted agent's Agent Card must carry a valid signature from one of its pinned keys.",
+      "properties": {
+        "algorithms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Algorithms",
+          "type": "array"
+        },
+        "auth": {
+          "$ref": "#/$defs/McpAuth",
+          "default": {
+            "audience": null,
+            "client_id": null,
+            "client_secret": null,
+            "issuer": null,
+            "kind": "none",
+            "scope": null,
+            "token": null
+          }
+        },
+        "binding": {
+          "default": "JSONRPC",
+          "enum": [
+            "JSONRPC",
+            "HTTP+JSON",
+            "GRPC"
+          ],
+          "title": "Binding",
+          "type": "string"
+        },
+        "card_keys": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "minProperties": 1,
+          "title": "Card Keys",
+          "type": "object"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,40}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "side_effect": {
+          "default": "write",
+          "enum": [
+            "read",
+            "write",
+            "irreversible"
+          ],
+          "title": "Side Effect",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "default": 120,
+          "exclusiveMinimum": 0,
+          "title": "Timeout Seconds",
+          "type": "number"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "url",
+        "card_keys"
+      ],
+      "title": "A2aAgent",
+      "type": "object"
+    },
+    "A2aPublish": {
+      "additionalProperties": false,
+      "description": "How the a2a-gateway publishes this platform's agents.",
+      "properties": {
+        "base_url": {
+          "default": "http://127.0.0.1:8092",
+          "title": "Base Url",
+          "type": "string"
+        },
+        "key_id": {
+          "default": "agent-platform-1",
+          "title": "Key Id",
+          "type": "string"
+        },
+        "push_allowed_hosts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Push Allowed Hosts",
+          "type": "array"
+        },
+        "signing_key": {
+          "default": "${secret:agent-platform/a2a#signing_key}",
+          "title": "Signing Key",
+          "type": "string"
+        }
+      },
+      "title": "A2aPublish",
+      "type": "object"
+    },
     "Currency": {
       "additionalProperties": false,
       "description": "LiteLLM accounts cost in USD; budgets and reports are in AUD.",
@@ -358,6 +491,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "a2a": {
+      "$ref": "#/$defs/A2a",
+      "default": {
+        "agents": [],
+        "publish": {
+          "base_url": "http://127.0.0.1:8092",
+          "key_id": "agent-platform-1",
+          "push_allowed_hosts": [],
+          "signing_key": "${secret:agent-platform/a2a#signing_key}"
+        }
+      }
+    },
     "components": {
       "additionalProperties": {
         "type": "string"

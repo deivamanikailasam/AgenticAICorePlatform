@@ -16,6 +16,42 @@ Costs from the gateway are in USD and converted with `currency.usd_to_aud`, whos
 | `currency` | Currency | yes |  |
 | `components` | object |  |  |
 | `mcp` | Mcp |  | `{'servers': []}` |
+| `a2a` | A2a |  | `{'publish': {'base_url': 'http://127.0.0.1:8092', 'key_id': 'agent-platform-1', 'push_allowed_hosts': [], 'signing_key': '${secret:agent-platform/a2a#signing_key}'}, 'agents': []}` |
+
+### `A2a`
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `publish` | A2aPublish |  | `{'base_url': 'http://127.0.0.1:8092', 'key_id': 'agent-platform-1', 'signing_key': '${secret:agent-platform/a2a#signing_key}', 'push_allowed_hosts': []}` |
+| `agents` | list of A2aAgent |  |  |
+
+### `A2aAgent`
+
+One allowlisted remote A2A agent (Step 24). Agents not listed here are refused, and a
+listed agent's Agent Card must carry a valid signature from one of its pinned keys.
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `name` | string | yes |  |
+| `url` | string | yes |  |
+| `description` | string |  |  |
+| `card_keys` | object | yes |  |
+| `algorithms` | list of string |  |  |
+| `binding` | `JSONRPC` \| `HTTP+JSON` \| `GRPC` |  | `JSONRPC` |
+| `side_effect` | `read` \| `write` \| `irreversible` |  | `write` |
+| `auth` | McpAuth |  | `{'kind': 'none', 'issuer': None, 'audience': None, 'client_id': None, 'client_secret': None, 'scope': None, 'token': None}` |
+| `timeout_seconds` | number |  | `120` |
+
+### `A2aPublish`
+
+How the a2a-gateway publishes this platform's agents.
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `base_url` | string |  | `http://127.0.0.1:8092` |
+| `key_id` | string |  | `agent-platform-1` |
+| `signing_key` | string |  | `${secret:agent-platform/a2a#signing_key}` |
+| `push_allowed_hosts` | list of string |  |  |
 
 ### `Currency`
 

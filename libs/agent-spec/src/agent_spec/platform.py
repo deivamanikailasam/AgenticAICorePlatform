@@ -106,6 +106,38 @@ class Mcp(_Cfg):
         return next((s for s in self.servers if s.name == name), None)
 
 
+class A2aAgent(_Cfg):
+    """One allowlisted remote A2A agent (Step 24). Agents not listed here are refused, and a
+    listed agent's Agent Card must carry a valid signature from one of its pinned keys."""
+
+    name: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{0,40}$")
+    url: str  # base URL; the card is read from <url>/.well-known/agent-card.json
+    description: str = ""
+    card_keys: dict[str, str] = Field(min_length=1)  # kid -> PEM public key (pinned)
+    algorithms: list[str] = Field(default_factory=lambda: ["ES256"])
+    binding: Literal["JSONRPC", "HTTP+JSON", "GRPC"] = "JSONRPC"
+    side_effect: Literal["read", "write", "irreversible"] = "write"  # remote agents act: not read
+    auth: McpAuth = McpAuth()
+    timeout_seconds: float = Field(default=120, gt=0)
+
+
+class A2aPublish(_Cfg):
+    """How the a2a-gateway publishes this platform's agents."""
+
+    base_url: str = "http://127.0.0.1:8092"
+    key_id: str = "agent-platform-1"
+    signing_key: str = "${secret:agent-platform/a2a#signing_key}"  # ES256 private key (PEM)
+    push_allowed_hosts: list[str] = Field(default_factory=list)  # push notification targets
+
+
+class A2a(_Cfg):
+    publish: A2aPublish = A2aPublish()
+    agents: list[A2aAgent] = Field(default_factory=list)
+
+    def agent(self, name: str) -> A2aAgent | None:
+        return next((a for a in self.agents if a.name == name), None)
+
+
 class PlatformConfig(_Cfg):
     platform_version: Literal[1] = 1
     gateway: Gateway = Gateway()
@@ -113,6 +145,7 @@ class PlatformConfig(_Cfg):
     currency: Currency
     components: dict[str, str] = Field(default_factory=dict)  # platform defaults: slot -> name
     mcp: Mcp = Mcp()
+    a2a: A2a = A2a()
 
     def alias_for(self, role_or_alias: str, spec_models: Mapping[str, str] | None = None) -> str:
         """Spec role > platform role > the name itself (already an alias)."""
