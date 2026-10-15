@@ -184,6 +184,10 @@ agents *args:
 cost-reconcile *args:
     uv run python -m scripts.cost_reconcile {{args}}
 
+# Verify the audit trail's hash chain (Step 31): the shared Postgres trail, or --file <jsonl>
+audit-verify *args:
+    uv run python -m scripts.audit_verify {{args}}
+
 # Regenerate tool and agent cards from the registries
 cards:
     uv run python -m scripts.cards
