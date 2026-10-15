@@ -160,6 +160,11 @@ run spec input="{}":
 migrate:
     uv run python -m scripts.migrate
 
+# Agent registry (Step 25): list every agent with its lifecycle status, or change one:
+#   just agents --approve NAME VERSION --by you --reason "..." [--expires 2027-01-31]
+agents *args:
+    uv run python -m agent_registry {{args}}
+
 # Regenerate tool and agent cards from the registries
 cards:
     uv run python -m scripts.cards

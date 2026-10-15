@@ -24,3 +24,4 @@ keys.txt
 *.db
 node_modules/
 !tests/stack/standin.env
+.agents.db

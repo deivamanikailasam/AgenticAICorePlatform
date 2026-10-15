@@ -10,6 +10,7 @@ members = [
     "agent-contracts",
     "agent-memory",
     "agent-platform",
+    "agent-registry",
     "agent-runtime",
     "agent-spec",
     "agent-tools",
@@ -95,6 +96,7 @@ dependencies = [
     { name = "agent-compiler" },
     { name = "agent-contracts" },
     { name = "agent-memory" },
+    { name = "agent-registry" },
     { name = "agent-runtime" },
     { name = "agent-spec" },
     { name = "agent-tools" },
@@ -109,6 +111,7 @@ requires-dist = [
     { name = "agent-compiler", editable = "libs/agent-compiler" },
     { name = "agent-contracts", editable = "libs/agent-contracts" },
     { name = "agent-memory", editable = "libs/agent-memory" },
+    { name = "agent-registry", editable = "libs/agent-registry" },
     { name = "agent-runtime", editable = "libs/agent-runtime" },
     { name = "agent-spec", editable = "libs/agent-spec" },
     { name = "agent-tools", editable = "libs/agent-tools" },
@@ -255,6 +258,25 @@ dev = [
     { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
     { name = "types-pyyaml", specifier = ">=6.0.12" },
     { name = "uvicorn", specifier = ">=0.54.0,<1" },
+]
+
+[[package]]
+name = "agent-registry"
+version = "0.1.0"
+source = { editable = "libs/agent-registry" }
+dependencies = [
+    { name = "agent-contracts" },
+    { name = "agent-spec" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-spec", editable = "libs/agent-spec" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6,<4" },
+    { name = "pyyaml", specifier = ">=6.0.3,<7" },
 ]
 
 [[package]]
