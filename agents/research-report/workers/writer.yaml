@@ -1,0 +1,26 @@
+spec_version: 1
+name: research-report-writer
+version: 0.1.0
+owner: agent-platform
+description: Writes a short report that cites its sources, and checks its length.
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+models: { default: local-qwen-fast }
+runtime: { adapter: langgraph, durability: memory }
+budgets: { max_steps: 6, max_tokens: 20000, max_cost_aud: 0.10, max_wall_seconds: 120 }
+tools:
+  - ref: local://platform/word_count
+graph:
+  nodes:
+    - id: write
+      type: agent
+      pattern: react
+      tools: [word_count]
+      config:
+        template: "Task: $input.task. Sources: $input.sources. Figures: $input.figures. Write a report of under 200 words citing the sources by title."
+        output_schema:
+          type: object
+          properties:
+            report: { type: string }
+          required: [report]

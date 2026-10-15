@@ -246,6 +246,21 @@ def semantic_issues(spec: AgentSpec) -> list[SpecIssue]:
     agent_names = [a.name for a in spec.agents]
     for dup in sorted({a for a in agent_names if agent_names.count(a) > 1}):
         issues.append(SpecIssue("agents", f"agent name '{dup}' is used more than once"))
+    if spec.pattern.value in ("supervisor", "hierarchical"):
+        if not spec.agents:
+            issues.append(SpecIssue("agents", f"pattern '{spec.pattern.value}' needs agents"))
+        fields = {"task", *spec.supervisor.state}
+        for i, a in enumerate(spec.agents):
+            for f in (*a.reads, *a.writes):
+                if f not in fields:
+                    issues.append(
+                        SpecIssue(f"agents[{i}]", f"field '{f}' is not in supervisor.state")
+                    )
+            if "task" in a.writes:
+                issues.append(SpecIssue(f"agents[{i}]", "no worker may overwrite 'task'"))
+        out = spec.supervisor.output
+        if out is not None and out not in spec.supervisor.state:
+            issues.append(SpecIssue("supervisor.output", f"'{out}' is not in supervisor.state"))
 
     if spec.risk_tier is RiskTier.HIGH and spec.evals is None:
         issues.append(SpecIssue("evals", "high-risk specs must name an eval suite"))

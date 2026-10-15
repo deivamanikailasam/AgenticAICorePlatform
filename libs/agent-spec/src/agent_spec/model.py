@@ -210,6 +210,22 @@ class SubAgent(_Spec):
     name: Annotated[str, Field(pattern=NAME)]
     spec: str
     role: str = ""
+    # shared state (Step 22): the fields this worker is given, and the fields it may set
+    reads: tuple[str, ...] = ()
+    writes: tuple[str, ...] = ()
+
+
+class SupervisorSettings(_Spec):
+    """How a supervisor delegates (Step 22, ``pattern: supervisor`` or ``hierarchical``)."""
+
+    dispatcher: Literal["llm", "rules"] = "llm"
+    model: str = "planner"
+    max_rounds: int = Field(default=8, ge=1, le=50)
+    max_depth: int = Field(default=3, ge=1, le=10)  # supervisors nested inside workers
+    max_failures: int = Field(default=2, ge=1)  # per worker, then its circuit opens
+    # the typed shared state: field -> JSON Schema; "task" (the input) is always present
+    state: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    output: str | None = None  # the state field returned as the answer
 
 
 class Evals(_Spec):
@@ -242,6 +258,7 @@ class AgentSpec(_Spec):
     guardrails: tuple[GuardrailRef, ...] = ()
     graph: Graph | None = None
     agents: tuple[SubAgent, ...] = ()
+    supervisor: SupervisorSettings = SupervisorSettings()
     components: dict[str, str] = Field(default_factory=dict)  # slot -> registered name
     evals: Evals | None = None
     interop: Interop = Interop()

@@ -91,6 +91,11 @@ class RulesPolicyDecisionPoint(PolicyDecisionPoint):
     async def decide(self, request: PolicyInput) -> PolicyDecision:
         if request.resource_tenant_id and request.resource_tenant_id != request.ctx.tenant_id:
             return PolicyDecision(effect=PolicyEffect.DENY, reasons=("cross-tenant access",))
+        if request.allowed_tools is not None and request.tool not in request.allowed_tools:
+            return PolicyDecision(
+                effect=PolicyEffect.DENY,
+                reasons=(f"{request.tool} is not granted to agent {request.ctx.agent_id}",),
+            )
         ev = request.approval or {}
         if (
             request.side_effect is SideEffect.IRREVERSIBLE

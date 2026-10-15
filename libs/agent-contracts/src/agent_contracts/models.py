@@ -246,6 +246,7 @@ class NodeKind(StrEnum):
     ROUTER = "router"
     APPROVAL = "approval"
     JOIN = "join"
+    SUPERVISOR = "supervisor"  # delegates to worker agents (Step 22)
 
 
 class PlanNode(Frozen):

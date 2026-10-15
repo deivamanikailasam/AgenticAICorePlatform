@@ -614,6 +614,14 @@
           "title": "Name",
           "type": "string"
         },
+        "reads": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Reads",
+          "type": "array"
+        },
         "role": {
           "default": "",
           "title": "Role",
@@ -622,6 +630,14 @@
         "spec": {
           "title": "Spec",
           "type": "string"
+        },
+        "writes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Writes",
+          "type": "array"
         }
       },
       "required": [
@@ -629,6 +645,68 @@
         "spec"
       ],
       "title": "SubAgent",
+      "type": "object"
+    },
+    "SupervisorSettings": {
+      "additionalProperties": false,
+      "description": "How a supervisor delegates (Step 22, ``pattern: supervisor`` or ``hierarchical``).",
+      "properties": {
+        "dispatcher": {
+          "default": "llm",
+          "enum": [
+            "llm",
+            "rules"
+          ],
+          "title": "Dispatcher",
+          "type": "string"
+        },
+        "max_depth": {
+          "default": 3,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "max_failures": {
+          "default": 2,
+          "minimum": 1,
+          "title": "Max Failures",
+          "type": "integer"
+        },
+        "max_rounds": {
+          "default": 8,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Max Rounds",
+          "type": "integer"
+        },
+        "model": {
+          "default": "planner",
+          "title": "Model",
+          "type": "string"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output"
+        },
+        "state": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "State",
+          "type": "object"
+        }
+      },
+      "title": "SupervisorSettings",
       "type": "object"
     },
     "ToolRef": {
@@ -817,6 +895,18 @@
       "default": 1,
       "title": "Spec Version",
       "type": "integer"
+    },
+    "supervisor": {
+      "$ref": "#/$defs/SupervisorSettings",
+      "default": {
+        "dispatcher": "llm",
+        "max_depth": 3,
+        "max_failures": 2,
+        "max_rounds": 8,
+        "model": "planner",
+        "output": null,
+        "state": {}
+      }
     },
     "tools": {
       "default": [],

@@ -11,7 +11,7 @@ from __future__ import annotations
 import importlib
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from agent_contracts.dummies.runtime import BUILTIN_FUNCTIONS
 from agent_contracts.interfaces import (
@@ -54,6 +54,14 @@ from agent_runtime.strategies import (
     ReflectionStrategy,
     RewooStrategy,
 )
+from agent_runtime.supervisor import (
+    Authorise,
+    LlmDispatcher,
+    RulesDispatcher,
+    SupervisorExecutor,
+    Worker,
+    WorkerResult,
+)
 from agent_spec import AgentSpec, load_spec
 from agent_tools.assemble import tool_names
 from opentelemetry.sdk.trace import TracerProvider
@@ -61,6 +69,7 @@ from opentelemetry.trace import Span, Status, StatusCode
 
 from agent_compiler import tracing
 from agent_compiler.compiler import compile_spec, runtime_for
+from agent_compiler.metering import Meter, MeteredModel
 
 FUNCTION_GROUP = "agent_platform.functions"
 
@@ -112,6 +121,9 @@ def executors_for(
     spec_path: str | Path | None = None,
     memory: RunMemory | None = None,
     artefacts: Any = None,
+    workers: WorkerFactory | None = None,
+    authorise: Authorise | None = None,
+    provider: TracerProvider | None = None,
 ) -> dict[NodeKind, NodeExecutor]:
     kinds = {n.kind for n in plan.nodes}
     executors: dict[NodeKind, NodeExecutor] = {}
@@ -150,6 +162,10 @@ def executors_for(
             tools, registry = _no_tools()
         executors[NodeKind.AGENT] = agent_dispatcher(
             spec, plan, model, tools, registry, memory, context_for(spec, model, artefacts)
+        )
+    if NodeKind.SUPERVISOR in kinds:
+        executors[NodeKind.SUPERVISOR] = supervisor_executor(
+            spec, model, spec_path, workers, authorise, provider
         )
     if NodeKind.SUBPLAN in kinds:
         base = Path(spec_path).parent if spec_path else Path.cwd()
@@ -306,6 +322,66 @@ def agent_dispatcher(
     )
 
 
+class WorkerFactory(Protocol):
+    """Builds what one worker runs with: its own model client and its own tool executor (its
+    spec's tools only, under policy with its spec's grants). The API's assembly provides it."""
+
+    async def __call__(
+        self, spec: AgentSpec, plan: ExecutablePlan
+    ) -> tuple[ModelClient, ToolExecutor]: ...
+
+
+def supervisor_executor(
+    spec: AgentSpec,
+    model: ModelClient | None,
+    spec_path: str | Path | None,
+    workers: WorkerFactory | None,
+    authorise: Authorise | None,
+    provider: TracerProvider | None,
+) -> SupervisorExecutor:
+    """Supervisor nodes (Step 22): each worker is its own spec, run as a child run with the
+    model and tools the worker factory builds for it, metered and traced per agent."""
+    if workers is None:
+        raise LookupError(
+            f"spec '{spec.name}' delegates to workers: pass a worker factory (each worker needs "
+            "its own tools and grants; the API's assembly provides one)"
+        )
+    base = Path(spec_path).parent if spec_path else Path.cwd()
+
+    async def run_worker(worker: Worker, inputs: dict[str, Any], ctx: RunContext) -> WorkerResult:
+        path = base / worker.spec
+        child = load_spec(path)
+        child_model, child_tools = await workers(child, compile_spec(child))
+        meter = Meter()
+        result, _ = await run(
+            child,
+            inputs,
+            ctx,
+            provider,
+            model=MeteredModel(child_model, meter),
+            tools=child_tools,
+            spec_path=path,
+            workers=workers,
+            authorise=authorise,
+            meter=meter,
+        )
+        return WorkerResult(
+            ok=result.status is RunStatus.SUCCEEDED,
+            output=result.output,
+            cost_aud=meter.cost_aud,
+            error=result.state.error,
+        )
+
+    def dispatcher(node: PlanNode) -> Any:
+        if node.config.get("dispatcher") == "rules":
+            return RulesDispatcher()
+        if model is None:
+            raise LookupError(f"spec '{spec.name}': the LLM supervisor needs a model client")
+        return LlmDispatcher(model, role=str(node.config.get("model") or "planner"))
+
+    return SupervisorExecutor(run_worker, dispatcher, authorise)
+
+
 def context_for(spec: AgentSpec, model: ModelClient, artefacts: Any = None) -> ContextWindow:
     """The context policy of the spec's agent nodes (Step 21, ``context:`` in agent.yaml)."""
     cfg = spec.context
@@ -339,13 +415,24 @@ def adapter_for(
     tools: ToolExecutor | None = None,
     spec_path: str | Path | None = None,
     runner: NodeRunner | None = None,
+    workers: WorkerFactory | None = None,
+    authorise: Authorise | None = None,
+    provider: TracerProvider | None = None,
 ) -> RuntimeAdapter:
     """The spec's runtime adapter with functions and executors plugged in. Test-double adapters
     (Step 4) take functions only."""
     functions = functions_for(plan)
     if runner is None:
         executors = executors_for(
-            spec, plan, functions, model=model, tools=tools, spec_path=spec_path
+            spec,
+            plan,
+            functions,
+            model=model,
+            tools=tools,
+            spec_path=spec_path,
+            workers=workers,
+            authorise=authorise,
+            provider=provider,
         )
         if spec.runtime.adapter in ("sequential", "stepwise") and not executors:
             return runtime_for(spec, functions=functions)
@@ -363,6 +450,9 @@ async def run(
     tools: ToolExecutor | None = None,
     spec_path: str | Path | None = None,
     runner: NodeRunner | None = None,
+    workers: WorkerFactory | None = None,
+    authorise: Authorise | None = None,
+    meter: Meter | None = None,
 ) -> tuple[RunResult, str]:
     """Execute ``spec`` and return the result and the trace id (hex).
 
@@ -370,7 +460,17 @@ async def run(
     ``journal(run_id)`` holds what this run did.
     """
     plan = compile_spec(spec)
-    adapter = adapter_for(spec, plan, model=model, tools=tools, spec_path=spec_path, runner=runner)
+    adapter = adapter_for(
+        spec,
+        plan,
+        model=model,
+        tools=tools,
+        spec_path=spec_path,
+        runner=runner,
+        workers=workers,
+        authorise=authorise,
+        provider=provider,
+    )
     handle = await adapter.build(plan)
     tr = tracing.tracer(provider)
     attrs = {
@@ -406,6 +506,11 @@ async def run(
             span.end()
         state = await adapter.get_state(ctx.run_id)
         root.set_attribute("agent_platform.run.status", state.status.value)
+        if meter is not None:  # per-agent cost (Step 22): workers are metered separately
+            root.set_attribute("agent_platform.cost.aud", round(meter.cost_aud, 6))
+            root.set_attribute("gen_ai.usage.input_tokens", meter.input_tokens)
+            root.set_attribute("gen_ai.usage.output_tokens", meter.output_tokens)
+            root.set_attribute("agent_platform.model_calls", meter.model_calls)
         if state.status is RunStatus.FAILED:
             root.set_status(Status(StatusCode.ERROR, state.error or "failed"))
     result = RunResult(

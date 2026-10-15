@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import contextvars
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -30,6 +30,7 @@ from agent_contracts.models import (
     PolicyEffect,
     PolicyInput,
     RunContext,
+    SideEffect,
     ToolCall,
     ToolErrorCode,
     ToolResult,
@@ -205,3 +206,37 @@ def _fail(call: ToolCall, code: ToolErrorCode, message: str, started: float) -> 
         error=message,
         duration_ms=int((time.perf_counter() - started) * 1000),
     )
+
+
+def delegation_authoriser(pdp: PolicyDecisionPoint, audit: AuditSink) -> Any:
+    """Policy on delegation (Step 22, ASI07): may this team hand work to ``worker``? The same
+    PDP as tool calls decides ``agent.delegate`` with the team's workers as its grants; every
+    decision is audited."""
+
+    async def authorise(worker: str, team: Sequence[str], ctx: RunContext) -> PolicyDecision:
+        caller = current_caller.get()
+        decision = await pdp.decide(
+            PolicyInput(
+                action="agent.delegate",
+                ctx=ctx,
+                tool=worker,
+                tool_ref=f"agent://{worker}",
+                side_effect=SideEffect.READ,
+                subject=dict(caller.subject) if caller else {},
+                allowed_tools=tuple(team),
+            )
+        )
+        await audit.append(
+            AuditEvent(
+                type="agent.delegate",
+                ctx=ctx,
+                payload={
+                    "worker": worker,
+                    "effect": decision.effect.value,
+                    "reasons": list(decision.reasons),
+                },
+            )
+        )
+        return decision
+
+    return authorise

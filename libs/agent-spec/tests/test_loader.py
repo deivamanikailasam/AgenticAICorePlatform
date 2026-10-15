@@ -152,7 +152,8 @@ def test_bad_yaml_is_reported_with_line() -> None:
 
 def test_cli_validate(capsys: pytest.CaptureFixture[str]) -> None:
     assert cli(["validate", str(ROOT / "agents")]) == 0
-    assert "2 file(s), 0 failed" in capsys.readouterr().out
+    specs = len(list((ROOT / "agents").rglob("*.yaml")))
+    assert f"{specs} file(s), 0 failed" in capsys.readouterr().out
     assert cli(["validate", str(FIX / "invalid")]) == 1
     out = capsys.readouterr().out
     assert "FAIL" in out

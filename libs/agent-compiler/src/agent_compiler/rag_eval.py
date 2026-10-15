@@ -42,7 +42,7 @@ from agent_runtime.agentic_rag import ANSWER_SCHEMA, SYSTEM
 from agent_spec import load_spec_text
 from opentelemetry.sdk.trace import TracerProvider
 
-from agent_compiler.compare import Meter, MeteredModel, MeteredTools
+from agent_compiler.metering import Meter, MeteredModel, MeteredTools
 from agent_compiler.run import run
 
 MODES = ("naive", "agentic")

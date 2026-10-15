@@ -34,6 +34,7 @@ The root of ``agent.yaml``.
 | `guardrails` | list of GuardrailRef |  | `[]` |
 | `graph` | Graph or null |  |  |
 | `agents` | list of SubAgent |  | `[]` |
+| `supervisor` | SupervisorSettings |  | `{'dispatcher': 'llm', 'model': 'planner', 'max_rounds': 8, 'max_depth': 3, 'max_failures': 2, 'state': {}, 'output': None}` |
 | `components` | object |  |  |
 | `evals` | Evals or null |  |  |
 | `interop` | Interop |  | `{'a2a_publish': False, 'mcp_publish': False}` |
@@ -186,6 +187,22 @@ A worker in a multi-agent spec: another agent.yaml with its own tools and budget
 | `name` | string | yes |  |
 | `spec` | string | yes |  |
 | `role` | string |  |  |
+| `reads` | list of string |  | `[]` |
+| `writes` | list of string |  | `[]` |
+
+### `SupervisorSettings`
+
+How a supervisor delegates (Step 22, ``pattern: supervisor`` or ``hierarchical``).
+
+| Field | Type | Required | Default |
+|---|---|---|---|
+| `dispatcher` | `llm` \| `rules` |  | `llm` |
+| `model` | string |  | `planner` |
+| `max_rounds` | integer |  | `8` |
+| `max_depth` | integer |  | `3` |
+| `max_failures` | integer |  | `2` |
+| `state` | object |  |  |
+| `output` | string or null |  |  |
 
 ### `ToolRef`
 

@@ -27,6 +27,8 @@ agent-compile = "agent_compiler.cli:main"
 "pattern_builder.rewoo" = "agent_compiler.patterns.react:RewooPatternBuilder"
 "pattern_builder.reflection" = "agent_compiler.patterns.react:ReflectionPatternBuilder"
 "pattern_builder.agentic_rag" = "agent_compiler.patterns.react:AgenticRagPatternBuilder"
+"pattern_builder.supervisor" = "agent_compiler.patterns.team:SupervisorPatternBuilder"
+"pattern_builder.hierarchical" = "agent_compiler.patterns.team:HierarchicalPatternBuilder"
 "pattern_builder.evaluator_optimiser" = "agent_compiler.patterns.react:EvaluatorOptimiserPatternBuilder"
 
 [tool.uv.sources]
