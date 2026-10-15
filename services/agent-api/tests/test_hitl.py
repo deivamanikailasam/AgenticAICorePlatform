@@ -111,9 +111,16 @@ class Clock:
 
 
 class World:
-    def __init__(self, risk: str = "medium", gated: bool = True, review: str = "") -> None:
+    def __init__(
+        self,
+        risk: str = "medium",
+        gated: bool = True,
+        review: str = "",
+        checkpointer: Any = None,
+        audit: Any = None,
+    ) -> None:
         self.payments: list[dict[str, Any]] = []
-        self.audit = MemoryAuditSink()
+        self.audit = audit or MemoryAuditSink()
         self.clock = Clock()
 
         async def registry(spec: Any) -> InMemoryToolRegistry:
@@ -134,6 +141,7 @@ class World:
             ),
             registry_factory=registry,
             memory_factory=no_memory,
+            checkpointer=checkpointer,
         )
         text = SPEC.replace("RISK", risk).replace("APPROVAL", GATED if gated else "")
         if risk == "high":

@@ -11,6 +11,7 @@ import importlib.util
 from pathlib import Path
 from typing import Any
 
+import pytest
 from agent_audit.events import validate
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
@@ -93,3 +94,96 @@ async def test_a_team_run_records_delegations_and_worker_calls_under_the_parent(
         assert e.ctx.agent_id == "research-report-researcher"
         assert e.versions["spec"]  # the worker's own versions
         assert e.versions["tools"] == {"search": e.versions["tools"]["search"]}
+
+
+async def _paid_run(checkpointer: Any = None, audit: Any = None) -> tuple[Any, Any, Any]:
+    from agent_contracts.dummies.state import InMemoryCheckpointer
+
+    checkpointer = checkpointer or InMemoryCheckpointer()
+    w = hitl.World(checkpointer=checkpointer, audit=audit)
+    async with w.client() as c:
+        run = await w.start(c)
+        resp = await hitl.decide(
+            c, run, "t-jsmith", decision="approve", arguments={"amount_aud": 40.0}
+        )
+        assert resp.status_code == 202, resp.text
+        await w.manager.wait_idle(run)
+    assert run.status == "succeeded"
+    records = list(await w.audit.read(run.run_id))
+    return run, records, list(await checkpointer.list(run.ctx.tenant_id, run.thread_id))
+
+
+async def test_a_run_is_reconstructed_from_audit_plus_checkpoints() -> None:
+    from agent_audit.reconstruct import reconstruct
+
+    run, records, points = await _paid_run()
+    assert points, "the run was checkpointed"
+    story = reconstruct(run.run_id, records, points)
+    assert story.ok, story.render()
+    assert (story.agent_id, story.user_id, story.status) == (
+        "pay-total",
+        run.ctx.user_id,
+        "succeeded",
+    )
+    assert story.versions["spec"] == "0.1.0"
+    assert story.trace_ids
+    assert story.output is not None  # rebuilt from the checkpoints; its digest matched run.ended
+    kinds = [(s.source, s.kind) for s in story.steps]
+    assert kinds[0] == ("audit", "run.started")
+    assert ("audit", "approval.decided") in kinds
+    assert ("checkpoint", "approval") in kinds
+    assert ("checkpoint", "node") in kinds
+    text = story.render()
+    assert "pay ok=True args={'amount_aud': 40.0}" in text
+    assert "approve by" in text
+
+
+async def test_reconstruction_catches_records_that_disagree() -> None:
+    from agent_audit.reconstruct import reconstruct
+    from agent_contracts.models import AuditRecord
+
+    run, records, points = await _paid_run()
+    # a checkpoint whose value was changed after the fact
+    last = max((p for p in points if p.node_id in run.plan.exits), key=lambda p: p.step)
+    forged = last.model_copy(update={"state": {**last.state, "value": "something else"}})
+    story = reconstruct(run.run_id, records, [forged if p is last else p for p in points])
+    assert {c.name for c in story.checks if not c.ok} == {"output matches run.ended"}
+
+    # a payment that ran with arguments other than the approved ones
+    def other_amount(r: AuditRecord) -> AuditRecord:
+        if r.event.type != "tool.call" or r.event.payload.get("tool") != "pay":
+            return r
+        event = r.event.model_copy(
+            update={"payload": {**r.event.payload, "arguments_digest": "0" * 64}}
+        )
+        return r.model_copy(update={"event": event})
+
+    story = reconstruct(run.run_id, [other_amount(r) for r in records], points)
+    failed = {c.name for c in story.checks if not c.ok}
+    assert failed == {"approved calls ran with the approved arguments", "events match their hashes"}
+
+
+@pytest.mark.integration
+async def test_just_audit_replay_reconstructs_a_run_from_postgres(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import base64
+    import os
+
+    from agent_audit.postgres import PostgresAuditSink
+    from agent_runtime.checkpoints import FieldCipher, PostgresCheckpointer
+
+    from scripts.audit_replay import run as replay_cli
+
+    dsn = os.environ.get("AGENT_DB_DSN", "postgresql://agent_app:standin-only@127.0.0.1:5432/agent")
+    key = os.urandom(32)
+    run, _, _ = await _paid_run(PostgresCheckpointer(dsn, FieldCipher(key)), PostgresAuditSink(dsn))
+    monkeypatch.setenv("AGENT_ENV", "test")
+    monkeypatch.setenv("SECRET__AGENT_PLATFORM__CHECKPOINTS__KEY", base64.b64encode(key).decode())
+    for var in ("P0_OPENBAO_URL", "AGENT_BAO_ROLE_ID", "AGENT_BAO_TOKEN"):
+        monkeypatch.delenv(var, raising=False)
+    assert await replay_cli(run.run_id, dsn, dsn) == 0
+    out = capsys.readouterr().out
+    assert f"run {run.run_id}" in out
+    assert "checkpoint approval" in out.replace("  ", " ").replace("  ", " ")
+    assert "FAIL" not in out

@@ -13,6 +13,8 @@ sensitive values replaced:
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from collections.abc import Mapping
 from typing import Any
@@ -54,3 +56,11 @@ def audited_arguments(arguments: Mapping[str, Any]) -> dict[str, Any]:
         "arguments_digest": arguments_digest(dict(arguments)),
         "arguments": redact_arguments(arguments),
     }
+
+
+def digest(value: Any) -> str:
+    """SHA-256 of any value's canonical JSON (a run's input or output): the trail proves what went
+    in and out without holding the content, which stays in the run store and checkpoints."""
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode()
+    ).hexdigest()

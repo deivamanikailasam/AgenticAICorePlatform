@@ -36,6 +36,7 @@ from agent_contracts.models import (
     RunContext,
     SideEffect,
     ToolSpec,
+    arguments_digest,
 )
 from agent_runtime.approvals import in_group
 from agent_tools.approvals import ApprovalRouter
@@ -123,6 +124,13 @@ class ApprovalDesk:
             [{"tool": action.get("tool"), "arguments": action.get("arguments")}] if action else []
         )
 
+    @staticmethod
+    def call_digests(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {"tool": c.get("tool"), "arguments_digest": arguments_digest(c.get("arguments") or {})}
+            for c in calls
+        ]
+
     # ------------------------------------------------------------ deciding
 
     async def _record(self, item: Mapping[str, Any], ctx: RunContext) -> ApprovalRecord:
@@ -205,6 +213,9 @@ class ApprovalDesk:
             payload |= {"co_by": who.user, "co_groups": list(who.groups)}
         if arguments is not None:
             payload["arguments"] = arguments
+        calls = self.calls_of(item)
+        if arguments is not None and len(calls) == 1:
+            calls[0]["arguments"] = arguments  # the call runs with the edited arguments
         await self._audit(
             "approval.decided",
             ctx,
@@ -212,6 +223,7 @@ class ApprovalDesk:
             by=who.user,
             decision=action,
             edited=arguments is not None,
+            calls=self.call_digests(calls),
         )
         return Verdict(payload)
 
@@ -273,6 +285,8 @@ class ApprovalDesk:
                     "approvers": item.get("approvers"),
                     "risk": item.get("risk"),
                     "tools": [c["tool"] for c in self.calls_of(item)],
+                    # Step 31: what exactly is approved, matched to the tool.call records
+                    "calls": self.call_digests(self.calls_of(item)),
                     **extra,
                 },
             )

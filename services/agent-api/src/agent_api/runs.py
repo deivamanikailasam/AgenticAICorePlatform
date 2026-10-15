@@ -29,6 +29,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from agent_audit.redact import digest
 from agent_compiler.compiler import compile_spec, runtime_for
 from agent_contracts.dummies.safety import InMemoryApprovalGate
 from agent_contracts.interfaces import RuntimeAdapter
@@ -83,14 +84,6 @@ class Principal:
         }
 
 
-def digest(value: Any) -> str:
-    """SHA-256 of a value's canonical JSON: the audit proves what went in and out without
-    holding the content (that is in the run store and checkpoints, encrypted)."""
-    return hashlib.sha256(
-        json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode()
-    ).hexdigest()
-
-
 def plan_summary(plan: ExecutablePlan) -> dict[str, Any]:
     return {
         "plan_hash": str(plan.metadata.get("plan_hash")),
@@ -104,6 +97,7 @@ def plan_summary(plan: ExecutablePlan) -> dict[str, Any]:
             for n in plan.nodes
         ],
         "edges": [[e.source, e.target, e.condition] for e in plan.edges],
+        "exits": list(plan.exits),
     }
 
 

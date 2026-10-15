@@ -188,6 +188,10 @@ cost-reconcile *args:
 audit-verify *args:
     uv run python -m scripts.audit_verify {{args}}
 
+# Reconstruct a run from the audit trail plus its checkpoints, with cross-checks (Step 31)
+audit-replay run_id *args:
+    uv run python -m scripts.audit_replay {{run_id}} {{args}}
+
 # Regenerate tool and agent cards from the registries
 cards:
     uv run python -m scripts.cards
