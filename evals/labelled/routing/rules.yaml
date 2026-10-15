@@ -1,0 +1,9 @@
+# Rules router for the routing eval: first match wins; no match -> default.
+default: technical
+rules:
+  - route: billing
+    any: ['\binvoice', '\bbill(ed|ing)?\b', '\brefund', '\bcharge', '\breceipt', '\bpayment', '\bcard\b', 'money back', '\bdebit\b', '\bgst\b']
+  - route: sales
+    any: ['\bpric(e|ing)\b', '\bquote\b', '\bdemo\b', '\bdiscount', '\btrial\b', '\bproposal\b', '\bcontract\b', '\bupgrade\b', '\bplan\b']
+  - route: account
+    any: ['\bpassword\b', '\blog ?in\b', '\busername\b', '\badmin\b', '\baccess\b', '\btwo-factor\b', '\bauthenticator\b', '\bdelete my account\b', '\bsign(ed)? up\b', '\bsingle sign-on\b', '\bowner(ship)?\b']

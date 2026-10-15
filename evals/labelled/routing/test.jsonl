@@ -1,0 +1,48 @@
+{"text": "There's a charge on my statement I don't recognise", "route": "billing"}
+{"text": "Can you resend the receipt for order 4471?", "route": "billing"}
+{"text": "We were billed for seats we removed last week", "route": "billing"}
+{"text": "The amount due doesn't match our contract", "route": "billing"}
+{"text": "My card expired, where do I put the new one?", "route": "billing"}
+{"text": "I'd like my money back for the unused months", "route": "billing"}
+{"text": "Why has the GST been added twice on this invoice?", "route": "billing"}
+{"text": "Payment bounced but the money left my account", "route": "billing"}
+{"text": "Please change our billing cycle to annual", "route": "billing"}
+{"text": "The direct debit came out early", "route": "billing"}
+{"text": "Is there a late fee if I pay on Friday?", "route": "billing"}
+{"text": "Our finance team needs invoices in AUD", "route": "billing"}
+{"text": "Nothing happens when I click Save", "route": "technical"}
+{"text": "The mobile app logs me out every few minutes", "route": "technical"}
+{"text": "Charts show yesterday's numbers even after refresh", "route": "technical"}
+{"text": "Webhooks stopped arriving at our endpoint", "route": "technical"}
+{"text": "Uploading a CSV over 10 MB fails", "route": "technical"}
+{"text": "The page is just a white screen in Safari", "route": "technical"}
+{"text": "Search results are missing recent documents", "route": "technical"}
+{"text": "We're seeing 429 responses from your API", "route": "technical"}
+{"text": "Notifications arrive hours late", "route": "technical"}
+{"text": "The integration with our CRM throws an auth error", "route": "technical"}
+{"text": "Reports take over a minute to generate now", "route": "technical"}
+{"text": "The printer-friendly view cuts off the last column", "route": "technical"}
+{"text": "We're a team of 200, what pricing can you offer?", "route": "sales"}
+{"text": "Is there a trial of the premium tier?", "route": "sales"}
+{"text": "Could someone walk our managers through the product?", "route": "sales"}
+{"text": "What's included if we go annual?", "route": "sales"}
+{"text": "Do you have an education discount?", "route": "sales"}
+{"text": "We're comparing you with two competitors, can you send a proposal?", "route": "sales"}
+{"text": "How much would SSO add to our plan?", "route": "sales"}
+{"text": "Can we get a custom contract with an SLA?", "route": "sales"}
+{"text": "Thinking of moving the whole company over, who do I speak to?", "route": "sales"}
+{"text": "Are there reseller or partner arrangements?", "route": "sales"}
+{"text": "What's the price difference between Pro and Business?", "route": "sales"}
+{"text": "We want to add another department next quarter, can we lock in today's price?", "route": "sales"}
+{"text": "I can't remember which email I signed up with", "route": "account"}
+{"text": "Lock my account, I think someone else got in", "route": "account"}
+{"text": "How do I remove a former employee's access?", "route": "account"}
+{"text": "The reset link in the email has expired", "route": "account"}
+{"text": "Can I change my username?", "route": "account"}
+{"text": "Make Priya an admin on our workspace", "route": "account"}
+{"text": "I want all my personal data erased", "route": "account"}
+{"text": "My authenticator app was on my old phone", "route": "account"}
+{"text": "How do I merge two accounts I accidentally created?", "route": "account"}
+{"text": "Set up single sign-on for my login please", "route": "account"}
+{"text": "Who is the owner of our organisation account?", "route": "account"}
+{"text": "Change my display name to my married name", "route": "account"}

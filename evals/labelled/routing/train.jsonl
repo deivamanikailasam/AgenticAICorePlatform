@@ -1,0 +1,24 @@
+{"text": "my invoice total looks wrong", "route": "billing"}
+{"text": "I was charged twice this month", "route": "billing"}
+{"text": "how do I get a refund", "route": "billing"}
+{"text": "update the credit card on file", "route": "billing"}
+{"text": "send me a copy of last month's bill", "route": "billing"}
+{"text": "why did my payment fail", "route": "billing"}
+{"text": "the app crashes when I open it", "route": "technical"}
+{"text": "I get error 500 when saving a report", "route": "technical"}
+{"text": "the dashboard will not load", "route": "technical"}
+{"text": "sync stopped working yesterday", "route": "technical"}
+{"text": "the API returns a timeout", "route": "technical"}
+{"text": "exports come out as empty files", "route": "technical"}
+{"text": "I'd like a quote for 40 seats", "route": "sales"}
+{"text": "what does the enterprise plan cost", "route": "sales"}
+{"text": "can we book a product demo", "route": "sales"}
+{"text": "do you offer discounts for non-profits", "route": "sales"}
+{"text": "I want to upgrade to a bigger plan", "route": "sales"}
+{"text": "who can I talk to about a volume deal", "route": "sales"}
+{"text": "I forgot my password", "route": "account"}
+{"text": "how do I add a new user to my team", "route": "account"}
+{"text": "change the email address on my login", "route": "account"}
+{"text": "please delete my account", "route": "account"}
+{"text": "turn on two-factor authentication", "route": "account"}
+{"text": "transfer ownership to my colleague", "route": "account"}

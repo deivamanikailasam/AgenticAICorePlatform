@@ -175,6 +175,10 @@ test-sandbox:
 compare-patterns cases="evals/reference/planning-tasks/cases.jsonl":
     uv run python -m agent_compiler.compare {{cases}}
 
+# Routing accuracy of the LLM, embedding and rules routers on the labelled set (Mac; VERIFY-ON-MAC)
+eval-routing dataset="evals/labelled/routing" routers="llm,embedding,rules":
+    uv run python -m agent_compiler.route_eval {{dataset}} {{routers}}
+
 # Firecracker and Kata engines (needs /dev/kvm; see scripts/install_firecracker.sh, install_kata.sh)
 test-microvm:
     uv run pytest -m microvm services/sandbox-runner -rs
