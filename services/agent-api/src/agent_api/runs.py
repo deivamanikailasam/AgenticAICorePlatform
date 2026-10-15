@@ -133,6 +133,10 @@ class Run:
         return self.adapter
 
 
+#: where each loaded agent's spec file lives: team workers are resolved relative to it
+SPEC_PATHS: dict[str, Path] = {}
+
+
 class ConflictError(ValueError):
     pass
 
@@ -153,6 +157,7 @@ class RunManager:
         for path in sorted(Path(directory).glob("*/agent.yaml")):
             spec = load_spec(path)
             agents[spec.name] = spec
+            SPEC_PATHS[spec.name] = path.resolve()
         return agents
 
     # ------------------------------------------------------------ access
@@ -236,7 +241,7 @@ class RunManager:
     async def _prepare(
         self, spec: AgentSpec, plan: ExecutablePlan, journal: RunJournal | None
     ) -> tuple[RuntimeAdapter, str]:
-        parts = await self.assembly.build(spec, plan, journal)
+        parts = await self.assembly.build(spec, plan, journal, spec_path=SPEC_PATHS.get(spec.name))
         adapter = runtime_for(spec, runner=parts.runner)
         return adapter, await adapter.build(plan)
 

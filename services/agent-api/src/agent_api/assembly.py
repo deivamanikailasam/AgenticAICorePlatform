@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from agent_compiler.run import executors_for, functions_for
@@ -33,7 +34,7 @@ from agent_runtime.nodes import RunJournal
 from agent_spec import AgentSpec
 from agent_spec.platform import PlatformConfig
 from agent_tools.assemble import grants_for
-from agent_tools.authorising import AuthorisingToolExecutor
+from agent_tools.authorising import AuthorisingToolExecutor, delegation_authoriser
 from agent_tools.builtin import BUILTIN_TOOLS
 from agent_tools.executor import PlatformToolExecutor
 from agent_tools.identity import TokenExchanger
@@ -109,7 +110,11 @@ class Assembly:
         return registry
 
     async def build(
-        self, spec: AgentSpec, plan: ExecutablePlan, journal: RunJournal | None = None
+        self,
+        spec: AgentSpec,
+        plan: ExecutablePlan,
+        journal: RunJournal | None = None,
+        spec_path: Path | None = None,
     ) -> Assembled:
         memory = await self.memory_factory(spec)
         registry = await self.registry_factory(spec)
@@ -129,7 +134,15 @@ class Assembly:
         model = StreamingModelClient(self.model_factory(spec))
         functions = functions_for(plan)
         executors: dict[Any, Any] = executors_for(
-            spec, plan, functions, model=model, tools=tools, memory=memory
+            spec,
+            plan,
+            functions,
+            model=model,
+            tools=tools,
+            memory=memory,
+            spec_path=spec_path,
+            workers=self.worker,
+            authorise=delegation_authoriser(self.pdp, self.audit),
         )
         runner: EventingNodeRunner
         if self.checkpointer is not None:
@@ -139,6 +152,14 @@ class Assembly:
         else:
             runner = EventingNodeRunner(functions, executors)
         return Assembled(model, tools, runner)
+
+    async def worker(
+        self, spec: AgentSpec, plan: ExecutablePlan
+    ) -> tuple[ModelClient, ToolExecutor]:
+        """A team worker (Step 22) is assembled like any agent: its own model roles, and only
+        its own spec's tools under policy with its own grants."""
+        parts = await self.build(spec, plan)
+        return parts.model, parts.tools
 
     async def memory(self, spec: AgentSpec) -> MemoryService | None:
         """The spec's long-term memory (Step 20), built once per agent and cached."""
