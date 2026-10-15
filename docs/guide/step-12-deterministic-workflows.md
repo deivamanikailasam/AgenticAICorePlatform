@@ -118,7 +118,8 @@ await run(spec, inputs, new_ctx, runner=replayer)  # same path, nothing executed
 - Undo steps are best effort: if an undo fails, the run stays failed and the failed undo is
   visible, but nothing retries it automatically yet.
 - Journals and run state live in memory until Step 18.
-- Approvals that policy requires on a tool node stop the call until Step 28 (fail closed).
+- Approvals that policy requires on a tool node stopped the call (fail closed) until Step 15,
+  which sends the approval node's decision to policy as evidence bound to the call (ADR 0026).
 
 ## 9. Alternatives
 

@@ -1,6 +1,6 @@
 # ADR 0023: Deterministic workflows — platform-level saga, journal replay, value paths, stable idempotency keys
 
-- **Status:** Accepted
+- **Status:** Accepted (point 5 amended by ADR 0026: approval evidence reaches policy from Step 15)
 - **Date:** 2026-10-15
 - **Step:** 12
 - **Deciders:** repository owner

@@ -41,3 +41,7 @@ Every term used in this repository, in plain English. Grows with each step.
 | ReWOO | "Reasoning without observation": plan once with tool arguments, run the tools, answer once |
 | Reflection | The model critiques its own draft and revises it, for a bounded number of rounds |
 | Evaluator-optimiser | One model drafts, a separate evaluator scores, the drafter improves; best candidate wins |
+| Router | A step that picks one of a fixed set of next steps for a request (by an LLM, by similarity to examples, or by rules) |
+| Embedding | A list of numbers representing a text's meaning, so similar texts can be found by comparing numbers |
+| Validation gate | A check on a step's output before the next step uses it; failures are sent back for a retry |
+| Approval evidence | A person's decision attached to one exact action (tool and arguments), checked by policy before the action runs |

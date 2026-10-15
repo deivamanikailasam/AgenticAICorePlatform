@@ -31,3 +31,4 @@ ADR supersedes it.
 | [0023](0023-deterministic-workflows.md) | Deterministic workflows: platform saga, journal replay, value paths, stable idempotency keys | 12 |
 | [0024](0024-agent-loop-engines.md) | Single tool-calling agent: native ReAct loop, agent_loop slot, framework engines, ADK via A2A | 13 |
 | [0025](0025-planning-and-reflection.md) | Planning and reflection: strategies on one agent node, planner/critic slots, one model-call cap, metered comparison | 14 |
+| [0026](0026-routing-chaining-and-approval-evidence.md) | Routing, prompt chains with gates, embedder slot, approval evidence bound to the call | 15 |

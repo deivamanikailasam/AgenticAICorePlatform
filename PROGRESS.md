@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 15 · Routing, chaining and hybrid (next)
+**Current step:** 16 · Agentic RAG (next)
 
 ## Environment note (read first)
 
@@ -34,12 +34,14 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 12 Deterministic workflows | done | on both engines: LLM + tool nodes in parallel then routing; saga undoes completed steps newest first (also after a policy denial); model-routed run replays identically without calling the model; sub-workflow; node timeout; tool nodes via the authorising executor with key `<run>:<node>` | — |
 | 13 Single tool-calling agent | done | ReAct loop: parallel reads, ordered writes, untrusted observations, bounded repairs, schema repair, `stopped` at max_steps, approval pause/resume, text ReAct fallback; agent_loop slot with native, OpenAI Agents SDK 0.22.3 and Pydantic AI 2.52.0 engines (contract); 8/8 golden tasks (stand-in model) on 3 engines × 2 adapters | golden tasks with the real local model (`-m mac`); Google ADK via A2A in Step 21 |
 | 14 Planning and reflection | done | plan_execute (re-plan on failure), rewoo (2 model calls), reflection (self-critique), evaluator_optimiser (judge, best candidate) as pattern builders; planner.llm / critic.llm pass their contracts; one model-call cap per node; all 5 patterns solve the 3 reference tasks on both adapters with a stand-in model, metered | `just compare-patterns` with the real local model (numbers: dataset 3 tasks, model alias) |
+| 15 Routing, chaining and hybrid | done | LLM, embedding and rules routers (contract; from agent.yaml on both adapters; confidence fallback); embedder slot with gateway embedder; validation gates and `prompt_chain` / `router` patterns; routing harness over 48 labelled cases (mechanics); approval evidence bound to the call, accepted by OPA (28 tests), Cerbos (12) and rules; invoice-triage reference app end to end on both adapters with the demo ERP over MCP (12 tests) | `just eval-routing` accuracy (dataset 48 cases, model aliases); `just demo-invoice-triage` with the real model; `local-embed` alias |
 
 ## Next
 
-- Step 15: routing, chaining and hybrid — prompt chains with validation gates, LLM router with
-  embedding-classifier and rules alternatives, routing accuracy on a labelled set, hybrid
-  reference app end to end.
+- Step 16: agentic RAG — an agent that decides whether, what and how to retrieve from `rag-core`
+  through MCP (decomposition, multi-hop, grounding self-check, corrective re-retrieval,
+  citations), selecting rag-core architectures per call; multi-hop golden questions vs Project
+  0's naive RAG on the same set.
 
 ## Open issues
 
@@ -51,4 +53,6 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 5 | Commit `0f13265` (Step 2 docs) failed CI on Markdown formatting; fixed in `1094c58`. Commits are now made only after `just check` passes on the exact staged tree | done |
 | 6 | CI run 9 (Step 7 docs commit) failed: two test modules each set the global OTel tracer provider. Fixed in `88b6b10` (shared fixture) | done |
 | 7 | Sandbox engines decided (owner delegated, 2026-10-15): Firecracker implemented and Kata verified on KVM CI; managed service stays a stub by decision (ADR 0021) | done |
+| 8 | Approver identity and groups come from the caller of `resume` until the run API takes them from a verified token | Step 17 |
+| 9 | The proxy in this build container refuses tag pushes (HTTP 403); `step-NN` tags exist locally only. Create them on the Mac or rely on commit messages | owner |
 | 4 | LiteLLM key values from provisioning must be moved into OpenBao (automated in Step 29) | Step 29 |
