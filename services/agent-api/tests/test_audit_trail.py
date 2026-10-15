@@ -69,9 +69,10 @@ async def test_an_approved_payment_leaves_a_complete_versioned_trail(
     pay = next(e for e in events if e.type == "tool.call" and e.payload["tool"] == "pay")
     decided = next(e for e in events if e.type == "approval.decided")
     assert pay.payload["arguments"] == {"amount_aud": 40.0}
-    assert pay.payload["arguments_digest"] == decided.payload.get(
-        "arguments_digest", pay.payload["arguments_digest"]
-    )
+    # the approval names exactly the call that ran: same tool, same (edited) arguments
+    assert decided.payload["calls"] == [
+        {"tool": "pay", "arguments_digest": pay.payload["arguments_digest"]}
+    ]
     ended = next(e for e in events if e.type == "run.ended" and e.payload["status"] == "succeeded")
     assert len(ended.payload["output_digest"]) == 64
 
