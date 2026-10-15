@@ -48,6 +48,12 @@ class _Stub(MemoryStore):
     async def erase_subject(self, tenant_id: str, user_id: str) -> int:
         self._refuse()
 
+    async def items(self, scope: MemoryScope, limit: int = 100) -> Sequence[MemoryItem]:
+        self._refuse()
+
+    async def flush_run(self, tenant_id: str, run_id: str) -> int:
+        self._refuse()
+
 
 class ZepMemoryStore(_Stub):
     """Zep. STUB: Community Edition is unsupported; Zep Cloud needs an account and API key."""

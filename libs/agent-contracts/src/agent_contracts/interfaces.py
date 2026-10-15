@@ -254,6 +254,14 @@ class MemoryStore(Component):
     async def erase_subject(self, tenant_id: str, user_id: str) -> int:
         """Right to erasure: remove every item about this user; returns the count."""
 
+    @abstractmethod
+    async def items(self, scope: MemoryScope, limit: int = 100) -> Sequence[MemoryItem]:
+        """Inspect: the unexpired items visible in ``scope``, newest first (all versions)."""
+
+    @abstractmethod
+    async def flush_run(self, tenant_id: str, run_id: str) -> int:
+        """Flush: remove every item a run wrote (incident response for a poisoned run)."""
+
 
 class MemoryPolicy(Component):
     """Decides what may be written to memory and in what form (Step 20)."""

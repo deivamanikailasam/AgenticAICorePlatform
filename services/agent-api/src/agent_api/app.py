@@ -15,6 +15,9 @@
 ``GET  /v1/threads/{id}/checkpoints``      time travel: a thread's checkpoints
 ``POST /v1/threads/{id}/fork``             time travel: continue from an earlier checkpoint
 ``POST /v1/admin/erasure``                 right to erasure for one user (privacy officer)
+``GET  /v1/memories?agent=A``              inspect: what agent A remembers for the caller
+``DELETE /v1/memories/{agent}/{id}``       the caller deletes one of their own memories
+``POST /v1/admin/memory/flush``            flush every memory one run wrote (officers)
 =========================================  ==============================================
 
 Every call needs a bearer token verified against Keycloak (issuer, signature, expiry,
@@ -184,6 +187,21 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
         tenant = str(data.get("tenant") or who.tenant)
         return JSONResponse({"erased": await manager.erase_subject(tenant, data["user"], who)})
 
+    async def memories(request: Request, who: Principal) -> Response:
+        agent = request.query_params.get("agent", "")
+        return JSONResponse({"memories": await manager.memories(agent, who)})
+
+    async def forget(request: Request, who: Principal) -> Response:
+        await manager.forget(request.path_params["agent"], request.path_params["item_id"], who)
+        return Response(status_code=204)
+
+    async def flush(request: Request, who: Principal) -> Response:
+        data = await body(request)
+        if not isinstance(data.get("run_id"), str) or not isinstance(data.get("agent"), str):
+            raise ValueError("'agent' and 'run_id' are required")
+        flushed = await manager.flush_run(data["agent"], data["run_id"], who)
+        return JSONResponse({"flushed": flushed})
+
     async def socket(ws: WebSocket) -> None:
         await ws.accept()
         try:
@@ -237,6 +255,9 @@ def build_app(manager: RunManager, verifier: TokenVerifier) -> Starlette:
             Route("/v1/threads/{thread_id}/checkpoints", guarded(checkpoints)),
             Route("/v1/threads/{thread_id}/fork", guarded(fork), methods=["POST"]),
             Route("/v1/admin/erasure", guarded(erasure), methods=["POST"]),
+            Route("/v1/memories", guarded(memories)),
+            Route("/v1/memories/{agent}/{item_id}", guarded(forget), methods=["DELETE"]),
+            Route("/v1/admin/memory/flush", guarded(flush), methods=["POST"]),
             WebSocketRoute("/v1/runs/{run_id}/ws", socket),
         ],
     )

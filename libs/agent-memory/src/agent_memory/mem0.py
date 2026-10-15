@@ -113,6 +113,7 @@ class Mem0MemoryStore(MemoryStore):
             "key": item.key or "",
             "version": item.version,
             "provenance": item.provenance.model_dump(mode="json"),
+            "source_run": item.provenance.run_id or "",
             "confidence": item.confidence,
             "expires_at": item.expires_at.timestamp() if item.expires_at else NEVER,
             "created": item.created_at.isoformat(),
@@ -203,3 +204,14 @@ class Mem0MemoryStore(MemoryStore):
         for mem0_id in ids:
             await self.memory.delete(mem0_id)
         return len(ids)
+
+    async def items(self, scope: MemoryScope, limit: int = 100) -> Sequence[MemoryItem]:
+        rows = await self._rows(self._visible(scope), limit=limit)
+        found = [self._item(scope.tenant_id, r) for r in rows]
+        return sorted(found, key=lambda i: i.created_at, reverse=True)[:limit]
+
+    async def flush_run(self, tenant_id: str, run_id: str) -> int:
+        rows = await self._rows({"user_id": tenant_id, "source_run": run_id})
+        for r in rows:
+            await self.memory.delete(r["id"])
+        return len(rows)

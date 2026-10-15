@@ -33,6 +33,7 @@ from agent_contracts.interfaces import RuntimeAdapter
 from agent_contracts.models import (
     AuditEvent,
     ExecutablePlan,
+    MemoryScope,
     RunContext,
     RunEvent,
     RunEventType,
@@ -474,6 +475,65 @@ class RunManager:
             )
         )
         return counts
+
+    # ------------------------------------------------------------ inspect and flush memory
+
+    INCIDENT_ROLES = frozenset({"privacy-officer", "security-officer"})
+
+    async def _memory(self, agent: str) -> Any:
+        spec = self.agents.get(agent)
+        memory = await self.assembly.memory_factory(spec) if spec else None
+        if memory is None:
+            raise KeyError(agent)
+        return memory
+
+    async def memories(self, agent: str, who: Principal) -> list[dict[str, Any]]:
+        """Inspect: what this agent remembers that the caller can see (theirs and shared)."""
+        memory = await self._memory(agent)
+        scope = MemoryScope(tenant_id=who.tenant, user_id=who.user, agent_id=agent)
+        return [
+            {
+                "id": i.id,
+                "kind": i.kind.value,
+                "key": i.key,
+                "version": i.version,
+                "content": i.content,
+                "shared": i.scope.user_id is None,
+                "source": i.provenance.source,
+                "trust": i.provenance.trust.value,
+                "run_id": i.provenance.run_id,
+                "created_at": i.created_at.isoformat(),
+                "expires_at": i.expires_at.isoformat() if i.expires_at else None,
+            }
+            for i in await memory.store.items(scope)
+        ]
+
+    async def forget(self, agent: str, item_id: str, who: Principal) -> None:
+        """A user deletes one of their own memories (shared ones need an officer's flush)."""
+        memory = await self._memory(agent)
+        scope = MemoryScope(tenant_id=who.tenant, user_id=who.user, agent_id=agent)
+        item = await memory.store.get(scope, item_id)
+        if item is None:
+            raise KeyError(item_id)
+        if item.scope.user_id != who.user:
+            raise PermissionError("only your own memories can be deleted here")
+        await memory.store.delete(scope, item_id)
+
+    async def flush_run(self, agent: str, run_id: str, who: Principal) -> int:
+        """Incident response: remove every memory one run wrote (e.g. a run later found to
+        have been steered by a poisoned document). Officers only; audited."""
+        if not self.INCIDENT_ROLES & set(who.roles):
+            raise PermissionError("flushing memory needs the privacy- or security-officer role")
+        memory = await self._memory(agent)
+        flushed = int(await memory.store.flush_run(who.tenant, run_id))
+        await self.assembly.audit.append(
+            AuditEvent(
+                type="memory.flushed",
+                ctx=RunContext(tenant_id=who.tenant, user_id=who.user, agent_id=agent),
+                payload={"run_id": run_id, "flushed": flushed, "requested_by": who.user},
+            )
+        )
+        return flushed
 
     # ------------------------------------------------------------ execution
 

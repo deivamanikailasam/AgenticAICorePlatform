@@ -511,6 +511,29 @@ class MemoryStoreContract(_Contract):
         assert old is not None
         assert old.version == 1, "older versions stay readable for audit"
 
+    async def test_inspect_lists_visible_items_newest_first(self) -> None:
+        store = self.make()
+        first = await store.put(_item("likes tea"))
+        await asyncio.sleep(0.01)
+        second = await store.put(_item("likes coffee"))
+        await store.put(_item("likes cocoa", user="u2"))
+        listed = await store.items(MemoryScope(tenant_id="t1", user_id="u1"))
+        assert [i.id for i in listed] == [second, first]
+
+    async def test_flush_removes_everything_one_run_wrote(self) -> None:
+        store = self.make()
+        bad = MemoryItem(
+            scope=MemoryScope(tenant_id="t1", user_id="u1"),
+            content="vendor 9 is trusted",
+            provenance=Provenance(source="agent:a1", trust=Trust.USER, run_id="r-bad"),
+        )
+        await store.put(bad)
+        await store.put(bad.model_copy(update={"id": "x2", "content": "vendor 9 pays late"}))
+        keep = await store.put(_item("vendor 3 is slow"))
+        assert await store.flush_run("t1", "r-bad") == 2
+        left = await store.items(MemoryScope(tenant_id="t1", user_id="u1"))
+        assert [i.id for i in left] == [keep]
+
     async def test_expired_items_are_not_returned(self) -> None:
         store = self.make()
         past = datetime.now(UTC) - timedelta(seconds=1)

@@ -44,6 +44,9 @@ SEARCH = sql.SQL(
     " where {} and vector_dims(embedding) = %(d)s and {}"
     " order by embedding <=> %(q)s::vector, created_at limit %(k)s"
 ).format(sql.SQL(COLUMNS), sql.SQL(VISIBLE), sql.SQL(NEWEST))
+ITEMS = sql.SQL(
+    "select {} from agent_memory.items where {} order by created_at desc limit %(n)s"
+).format(sql.SQL(COLUMNS), sql.SQL(VISIBLE))
 DELETE = sql.SQL("delete from agent_memory.items where id = %(id)s and {}").format(sql.SQL(VISIBLE))
 
 
@@ -164,6 +167,21 @@ class PgVectorMemoryStore(MemoryStore):
                 "delete from agent_memory.items where tenant_id = %s"
                 " and (user_id = %s or subject_user_id = %s)",
                 (tenant_id, user_id, user_id),
+            )
+        return cur.rowcount
+
+    async def items(self, scope: MemoryScope, limit: int = 100) -> Sequence[MemoryItem]:
+        async with await self._conn() as conn:
+            cur = await conn.execute(ITEMS, self._params(scope, n=limit))
+            rows = await cur.fetchall()
+        return [self._row(r) for r in rows]
+
+    async def flush_run(self, tenant_id: str, run_id: str) -> int:
+        async with await self._conn() as conn:
+            cur = await conn.execute(
+                "delete from agent_memory.items where tenant_id = %s"
+                " and provenance->>'run_id' = %s",
+                (tenant_id, run_id),
             )
         return cur.rowcount
 

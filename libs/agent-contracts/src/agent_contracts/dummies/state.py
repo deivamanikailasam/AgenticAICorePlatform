@@ -265,6 +265,20 @@ class InMemoryMemoryStore(MemoryStore):
             del self._items[k]
         return len(doomed)
 
+    async def items(self, scope: MemoryScope, limit: int = 100) -> Sequence[MemoryItem]:
+        seen = [i for i in self._items.values() if _visible(i, scope)]
+        return sorted(seen, key=lambda i: i.created_at, reverse=True)[:limit]
+
+    async def flush_run(self, tenant_id: str, run_id: str) -> int:
+        doomed = [
+            k
+            for k, i in self._items.items()
+            if i.scope.tenant_id == tenant_id and i.provenance.run_id == run_id
+        ]
+        for k in doomed:
+            del self._items[k]
+        return len(doomed)
+
 
 class SqliteMemoryStore(MemoryStore):
     """Memory items in SQLite (in-memory by default); keyword-overlap search in Python."""
@@ -311,6 +325,16 @@ class SqliteMemoryStore(MemoryStore):
 
     async def erase_subject(self, tenant_id: str, user_id: str) -> int:
         doomed = [i.id for i in self._all(tenant_id) if _about(i, tenant_id, user_id)]
+        self._db.executemany("delete from memory where id=?", [(d,) for d in doomed])
+        self._db.commit()
+        return len(doomed)
+
+    async def items(self, scope: MemoryScope, limit: int = 100) -> Sequence[MemoryItem]:
+        seen = [i for i in self._all(scope.tenant_id) if _visible(i, scope)]
+        return sorted(seen, key=lambda i: i.created_at, reverse=True)[:limit]
+
+    async def flush_run(self, tenant_id: str, run_id: str) -> int:
+        doomed = [i.id for i in self._all(tenant_id) if i.provenance.run_id == run_id]
         self._db.executemany("delete from memory where id=?", [(d,) for d in doomed])
         self._db.commit()
         return len(doomed)

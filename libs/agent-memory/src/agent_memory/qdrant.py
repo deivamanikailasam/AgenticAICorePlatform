@@ -22,7 +22,7 @@ from qdrant_client import AsyncQdrantClient, models
 from agent_memory.common import Sealer, embed_ctx
 
 NEVER = 32503680000.0  # 3000-01-01: "no expiry" as a number Qdrant can range over
-KEYWORDS = ("tenant_id", "user_id", "agent_id", "subject_user_id", "key")
+KEYWORDS = ("tenant_id", "user_id", "agent_id", "subject_user_id", "key", "run_id")
 
 
 def point_id(item_id: str) -> str:
@@ -114,6 +114,7 @@ class QdrantMemoryStore(MemoryStore):
             "version": item.version,
             "content": self.sealer.seal(item),
             "provenance": item.provenance.model_dump(mode="json"),
+            "run_id": item.provenance.run_id or "",
             "confidence": item.confidence,
             "expires_at": item.expires_at.timestamp() if item.expires_at else NEVER,
             "created_at": item.created_at.isoformat(),
@@ -221,5 +222,24 @@ class QdrantMemoryStore(MemoryStore):
             total += (await self.client.count(name, count_filter=about, exact=True)).count
             await self.client.delete(
                 name, points_selector=models.FilterSelector(filter=about), wait=True
+            )
+        return total
+
+    async def items(self, scope: MemoryScope, limit: int = 100) -> Sequence[MemoryItem]:
+        found: list[MemoryItem] = []
+        for name in await self._collections():
+            points, _ = await self.client.scroll(
+                name, scroll_filter=models.Filter(must=visible(scope)), limit=limit
+            )
+            found += [self._item(p.payload or {}) for p in points]
+        return sorted(found, key=lambda i: i.created_at, reverse=True)[:limit]
+
+    async def flush_run(self, tenant_id: str, run_id: str) -> int:
+        written = models.Filter(must=[_match("tenant_id", tenant_id), _match("run_id", run_id)])
+        total = 0
+        for name in await self._collections():
+            total += (await self.client.count(name, count_filter=written, exact=True)).count
+            await self.client.delete(
+                name, points_selector=models.FilterSelector(filter=written), wait=True
             )
         return total
