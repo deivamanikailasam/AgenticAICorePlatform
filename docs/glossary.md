@@ -54,3 +54,8 @@ Every term used in this repository, in plain English. Grows with each step.
 | Checkpoint | A saved snapshot of a run after a step, so it can continue from there |
 | Time travel | Looking at a run's earlier checkpoints, and starting a new branch from one of them |
 | Retention | How long saved data is kept before it is deleted |
+| Workflow (Temporal) | Code that only decides what happens next; the server records every decision, so the run can be rebuilt anywhere after a crash |
+| Activity | One piece of real work in a workflow (a model or tool call), retried by the server if it fails |
+| Signal | A message sent into a running workflow, such as an approval |
+| Durable timer | A wait recorded on the server, not in a process's memory, so it keeps counting through restarts |
+| Heartbeat | A regular "still alive" message from a long activity, so a dead worker is noticed quickly |

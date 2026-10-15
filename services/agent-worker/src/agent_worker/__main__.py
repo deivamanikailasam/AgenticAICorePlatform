@@ -28,7 +28,7 @@ from agent_worker.worker import serve
 async def artefacts() -> Any:
     endpoint = os.environ.get("P0_S3_ENDPOINT")
     if not endpoint:
-        return None  # values stay inline (Temporal's 2 MiB payload limit applies)
+        return None  # values stay inline (Temporal's 2 MB payload limit applies)
     secrets = EnvSecretResolver()
     return S3ArtefactStore(
         endpoint,

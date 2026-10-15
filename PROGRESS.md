@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 19 · Durable long runs, Temporal (next)
+**Current step:** 20 · Long-term memory (next)
 
 ## Environment note (read first)
 
@@ -38,14 +38,14 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 16 Agentic RAG | done | `pattern: agentic_rag`: retrieve decision, hops with `#Q` references, allowed architectures, citations only from retrieved passages, grounding check with corrective re-retrieval; golden set (10 questions, 10 documents) runs in naive and agentic modes on both adapters with no access violations (offline double, stand-in model); real Keycloak token exchange: each user cites only their documents | `just eval-agentic-rag` (agentic vs naive; corpus ingested into rag-core; real model); rag-core answer endpoint as baseline if it exists |
 | 17 Run API and streaming | done | `agent-api` (ag-ui-protocol 1.0.0): create (idempotent), AG-UI over SSE and WebSocket, state, cancel, resume (refuses approvals), threads, approvals from verified tokens (self 403, outsider 404); events from inside the run on both adapters; container healthy with public/internal issuer split (also fixed in the gateway); integration: invoice-triage through the real service with Keycloak and OPA; headless Chromium drives the page to approval and payment | real Project 0 Keycloak hostname (`KC_HOSTNAME`) and `P0_KEYCLOAK_PUBLIC_URL` |
 | 18 Checkpoints and threads | done | Postgres checkpointer (contract; AES-256-GCM field encryption bound to tenant/thread/checkpoint; retention keeps newest per thread); Valkey (contract) and SQLite alternatives; history and fork; SIGKILL mid-run then resume without repeating the write on both adapters (SQLite) and with Postgres; durable run API: paused runs survive a restart, running runs resume from checkpoints, forks continue after the chosen checkpoint, runs and events encrypted at rest | checkpoint key in OpenBao (Step 29) |
+| 19 Durable long runs (Temporal) | done | temporalio 1.34.0; `durability: temporal` runs the plan as the `agent-run` workflow, nodes as `run_node` activities (retries, heartbeats), approvals as signals with a 7-day durable timer, values over 256 KiB by S3 reference; dev server 1.9.1 by digest on 127.0.0.1; `agent-worker` service; durable executor contract; approval wait survives worker stop and server restart with each side effect scheduled once; 24 h wait and expiry on the time-skipping server (CI only: download blocked here); Restate and DBOS stubs | API dispatch of temporal agents with per-node events; delegated credentials in the worker (Step 29) |
 
 ## Next
 
-- Step 19: durable long runs (Temporal) — `durability: temporal` runs the agent as a Temporal
-  workflow (model and tool calls as activities with retry policies, durable timers and signals
-  for multi-day waits and approvals, heartbeats, large payloads in S3 by reference); Restate or
-  DBOS as alternatives; a run waits 24 hours (simulated) for an approval, survives a worker and
-  server restart, then finishes.
+- Step 20: long-term memory — semantic, episodic and procedural memory scoped per user, tenant
+  or agent; a `MemoryPolicy` (PII redaction, provenance, confidence, TTL, no unvalidated writes
+  from untrusted tool output); right-to-erasure via Project 0's lifecycle; pgvector default with
+  Qdrant, Mem0, Letta, Zep alternatives.
 
 ## Open issues
 
