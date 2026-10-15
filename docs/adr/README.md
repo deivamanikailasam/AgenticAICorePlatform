@@ -1,0 +1,19 @@
+# Architecture decision records
+
+An ADR records one hard-to-reverse decision: the context, the decision, the alternatives and
+the consequences. Create one with `just adr "<title>"`. An accepted ADR is never edited; a new
+ADR supersedes it.
+
+| ADR | Decision | Step |
+|---|---|---|
+| [0001](0001-separate-repo-consuming-project-0.md) | Separate repo that consumes Project 0 services | 1 |
+| [0002](0002-python-uv-fastapi-pydantic.md) | Python 3.12, uv, FastAPI, Pydantic v2 | 1 |
+| [0003](0003-declarative-agent-spec.md) | Declarative `agent.yaml` + pattern compiler | 1 |
+| [0004](0004-runtime-adapter-langgraph-default.md) | Runtime adapter; LangGraph 1.x default | 1 |
+| [0005](0005-two-durability-tiers.md) | Postgres checkpoints + Temporal | 1 |
+| [0006](0006-mcp-only-tool-protocol.md) | MCP 2026-07-28 is the tool protocol | 1 |
+| [0007](0007-a2a-for-cross-boundary-agents.md) | A2A v1.x across boundaries | 1 |
+| [0008](0008-all-model-calls-via-litellm.md) | All model calls via LiteLLM | 1 |
+| [0009](0009-opa-decides-every-tool-call.md) | OPA on every tool call; OpenFGA for relationships | 1 |
+| [0010](0010-otel-genai-conventions.md) | OTel GenAI semantic conventions | 1 |
+| [0011](0011-cloud-build-and-project-0-standin.md) | Cloud build + Project 0 stand-in for integration tests | 1 |
