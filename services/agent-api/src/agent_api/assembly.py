@@ -30,6 +30,11 @@ from agent_memory.service import MemoryService
 from agent_memory.tools import RememberTool
 from agent_runtime.budget import BudgetedModelClient, BudgetedToolExecutor, RunBudgets
 from agent_runtime.checkpoints import PostgresCheckpointer
+from agent_runtime.circuit import (
+    CircuitBreaker,
+    CircuitBreakingModelClient,
+    CircuitBreakingToolExecutor,
+)
 from agent_runtime.durable import CheckpointingNodeRunner
 from agent_runtime.events import EventingNodeRunner, EventingToolExecutor, StreamingModelClient
 from agent_runtime.models.embeddings import GatewayEmbedder
@@ -87,6 +92,9 @@ class Assembly:
     ) -> None:
         # Step 26: budgets and loop detection for every run and child run built here
         self.budgets = budgets if budgets is not None else RunBudgets()
+        # circuit breakers shared by every run of this process (Step 26)
+        self.tool_circuits = CircuitBreaker(failures=5, cooldown=30)
+        self.model_circuits = CircuitBreaker(failures=3, cooldown=30)
         # Step 25: which agents may run and be delegated to here (the registry gate)
         self.admit = admit
         self.secrets = secrets or EnvSecretResolver()
@@ -151,17 +159,25 @@ class Assembly:
             await registry.register(RememberTool(memory))
         tools = BudgetedToolExecutor(
             EventingToolExecutor(
-                AuthorisingToolExecutor(
-                    PlatformToolExecutor(registry),
-                    registry,
-                    self.pdp,
-                    self.audit,
-                    grants=grants_for(plan),
+                CircuitBreakingToolExecutor(
+                    AuthorisingToolExecutor(
+                        PlatformToolExecutor(registry),
+                        registry,
+                        self.pdp,
+                        self.audit,
+                        grants=grants_for(plan),
+                    ),
+                    self.tool_circuits,
                 )
             ),
             self.budgets,
         )
-        model = StreamingModelClient(BudgetedModelClient(self.model_factory(spec), self.budgets))
+        model = StreamingModelClient(
+            BudgetedModelClient(
+                CircuitBreakingModelClient(self.model_factory(spec), self.model_circuits),
+                self.budgets,
+            )
+        )
         functions = functions_for(plan)
         executors: dict[Any, Any] = executors_for(
             spec,

@@ -220,6 +220,7 @@ class ToolErrorCode(StrEnum):
     TIMEOUT = "timeout"
     FAILED = "failed"
     RATE_LIMITED = "rate_limited"
+    UNAVAILABLE = "unavailable"  # circuit open: the tool kept failing (Step 26)
 
 
 class ToolResult(Frozen):
