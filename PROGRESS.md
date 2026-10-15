@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 10 · Tool authorisation (next)
+**Current step:** 11 · LangGraph runtime adapter (next)
 
 ## Environment note (read first)
 
@@ -29,12 +29,12 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 7 MCP client | done | filesystem (stdio, 2025-11-25) + OAuth HTTP server (2026-07-28) discovered, called, traced, audited; unlisted refused (client + compiler) | against Project 0 Keycloak; audit into Project 0's log (Step 31) |
 | 8 Platform MCP server | done | gateway with Keycloak auth + OPA per call + audit; alice/bob/gina see only permitted docs via token exchange (stand-in + rag-core double); hardened container via `just up` | real rag-core API shape; Project 0 realm group claims, token exchange, downstream clients; OPA bundle loading |
 | 9 Sandboxed code execution | done | gVisor 20261005.0: fork bomb killed, network blocked, 10-min loop cut, OOM stopped, artefacts in/out; CI job installs gVisor | gVisor inside OrbStack on the Mac |
+| 10 Tool authorisation | done | Rego 21/21 (allow, deny, approval); cross-tenant call through the live gateway denied and audited; authorising executor with Valkey rate limits; on-behalf-of MCP (server sees alice); Cerbos 0.56.0 parity with OPA on 19 cases; OpenFGA v1.22.0 relationships | Project 0 OPA loading `data.agent.config`; realm group paths; token exchange per audience |
 
 ## Next
 
-- Step 10: full tool authorisation policy (user, tenant, agent, tool, side-effect class, data
-  classification, arguments, risk tier), on-behalf-of everywhere, per-tool rate limits in Valkey,
-  Cerbos and OpenFGA alternatives; Rego tests for allow/deny/approval; cross-tenant denial audited.
+- Step 11: LangGraph runtime adapter (default) and the alternatives listed in the spec; the
+  runtime builds tool grants from the spec and calls tools only through the authorising executor.
 
 ## Open issues
 

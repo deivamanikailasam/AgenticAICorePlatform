@@ -87,6 +87,20 @@ just up
 
 At Step 1 this builds the ops image and runs `agent-health` inside Project 0's network.
 
+### Optional: other policy engines (Step 10)
+
+OPA comes from Project 0 and is the default. To try Cerbos or OpenFGA relationship checks, add
+`OPENFGA_PRESHARED_KEY_DEV` and `SECRET__OPENFGA__AGENT_PLATFORM__PRESHARED_KEY` (same value) to
+`secrets/dev.env`, then:
+
+```bash
+just with-secrets just up-alternatives      # cerbos (127.0.0.1:3592), openfga (127.0.0.1:8085)
+just with-secrets just provision-openfga    # second run: "model: up to date"
+MCP_GATEWAY_PDP=cerbos+openfga just with-secrets just up
+```
+
+OpenFGA here keeps relationships in memory: they are lost when the container restarts.
+
 ## 6. Verify
 
 ```bash
@@ -105,7 +119,11 @@ just test-integration
 | Port already in use on 5432/6379/8080 | The CI stand-in was started on the Mac | `just standin-down` (never use the stand-in on the Mac) |
 | `sops: no matching creation rules` | File not under `secrets/*.enc.*` | Use `just secrets-init` |
 | Build fails with certificate errors | Corporate proxy | Set `EXTRA_CA_BUNDLE=/path/to/ca.pem` before `just up` |
+| Every tool call says `policy agent/tools/decision is not loaded` | Policies not in OPA (OPA restarted) | `just with-secrets just provision-policies` |
+| Calls denied with `no rule allows this call` | `data.agent.config` missing in OPA | Same: provisioning loads `policies/agent/config/data.json` |
+| `rate_limited` errors | Per-minute limit reached | Wait for the next minute, or raise `rate_limit_per_minute` / `MCP_GATEWAY_RATE_LIMIT_PER_MINUTE` |
+| `refusing to call it with a service identity` | `on_behalf_of` MCP server called without a user token | Call through the gateway or agent API as a signed-in user |
+| `openfga` exits: `please specify at least one key` | `OPENFGA_PRESHARED_KEY_DEV` not set | Add it to `secrets/dev.env`; run through `just with-secrets` |
 
 Later steps extend this table (gateway via `host.docker.internal`, Keycloak audience mismatch,
-OPA denies everything, Temporal namespace missing, sandbox without gVisor, MCP version
-negotiation).
+Temporal namespace missing, sandbox without gVisor, MCP version negotiation).

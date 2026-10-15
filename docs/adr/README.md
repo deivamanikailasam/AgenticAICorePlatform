@@ -25,3 +25,4 @@ ADR supersedes it.
 | [0017](0017-mcp-client.md) | MCP client: allowlist, negotiation fallback, trust, OAuth, task-owned connections | 7 |
 | [0018](0018-platform-mcp-gateway.md) | Platform MCP gateway: Keycloak, OPA per call, token exchange, audit | 8 |
 | [0019](0019-code-sandbox-engines.md) | Code sandbox: gVisor default, Kata option, Firecracker/managed stubs | 9 |
+| [0020](0020-tool-authorisation.md) | Tool authorisation: authorising executor, rate limits, on-behalf-of, Cerbos and OpenFGA options | 10 |
