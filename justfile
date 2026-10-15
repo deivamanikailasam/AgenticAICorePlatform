@@ -171,6 +171,10 @@ sandbox-runner:
 test-sandbox:
     uv run pytest -m sandbox services/sandbox-runner
 
+# Compare agent patterns on the reference tasks with the real local model (Mac; VERIFY-ON-MAC)
+compare-patterns cases="evals/reference/planning-tasks/cases.jsonl":
+    uv run python -m agent_compiler.compare {{cases}}
+
 # Firecracker and Kata engines (needs /dev/kvm; see scripts/install_firecracker.sh, install_kata.sh)
 test-microvm:
     uv run pytest -m microvm services/sandbox-runner -rs
