@@ -21,6 +21,10 @@ agent-compile = "agent_compiler.cli:main"
 "pattern_builder.state_machine" = "agent_compiler.patterns.graph:StateMachinePatternBuilder"
 "pattern_builder.hybrid" = "agent_compiler.patterns.graph:HybridPatternBuilder"
 "pattern_builder.react" = "agent_compiler.patterns.react:ReactPatternBuilder"
+"pattern_builder.plan_execute" = "agent_compiler.patterns.react:PlanExecutePatternBuilder"
+"pattern_builder.rewoo" = "agent_compiler.patterns.react:RewooPatternBuilder"
+"pattern_builder.reflection" = "agent_compiler.patterns.react:ReflectionPatternBuilder"
+"pattern_builder.evaluator_optimiser" = "agent_compiler.patterns.react:EvaluatorOptimiserPatternBuilder"
 
 [tool.uv.sources]
 agent-contracts = { workspace = true }

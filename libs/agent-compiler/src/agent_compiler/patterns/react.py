@@ -1,4 +1,5 @@
-"""``pattern: react`` — the single tool-calling agent (Step 13).
+"""Agentic patterns built as one agent node: ``react`` (Step 13) and the planning and reflection
+patterns ``plan_execute``, ``rewoo``, ``reflection``, ``evaluator_optimiser`` (Step 14).
 
 Builds two nodes: ``<prefix>loop`` (an AGENT node run by the agent-loop executor) and
 ``<prefix>approval``, which the loop routes to when a tool that needs approval is called; the
@@ -17,8 +18,13 @@ from typing import Any
 from agent_contracts.interfaces import PatternBuilder
 from agent_contracts.models import NodeKind, PlanEdge, PlanFragment, PlanNode
 
+#: strategy settings lifted from an agent node's ``config`` onto the plan node
+STRATEGY_SETTINGS = ("max_rounds", "max_replans", "executor_model")
+
 
 class ReactPatternBuilder(PatternBuilder):
+    loop = "react"
+
     def build(self, section: Mapping[str, Any], prefix: str) -> PlanFragment:
         if "spec" in section:  # the whole spec is one agent
             spec = section["spec"]
@@ -44,7 +50,8 @@ class ReactPatternBuilder(PatternBuilder):
             id=loop_id,
             kind=NodeKind.AGENT,
             config={
-                "loop": "react",
+                **{k: config[k] for k in STRATEGY_SETTINGS if k in config},
+                "loop": self.loop,
                 "tools": tools,
                 "approval_tools": approval_tools,
                 "model": model,
@@ -63,3 +70,27 @@ class ReactPatternBuilder(PatternBuilder):
             entry=loop_id,
             exits=(loop_id,),
         )
+
+
+class PlanExecutePatternBuilder(ReactPatternBuilder):
+    """Plan, carry out each step with a small ReAct run, re-plan on failure."""
+
+    loop = "plan_execute"
+
+
+class RewooPatternBuilder(ReactPatternBuilder):
+    """Plan once with tool arguments, run the tools without re-prompting, solve once."""
+
+    loop = "rewoo"
+
+
+class ReflectionPatternBuilder(ReactPatternBuilder):
+    """Draft, self-critique, revise; bounded rounds."""
+
+    loop = "reflection"
+
+
+class EvaluatorOptimiserPatternBuilder(ReactPatternBuilder):
+    """Optimiser drafts, separate evaluator scores, keep the best; bounded rounds."""
+
+    loop = "evaluator_optimiser"

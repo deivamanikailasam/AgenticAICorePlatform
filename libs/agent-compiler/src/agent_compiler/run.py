@@ -16,7 +16,9 @@ from typing import Any
 from agent_contracts.dummies.runtime import BUILTIN_FUNCTIONS
 from agent_contracts.interfaces import (
     AgentLoop,
+    Critic,
     ModelClient,
+    Planner,
     RuntimeAdapter,
     ToolExecutor,
     ToolRegistry,
@@ -30,6 +32,7 @@ from agent_contracts.models import (
     RunStatus,
 )
 from agent_contracts.registry import registry as component_registry
+from agent_runtime.agent_loop import AgentLoopExecutor
 from agent_runtime.executors import (
     LlmNodeExecutor,
     RouterNodeExecutor,
@@ -38,6 +41,13 @@ from agent_runtime.executors import (
 )
 from agent_runtime.models.gateway import GatewayModelClient
 from agent_runtime.nodes import NodeExecutor, NodeRunner
+from agent_runtime.strategies import (
+    AgentNodeDispatcher,
+    EvaluatorOptimiserStrategy,
+    PlanExecuteStrategy,
+    ReflectionStrategy,
+    RewooStrategy,
+)
 from agent_spec import AgentSpec, load_spec
 from agent_tools.assemble import tool_names
 from opentelemetry.sdk.trace import TracerProvider
@@ -111,23 +121,7 @@ def executors_for(
             if any(n.config.get("tools") for n in plan.nodes if n.kind is NodeKind.AGENT):
                 raise LookupError("agent nodes with tools need a tool executor with a registry")
             tools, registry = _no_tools()
-        engine = spec.components.get("agent_loop", "native")
-        try:
-            loop = component_registry.create(
-                "agent_loop",
-                engine,
-                model=model,
-                tools=tools,
-                registry=registry,
-                names=tool_names(plan),
-            )
-        except KeyError:
-            installed = ", ".join(component_registry.names("agent_loop")) or "none"
-            raise LookupError(
-                f"agent loop engine '{engine}' is not installed (installed: {installed})"
-            ) from None
-        assert isinstance(loop, AgentLoop)
-        executors[NodeKind.AGENT] = loop
+        executors[NodeKind.AGENT] = agent_dispatcher(spec, plan, model, tools, registry)
     if NodeKind.SUBPLAN in kinds:
         base = Path(spec_path).parent if spec_path else Path.cwd()
 
@@ -152,6 +146,60 @@ def executors_for(
 
         executors[NodeKind.SUBPLAN] = SubplanNodeExecutor(run_subplan)
     return executors
+
+
+def _create(slot: str, name: str, **kwargs: Any) -> Any:
+    """Create a component, passing only the collaborators its constructor accepts (test-double
+    components take none)."""
+    try:
+        return component_registry.create(slot, name, **kwargs)
+    except KeyError:
+        installed = ", ".join(component_registry.names(slot)) or "none"
+        raise LookupError(f"{slot} '{name}' is not installed (installed: {installed})") from None
+    except TypeError:
+        return component_registry.create(slot, name)
+
+
+def agent_dispatcher(
+    spec: AgentSpec,
+    plan: ExecutablePlan,
+    model: ModelClient,
+    tools: ToolExecutor,
+    registry: ToolRegistry,
+) -> AgentLoop:
+    """The executor for agent nodes: the spec's ReAct engine plus the planning and reflection
+    strategies (Step 14), with planner and critic from the spec's components."""
+    names = tool_names(plan)
+    engine = spec.components.get("agent_loop", "native")
+    planner_name = spec.components.get("planner", "llm")
+    critic_name = spec.components.get("critic", "llm")
+
+    def react(m: ModelClient) -> AgentLoop:
+        loop = _create("agent_loop", engine, model=m, tools=tools, registry=registry, names=names)
+        assert isinstance(loop, AgentLoop)
+        return loop
+
+    def native(m: ModelClient) -> AgentLoop:  # strategies' sub-steps use the native loop
+        return AgentLoopExecutor(m, tools, registry, names)
+
+    def planner(m: ModelClient) -> Planner:
+        return _create("planner", planner_name, model=m)  # type: ignore[no-any-return]
+
+    def critic(m: ModelClient, role: str) -> Critic:
+        return _create("critic", critic_name, model=m, role=role)  # type: ignore[no-any-return]
+
+    common: dict[str, Any] = {"model": model, "tools": tools, "registry": registry, "names": names}
+    return AgentNodeDispatcher(
+        {
+            "react": react(model),
+            "plan_execute": PlanExecuteStrategy(**common, planner=planner, react=native),
+            "rewoo": RewooStrategy(**common, planner=planner),
+            "reflection": ReflectionStrategy(**common, critic=critic, react=native),
+            "evaluator_optimiser": EvaluatorOptimiserStrategy(
+                **common, critic=critic, react=native
+            ),
+        }
+    )
 
 
 def _no_tools() -> tuple[ToolExecutor, ToolRegistry]:
