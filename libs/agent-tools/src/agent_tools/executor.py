@@ -103,7 +103,18 @@ class PlatformToolExecutor(ToolExecutor):
             first = await self.idempotency.get(key)
             if first is not None:
                 return first.model_copy(update={"call_id": call.id})
-            if not await self.idempotency.pending(key) or time.monotonic() > deadline:
+            if not await self.idempotency.pending(key):
+                # the first call may have stored its result between the two reads above
+                first = await self.idempotency.get(key)
+                if first is not None:
+                    return first.model_copy(update={"call_id": call.id})
+                return self._fail(
+                    call,
+                    ToolErrorCode.FAILED,
+                    "the first call with this idempotency key did not finish; retry",
+                    started,
+                )
+            if time.monotonic() > deadline:
                 return self._fail(
                     call,
                     ToolErrorCode.FAILED,

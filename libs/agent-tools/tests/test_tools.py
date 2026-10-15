@@ -15,6 +15,7 @@ from agent_contracts.testing import ToolContract, ToolExecutorContract, ToolRegi
 from agent_tools.artefacts import MemoryArtefactStore
 from agent_tools.builtin import CalculatorTool, ClockTool, WordCountTool, safe_eval
 from agent_tools.executor import PlatformToolExecutor
+from agent_tools.idempotency import MemoryIdempotencyStore
 from agent_tools.registry import InMemoryToolRegistry
 
 CTX = RunContext(tenant_id="t1", user_id="u1", agent_id="a1")
@@ -159,3 +160,34 @@ async def test_argument_errors_say_where() -> None:
     assert res.error_code is ToolErrorCode.INVALID_ARGUMENTS
     assert res.error is not None
     assert res.error.startswith("expression:")
+
+
+class _FinishesBetweenReads(MemoryIdempotencyStore):
+    """The first caller stores its result exactly between the waiter's ``get`` and ``pending``."""
+
+    def __init__(self, result: Any) -> None:
+        super().__init__()
+        self.result = result
+        self.gets = 0
+
+    async def claim(self, key: str, ttl_seconds: int) -> bool:
+        return False  # someone else holds the key
+
+    async def get(self, key: str) -> Any:
+        self.gets += 1
+        return None if self.gets == 1 else self.result
+
+    async def pending(self, key: str) -> bool:
+        return False  # by now the value is the stored result, not the pending marker
+
+
+async def test_a_duplicate_that_finishes_between_reads_still_returns_the_first_result() -> None:
+    from agent_contracts.models import ToolResult
+
+    reg = InMemoryToolRegistry()
+    await reg.register(CalculatorTool())
+    first = ToolResult(call_id="c-1", tool="calculator", ok=True, output={"result": 2.0})
+    ex = PlatformToolExecutor(reg, idempotency=_FinishesBetweenReads(first))
+    call = ToolCall(name="calculator", arguments={"expression": "1+1"}, idempotency_key="k")
+    result = await ex.execute(call, CTX)
+    assert (result.ok, result.output, result.call_id) == (True, {"result": 2.0}, call.id)
