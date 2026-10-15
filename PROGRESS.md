@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** 18 · Checkpoints and threads (next)
+**Current step:** 19 · Durable long runs, Temporal (next)
 
 ## Environment note (read first)
 
@@ -37,13 +37,15 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 | 15 Routing, chaining and hybrid | done | LLM, embedding and rules routers (contract; from agent.yaml on both adapters; confidence fallback); embedder slot with gateway embedder; validation gates and `prompt_chain` / `router` patterns; routing harness over 48 labelled cases (mechanics); approval evidence bound to the call, accepted by OPA (28 tests), Cerbos (12) and rules; invoice-triage reference app end to end on both adapters with the demo ERP over MCP (12 tests) | `just eval-routing` accuracy (dataset 48 cases, model aliases); `just demo-invoice-triage` with the real model; `local-embed` alias |
 | 16 Agentic RAG | done | `pattern: agentic_rag`: retrieve decision, hops with `#Q` references, allowed architectures, citations only from retrieved passages, grounding check with corrective re-retrieval; golden set (10 questions, 10 documents) runs in naive and agentic modes on both adapters with no access violations (offline double, stand-in model); real Keycloak token exchange: each user cites only their documents | `just eval-agentic-rag` (agentic vs naive; corpus ingested into rag-core; real model); rag-core answer endpoint as baseline if it exists |
 | 17 Run API and streaming | done | `agent-api` (ag-ui-protocol 1.0.0): create (idempotent), AG-UI over SSE and WebSocket, state, cancel, resume (refuses approvals), threads, approvals from verified tokens (self 403, outsider 404); events from inside the run on both adapters; container healthy with public/internal issuer split (also fixed in the gateway); integration: invoice-triage through the real service with Keycloak and OPA; headless Chromium drives the page to approval and payment | real Project 0 Keycloak hostname (`KC_HOSTNAME`) and `P0_KEYCLOAK_PUBLIC_URL` |
+| 18 Checkpoints and threads | done | Postgres checkpointer (contract; AES-256-GCM field encryption bound to tenant/thread/checkpoint; retention keeps newest per thread); Valkey (contract) and SQLite alternatives; history and fork; SIGKILL mid-run then resume without repeating the write on both adapters (SQLite) and with Postgres; durable run API: paused runs survive a restart, running runs resume from checkpoints, forks continue after the chosen checkpoint, runs and events encrypted at rest | checkpoint key in OpenBao (Step 29) |
 
 ## Next
 
-- Step 18: checkpoints and threads — Postgres checkpointer in the `agent` database (snapshot after
-  every node, keyed by tenant, thread and run), time travel (inspect and fork), retention, field
-  encryption; Valkey/SQLite alternatives; kill the worker mid-run and resume from the last
-  checkpoint without repeating a completed write tool; the run API's runs become durable.
+- Step 19: durable long runs (Temporal) — `durability: temporal` runs the agent as a Temporal
+  workflow (model and tool calls as activities with retry policies, durable timers and signals
+  for multi-day waits and approvals, heartbeats, large payloads in S3 by reference); Restate or
+  DBOS as alternatives; a run waits 24 hours (simulated) for an approval, survives a worker and
+  server restart, then finishes.
 
 ## Open issues
 

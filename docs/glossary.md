@@ -51,3 +51,6 @@ Every term used in this repository, in plain English. Grows with each step.
 | AG-UI | An open event protocol between agents and user interfaces (text, tool calls, state, interrupts) |
 | SSE | Server-sent events: a long HTTP response the server keeps writing events into |
 | Idempotency key | A client-chosen key that makes repeating the same request safe: the second one returns the first one's result |
+| Checkpoint | A saved snapshot of a run after a step, so it can continue from there |
+| Time travel | Looking at a run's earlier checkpoints, and starting a new branch from one of them |
+| Retention | How long saved data is kept before it is deleted |

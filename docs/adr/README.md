@@ -34,3 +34,4 @@ ADR supersedes it.
 | [0026](0026-routing-chaining-and-approval-evidence.md) | Routing, prompt chains with gates, embedder slot, approval evidence bound to the call | 15 |
 | [0027](0027-agentic-rag.md) | Agentic RAG: strategy over rag-core, citations only from retrieved passages, grounding check, naive-RAG comparison | 16 |
 | [0028](0028-run-api-and-ag-ui.md) | Run API: AG-UI over SSE (WebSocket alternative), in-run events, approvals from verified tokens | 17 |
+| [0029](0029-checkpoints-and-durable-runs.md) | Checkpoints at the node runner, encrypted in Postgres; resume by journal replay; durable run API | 18 |

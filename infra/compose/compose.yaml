@@ -85,6 +85,11 @@ services:
       AGENT_API_AGENTS_DIR: /app/agents
       AGENT_API_AUDIT_FILE: /tmp/agent-api-audit.jsonl
       AGENT_API_PDP: ${AGENT_API_PDP:-opa}
+      # Step 18: memory (default) | postgres (runs and encrypted checkpoints in the agent DB)
+      AGENT_API_STORE: ${AGENT_API_STORE:-memory}
+      AGENT_DB_DSN: ${AGENT_DB_DSN_INTERNAL:-}
+      # dev/CI only: the checkpoint key as an env var; production resolves it from OpenBao (Step 29)
+      SECRET__AGENT_PLATFORM__CHECKPOINTS__KEY: ${AGENT_CHECKPOINT_KEY_DEV:-}
       AGENT_CERBOS_URL: http://cerbos:3592
       P0_RAG_CORE_URL: ${P0_RAG_CORE_URL_INTERNAL:-http://rag-core:8000}
       # dev/CI only: the client secret as an env var; production resolves it from OpenBao (Step 29)
