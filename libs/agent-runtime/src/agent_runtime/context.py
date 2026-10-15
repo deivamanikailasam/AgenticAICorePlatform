@@ -150,7 +150,9 @@ class LlmSummariser:
 
 
 FACT = re.compile(
-    r"\d|\b(my|our|i|we)\b.*\b(is|are|was|prefer|need|want|use|live|work|like)\b", re.IGNORECASE
+    r"\d|\b(my|our|i|we)\b.*\b(am|is|are|was|were|have|has|had|prefer|need|want|use|live|"
+    r"work|like|moved|changed)\b",
+    re.IGNORECASE,
 )
 
 
