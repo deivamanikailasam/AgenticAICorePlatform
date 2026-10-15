@@ -1,0 +1,38 @@
+kind: system
+name: review-chat
+version: 0.1.0
+purpose: A writer and a critic revise a text until the critic is satisfied.
+owner: agent-platform
+risk_tier: low
+agents:
+- name: review-chat
+  risk_tier: low
+  autonomy: multi_agent
+- name: review-chat-critic
+  risk_tier: low
+  autonomy: hybrid
+- name: review-chat-writer
+  risk_tier: low
+  autonomy: hybrid
+tools: []
+services:
+- OPA (policy on every tool call)
+- agent-api (runs, approvals, streaming)
+human_oversight:
+- No tool needs approval
+limitations:
+- 'review-chat: Stops at 30 steps, 300 s, 60000 tokens, AUD 0.30; a stopped run returns
+  partial output and the reason'
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+- Delegates to 2 worker(s), at most 2 levels deep; each worker has its own tools and
+  budget
+- 'review-chat-critic: Stops at 4 steps, 60 s, 8000 tokens, AUD 0.05; a stopped run
+  returns partial output and the reason'
+- 'review-chat-writer: Stops at 4 steps, 60 s, 8000 tokens, AUD 0.05; a stopped run
+  returns partial output and the reason'
+eval_results:
+  review-chat: 'No recorded eval run (suite: none declared)'
+  review-chat-critic: 'No recorded eval run (suite: none declared)'
+  review-chat-writer: 'No recorded eval run (suite: none declared)'

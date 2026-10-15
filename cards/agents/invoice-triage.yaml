@@ -1,0 +1,68 @@
+kind: agent
+name: invoice-triage
+version: 0.3.0
+spec: agents/invoice-triage/agent.yaml
+spec_hash: 95c7cd3587e426e329433d68de0aa926b10ee430e32e66ac7c3e63b194b2d48c
+system: invoice-triage
+worker: false
+purpose: Validates invoices, resolves exceptions with an agent, pays after approval.
+owner: finance-platform
+risk_tier: medium
+autonomy: hybrid
+pattern: hybrid
+runtime: langgraph, durability checkpoint
+models:
+  default: local-qwen-fast
+  executor: local-qwen-fast
+  judge: local-qwen-quality
+  planner: local-qwen-quality
+  router: local-qwen-fast
+  summariser: local-qwen-fast
+tools:
+- name: get_invoice
+  ref: mcp://erp/get_invoice
+  kind: mcp
+  data_classification: per server
+  version: '-'
+  side_effect: undeclared
+  unlisted_server: erp
+  approval: none
+- name: post_payment
+  ref: mcp://erp/post_payment
+  kind: mcp
+  data_classification: per server
+  version: '-'
+  side_effect: undeclared
+  unlisted_server: erp
+  approval: group:finance-approvers
+- name: search
+  ref: mcp://rag-core/search
+  kind: mcp
+  version: 1.0.0
+  side_effect: read
+  data_classification: confidential
+  approval: none
+workers: []
+data:
+- 'Tool data: confidential, per server'
+- 'Long-term memory: pgvector, per tenant, policy validating'
+- 'Run state: checkpoints (encrypted at rest when durable)'
+- 'Prompts and responses: Langfuse only, redacted (Step 30)'
+guardrails:
+- prompt_injection
+- secret_leak
+- pii_redaction
+- tool_args_schema
+- output_schema
+human_oversight:
+- 'post_payment: group:finance-approvers'
+limitations:
+- Stops at 25 steps, 300 s, 60000 tokens, AUD 0.50; a stopped run returns partial
+  output and the reason
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+- 'MCP server(s) not in platform.yaml''s allowlist: erp. Their tools'' side effects
+  are undeclared here, and compiling against platform.yaml refuses the spec until
+  the platform owner lists them'
+eval_results: 'No recorded eval run (suite: evals/invoice-triage)'

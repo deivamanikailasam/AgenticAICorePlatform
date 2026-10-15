@@ -1,0 +1,407 @@
+entries:
+- id: AI-batch-summary
+  agent: batch-summary
+  version: 0.1.0
+  system: batch-summary
+  purpose: Summarises many documents in parallel, then combines them (map-reduce).
+  owner: agent-platform
+  risk_tier: low
+  autonomy: multi_agent
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/batch-summary.md
+- id: AI-batch-summary-mapper
+  agent: batch-summary-mapper
+  version: 0.1.0
+  system: batch-summary
+  purpose: Summarises one document in a sentence.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/batch-summary-mapper.md
+- id: AI-batch-summary-reducer
+  agent: batch-summary-reducer
+  version: 0.1.0
+  system: batch-summary
+  purpose: Combines the one-line summaries into a digest.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/batch-summary-reducer.md
+- id: AI-hello-workflow
+  agent: hello-workflow
+  version: 0.1.0
+  system: hello-workflow
+  purpose: Greets the caller. Proves spec -> compiler -> runtime -> trace.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: workflow
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/hello-workflow.md
+- id: AI-invoice-triage
+  agent: invoice-triage
+  version: 0.3.0
+  system: invoice-triage
+  purpose: Validates invoices, resolves exceptions with an agent, pays after approval.
+  owner: finance-platform
+  risk_tier: medium
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - 'post_payment: group:finance-approvers'
+  data:
+  - 'Tool data: confidential, per server'
+  - 'Long-term memory: pgvector, per tenant, policy validating'
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/invoice-triage.md
+- id: AI-policy-debate
+  agent: policy-debate
+  version: 0.1.0
+  system: policy-debate
+  purpose: Two agents argue a proposal and a judge decides.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: multi_agent
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/policy-debate.md
+- id: AI-policy-debate-con
+  agent: policy-debate-con
+  version: 0.1.0
+  system: policy-debate
+  purpose: Argues against the proposal.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/policy-debate-con.md
+- id: AI-policy-debate-judge
+  agent: policy-debate-judge
+  version: 0.1.0
+  system: policy-debate
+  purpose: Weighs the arguments and decides.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/policy-debate-judge.md
+- id: AI-policy-debate-pro
+  agent: policy-debate-pro
+  version: 0.1.0
+  system: policy-debate
+  purpose: Argues for the proposal.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/policy-debate-pro.md
+- id: AI-research-report
+  agent: research-report
+  version: 0.1.0
+  system: research-report
+  purpose: Researches a question, works out the figures and writes a short cited report.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: multi_agent
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/research-report.md
+- id: AI-research-report-analyst
+  agent: research-report-analyst
+  version: 0.1.0
+  system: research-report
+  purpose: Works out the figures the report needs from the sources, with the calculator.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Tool data: public'
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/research-report-analyst.md
+- id: AI-research-report-researcher
+  agent: research-report-researcher
+  version: 0.1.0
+  system: research-report
+  purpose: Finds sources for a question through Project 0 retrieval, with quotes.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Tool data: confidential'
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/research-report-researcher.md
+- id: AI-research-report-writer
+  agent: research-report-writer
+  version: 0.1.0
+  system: research-report
+  purpose: Writes a short report that cites its sources, and checks its length.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Tool data: internal'
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/research-report-writer.md
+- id: AI-review-chat
+  agent: review-chat
+  version: 0.1.0
+  system: review-chat
+  purpose: A writer and a critic revise a text until the critic is satisfied.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: multi_agent
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/review-chat.md
+- id: AI-review-chat-critic
+  agent: review-chat-critic
+  version: 0.1.0
+  system: review-chat
+  purpose: Reviews the draft; says TERMINATE when it is good enough.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/review-chat-critic.md
+- id: AI-review-chat-writer
+  agent: review-chat-writer
+  version: 0.1.0
+  system: review-chat
+  purpose: Drafts and revises the text.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/review-chat-writer.md
+- id: AI-support-handoff
+  agent: support-handoff
+  version: 0.1.0
+  system: support-handoff
+  purpose: Triage hands customers to billing or technical support (swarm handoff).
+  owner: agent-platform
+  risk_tier: low
+  autonomy: multi_agent
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/support-handoff.md
+- id: AI-support-handoff-billing
+  agent: support-handoff-billing
+  version: 0.1.0
+  system: support-handoff
+  purpose: Handles refunds, invoices and payments.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/support-handoff-billing.md
+- id: AI-support-handoff-tech
+  agent: support-handoff-tech
+  version: 0.1.0
+  system: support-handoff
+  purpose: Handles logins, errors and set-up problems.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/support-handoff-tech.md
+- id: AI-support-handoff-triage
+  agent: support-handoff-triage
+  version: 0.1.0
+  system: support-handoff
+  purpose: Answers simple questions or hands the customer to billing or technical
+    support.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/support-handoff-triage.md

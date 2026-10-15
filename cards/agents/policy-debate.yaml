@@ -1,0 +1,42 @@
+kind: agent
+name: policy-debate
+version: 0.1.0
+spec: agents/policy-debate/agent.yaml
+spec_hash: e16c1ccb5223144b15d566329efca265cd1a19ee1b63c3084a160ce17efb5e9a
+system: policy-debate
+worker: false
+purpose: Two agents argue a proposal and a judge decides.
+owner: agent-platform
+risk_tier: low
+autonomy: multi_agent
+pattern: debate
+runtime: langgraph, durability checkpoint
+models:
+  default: local-qwen-fast
+  executor: local-qwen-fast
+  judge: local-qwen-quality
+  planner: local-qwen-quality
+  router: local-qwen-fast
+  summariser: local-qwen-fast
+tools: []
+workers:
+- pro
+- con
+- judge
+data:
+- 'Run state: checkpoints (encrypted at rest when durable)'
+- 'Prompts and responses: Langfuse only, redacted (Step 30)'
+guardrails:
+- prompt_injection
+- secret_leak
+human_oversight:
+- No tool needs approval
+limitations:
+- Stops at 30 steps, 300 s, 60000 tokens, AUD 0.30; a stopped run returns partial
+  output and the reason
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+- Delegates to 3 worker(s), at most 2 levels deep; each worker has its own tools and
+  budget
+eval_results: 'No recorded eval run (suite: none declared)'

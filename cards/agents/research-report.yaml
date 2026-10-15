@@ -1,0 +1,42 @@
+kind: agent
+name: research-report
+version: 0.1.0
+spec: agents/research-report/agent.yaml
+spec_hash: 23a4f1a472a062b4436b9b3e712beeeaae5a32c3dab77b3f85fb1ab367d44e97
+system: research-report
+worker: false
+purpose: Researches a question, works out the figures and writes a short cited report.
+owner: agent-platform
+risk_tier: low
+autonomy: multi_agent
+pattern: supervisor
+runtime: langgraph, durability checkpoint
+models:
+  default: local-qwen-fast
+  executor: local-qwen-fast
+  judge: local-qwen-quality
+  planner: local-qwen-quality
+  router: local-qwen-fast
+  summariser: local-qwen-fast
+tools: []
+workers:
+- researcher
+- analyst
+- writer
+data:
+- 'Run state: checkpoints (encrypted at rest when durable)'
+- 'Prompts and responses: Langfuse only, redacted (Step 30)'
+guardrails:
+- prompt_injection
+- secret_leak
+human_oversight:
+- No tool needs approval
+limitations:
+- Stops at 12 steps, 300 s, 60000 tokens, AUD 0.50; a stopped run returns partial
+  output and the reason
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+- Delegates to 3 worker(s), at most 2 levels deep; each worker has its own tools and
+  budget
+eval_results: 'No recorded eval run (suite: none declared)'

@@ -1,0 +1,20 @@
+# Step 32: who must approve a change, by the risk tier of the agent it touches.
+# Values are GitHub users (@name) or teams (@org/team). `just cards` writes .github/CODEOWNERS from
+# this file and the specs; the CI governance gate refuses a pull request that changes a high-risk
+# spec (high before or after the change) until one of the `high` approvers has approved it.
+#
+# Owner decision (2026-10-15): the repository has a single maintainer, so every tier names them.
+# Add a second person or a team to `high` before high-risk agents go to production: GitHub does
+# not let anyone approve their own pull request.
+default: ["@deivamanikailasam"]
+tiers:
+  low: ["@deivamanikailasam"]
+  medium: ["@deivamanikailasam"]
+  high: ["@deivamanikailasam"]
+# governance itself (this file, the generator, the gate, CI) changes only with the high approvers
+governance_paths:
+  - /governance/
+  - /.github/
+  - /libs/agent-governance/
+  - /scripts/cards.py
+  - /scripts/governance_gate.py

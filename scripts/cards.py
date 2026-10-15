@@ -1,8 +1,15 @@
-"""Generate tool cards (and, from Step 32, agent and system cards) from the registries.
+"""Generate the governance artefacts from the specs and registries (Steps 6 and 32).
 
-Source data goes to ``cards/<kind>/<name>.yaml`` (machine-readable, used for lineage and the AI
-inventory); a rendered page goes to ``docs/cards/<kind>/<name>.md``. ``--check`` fails if either
-is stale, so cards can never drift from the code.
+* tool cards, from the tool registry;
+* agent cards, one per spec, and a system card per reference app (a top-level agent with its
+  workers);
+* lineage: spec -> prompts -> models -> tools -> datasets;
+* the AI-use register, one entry per agent;
+* ``.github/CODEOWNERS``, by risk tier, from ``governance/approvers.yaml``.
+
+Source data goes to ``cards/`` (machine-readable); rendered pages go to ``docs/cards/`` and
+``docs/governance/``. ``--check`` fails if any file is stale or orphaned, so the artefacts can
+never drift from the code (``just check``, in CI).
 """
 
 from __future__ import annotations
@@ -16,6 +23,9 @@ import yaml
 from agent_contracts.interfaces import Tool
 from agent_contracts.models import SideEffect, ToolSpec
 from agent_contracts.registry import registry
+from agent_governance import cards as agent_cards
+from agent_governance import codeowners, lineage, register
+from agent_governance.inventory import load
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -104,15 +114,50 @@ def render(card: dict[str, Any]) -> str:
     return "\n".join(out)
 
 
+def _yaml(data: Any) -> str:
+    return yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
+
+
 def outputs() -> dict[Path, str]:
     files: dict[Path, str] = {}
+    tool_cards: dict[str, dict[str, Any]] = {}
     for spec in tool_specs():
         data = card_data(spec)
-        files[ROOT / "cards" / "tools" / f"{spec.name}.yaml"] = yaml.safe_dump(
-            data, sort_keys=False
-        )
+        if spec.ref:
+            tool_cards[spec.ref] = data
+        files[ROOT / "cards" / "tools" / f"{spec.name}.yaml"] = _yaml(data)
         files[ROOT / "docs" / "cards" / "tools" / f"{spec.name}.md"] = render(data)
+    inv = load(ROOT, tool_cards)
+    for entry in inv.entries:
+        card = agent_cards.agent_card(entry, inv)
+        files[ROOT / "cards" / "agents" / f"{entry.spec.name}.yaml"] = _yaml(card)
+        files[ROOT / "docs" / "cards" / "agents" / f"{entry.spec.name}.md"] = (
+            agent_cards.render_agent(card)
+        )
+    for entry in inv.systems():
+        card = agent_cards.system_card(entry, inv)
+        files[ROOT / "cards" / "systems" / f"{entry.system}.yaml"] = _yaml(card)
+        files[ROOT / "docs" / "cards" / "systems" / f"{entry.system}.md"] = (
+            agent_cards.render_system(card)
+        )
+    graph = lineage.lineage(inv)
+    files[ROOT / "cards" / "lineage.yaml"] = _yaml(graph)
+    files[ROOT / "docs" / "cards" / "lineage.md"] = lineage.render(graph)
+    entries = register.register(inv)
+    files[ROOT / "cards" / "register.yaml"] = _yaml(entries)
+    files[ROOT / "docs" / "governance" / "ai-use-register.md"] = register.render(entries)
+    files[ROOT / ".github" / "CODEOWNERS"] = codeowners.render(inv)
     return files
+
+
+GENERATED_DIRS = (
+    "cards/tools",
+    "cards/agents",
+    "cards/systems",
+    "docs/cards/tools",
+    "docs/cards/agents",
+    "docs/cards/systems",
+)
 
 
 def main(argv: list[str]) -> int:
@@ -126,7 +171,7 @@ def main(argv: list[str]) -> int:
         known = {p for p in files}
         orphans = [
             str(p.relative_to(ROOT))
-            for d in ("cards/tools", "docs/cards/tools")
+            for d in GENERATED_DIRS
             for p in (ROOT / d).glob("*")
             if p not in known
         ]

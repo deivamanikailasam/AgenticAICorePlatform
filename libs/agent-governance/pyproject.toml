@@ -1,0 +1,23 @@
+[project]
+name = "agent-governance"
+version = "0.1.0"
+description = "Governance artefacts (Step 32): agent, tool and system cards, lineage, the AI-use register, CODEOWNERS by risk tier and the high-risk merge gate"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "agent-contracts",
+    "agent-spec",
+    "agent-registry",
+    "pyyaml>=6.0.3,<7",
+]
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+agent-spec = { workspace = true }
+agent-registry = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_governance"]

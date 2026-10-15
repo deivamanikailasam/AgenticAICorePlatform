@@ -1,0 +1,44 @@
+kind: system
+name: policy-debate
+version: 0.1.0
+purpose: Two agents argue a proposal and a judge decides.
+owner: agent-platform
+risk_tier: low
+agents:
+- name: policy-debate
+  risk_tier: low
+  autonomy: multi_agent
+- name: policy-debate-con
+  risk_tier: low
+  autonomy: hybrid
+- name: policy-debate-judge
+  risk_tier: low
+  autonomy: hybrid
+- name: policy-debate-pro
+  risk_tier: low
+  autonomy: hybrid
+tools: []
+services:
+- OPA (policy on every tool call)
+- agent-api (runs, approvals, streaming)
+human_oversight:
+- No tool needs approval
+limitations:
+- 'policy-debate: Stops at 30 steps, 300 s, 60000 tokens, AUD 0.30; a stopped run
+  returns partial output and the reason'
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+- Delegates to 3 worker(s), at most 2 levels deep; each worker has its own tools and
+  budget
+- 'policy-debate-con: Stops at 4 steps, 60 s, 8000 tokens, AUD 0.05; a stopped run
+  returns partial output and the reason'
+- 'policy-debate-judge: Stops at 4 steps, 60 s, 8000 tokens, AUD 0.05; a stopped run
+  returns partial output and the reason'
+- 'policy-debate-pro: Stops at 4 steps, 60 s, 8000 tokens, AUD 0.05; a stopped run
+  returns partial output and the reason'
+eval_results:
+  policy-debate: 'No recorded eval run (suite: none declared)'
+  policy-debate-con: 'No recorded eval run (suite: none declared)'
+  policy-debate-judge: 'No recorded eval run (suite: none declared)'
+  policy-debate-pro: 'No recorded eval run (suite: none declared)'

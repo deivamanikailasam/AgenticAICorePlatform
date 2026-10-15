@@ -1,0 +1,45 @@
+kind: agent
+name: research-report-writer
+version: 0.1.0
+spec: agents/research-report/workers/writer.yaml
+spec_hash: b064771e9043d8461c36cf18e294ecf7faf0a840c08a7833ea01f78a4b702c55
+system: research-report
+worker: true
+purpose: Writes a short report that cites its sources, and checks its length.
+owner: agent-platform
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+runtime: langgraph, durability memory
+models:
+  default: local-qwen-fast
+  executor: local-qwen-fast
+  judge: local-qwen-quality
+  planner: local-qwen-quality
+  router: local-qwen-fast
+  summariser: local-qwen-fast
+tools:
+- name: word_count
+  ref: local://platform/word_count
+  kind: local
+  version: 1.0.0
+  side_effect: read
+  data_classification: internal
+  approval: none
+workers: []
+data:
+- 'Tool data: internal'
+- 'Run state: checkpoints (encrypted at rest when durable)'
+- 'Prompts and responses: Langfuse only, redacted (Step 30)'
+guardrails:
+- prompt_injection
+- secret_leak
+human_oversight:
+- No tool needs approval
+limitations:
+- Stops at 6 steps, 120 s, 20000 tokens, AUD 0.10; a stopped run returns partial output
+  and the reason
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+eval_results: 'No recorded eval run (suite: none declared)'

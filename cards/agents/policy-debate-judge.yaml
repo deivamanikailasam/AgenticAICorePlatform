@@ -1,0 +1,37 @@
+kind: agent
+name: policy-debate-judge
+version: 0.1.0
+spec: agents/policy-debate/workers/judge.yaml
+spec_hash: 737fc9b78ef22187dfcd1271388ac617590a6fe8887cb648ba1af9fe7564e021
+system: policy-debate
+worker: true
+purpose: Weighs the arguments and decides.
+owner: agent-platform
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+runtime: langgraph, durability memory
+models:
+  default: local-qwen-fast
+  executor: local-qwen-fast
+  judge: local-qwen-quality
+  planner: local-qwen-quality
+  router: local-qwen-fast
+  summariser: local-qwen-fast
+tools: []
+workers: []
+data:
+- 'Run state: checkpoints (encrypted at rest when durable)'
+- 'Prompts and responses: Langfuse only, redacted (Step 30)'
+guardrails:
+- prompt_injection
+- secret_leak
+human_oversight:
+- No tool needs approval
+limitations:
+- Stops at 4 steps, 60 s, 8000 tokens, AUD 0.05; a stopped run returns partial output
+  and the reason
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+eval_results: 'No recorded eval run (suite: none declared)'
