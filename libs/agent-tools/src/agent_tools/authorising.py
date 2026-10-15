@@ -8,8 +8,12 @@ For every call, in this order:
    A person's approval travels with the call as evidence; its binding to this tool and these
    arguments is verified here and policy decides whether it satisfies the approval (Step 15);
 3. count the call against the tool's per-minute limit for this tenant and agent;
-4. run it through the inner executor (validation, idempotency, timeouts, retries, spill);
-5. audit the decision and the outcome, allowed or not.
+4. when the grant names a credential source, issue a short-lived credential for this one call
+   from the credential broker (Step 29), hand it to the tool through ``current_credential``,
+   and revoke it as soon as the call ends;
+5. run it through the inner executor (validation, idempotency, timeouts, retries, spill);
+6. audit the decision and the outcome, allowed or not, with the credential's lease (never its
+   values) next to the user and agent the call ran for.
 
 Tools that address tenant-owned data take a ``tenant_id`` argument; it is passed to policy as
 ``resource_tenant_id``, so a call for another tenant's data is denied and audited.
@@ -23,9 +27,16 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from agent_contracts.interfaces import AuditSink, PolicyDecisionPoint, ToolExecutor, ToolRegistry
+from agent_contracts.interfaces import (
+    AuditSink,
+    CredentialBroker,
+    PolicyDecisionPoint,
+    ToolExecutor,
+    ToolRegistry,
+)
 from agent_contracts.models import (
     AuditEvent,
+    Credential,
     PolicyDecision,
     PolicyEffect,
     PolicyInput,
@@ -37,6 +48,7 @@ from agent_contracts.models import (
     arguments_digest,
 )
 
+from agent_tools.credentials import current_credential
 from agent_tools.ratelimit import MemoryRateLimiter, RateLimiter
 
 TENANT_ARGUMENT = "tenant_id"
@@ -64,6 +76,7 @@ class ToolGrant:
     rate_limit_per_minute: int | None = None
     approval_required: bool = False
     approvers: str | None = None
+    credentials: str | None = None  # credential source issued for each call (Step 29)
 
 
 def approval_facts(call: ToolCall) -> dict[str, Any] | None:
@@ -95,6 +108,7 @@ class AuthorisingToolExecutor(ToolExecutor):
     #: tool name → grant. None means "not an agent" (a person calling through the gateway).
     grants: Mapping[str, ToolGrant] | None = None
     default_rate_limit_per_minute: int | None = None
+    broker: CredentialBroker | None = None
 
     async def decide(self, call: ToolCall, ctx: RunContext) -> PolicyDecision:
         caller = current_caller.get()
@@ -190,6 +204,9 @@ class AuthorisingToolExecutor(ToolExecutor):
                     started,
                 )
 
+        grant = (self.grants or {}).get(call.name)
+        if grant is not None and grant.credentials:
+            return await self._with_credential(call, ctx, grant.credentials, payload, started)
         result = await self.inner.execute(call, ctx)
         payload |= {
             "ok": result.ok,
@@ -198,6 +215,67 @@ class AuthorisingToolExecutor(ToolExecutor):
         }
         await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
         return result
+
+    async def _with_credential(
+        self,
+        call: ToolCall,
+        ctx: RunContext,
+        source: str,
+        payload: dict[str, Any],
+        started: float,
+    ) -> ToolResult:
+        """Issue → call → revoke. A credential that cannot be issued stops the call (fail
+        closed); one that cannot be revoked still expires on its own, and the audit says so."""
+        payload["credential_source"] = source
+        if self.broker is None:
+            code, message = ToolErrorCode.UNAVAILABLE, "no credential broker is configured"
+        else:
+            try:
+                cred = await self.broker.issue(source, ctx)
+            except (PermissionError, KeyError) as err:
+                code, message = ToolErrorCode.DENIED, f"credential refused: {err}"
+            except Exception as err:  # the secret manager is down: never run without
+                code = ToolErrorCode.UNAVAILABLE
+                message = f"credential unavailable: {type(err).__name__}"
+            else:
+                payload["credential"] = cred.lease()
+                token = current_credential.set(cred)
+                try:
+                    result = await self.inner.execute(call, ctx)
+                finally:
+                    current_credential.reset(token)
+                    try:
+                        await self.broker.revoke(cred)
+                        payload["credential"]["revoked"] = True
+                    except Exception as err:
+                        payload["credential"]["revoked"] = False
+                        payload["credential"]["revoke_error"] = type(err).__name__
+                if _leaks(result, cred):
+                    # a tool that echoes its credential never hands it to the model
+                    payload["credential"]["withheld_output"] = True
+                    result = _fail(
+                        call,
+                        ToolErrorCode.FAILED,
+                        "the tool's output contained its credential and was withheld",
+                        started,
+                    )
+                payload |= {
+                    "ok": result.ok,
+                    "error_code": result.error_code.value if result.error_code else None,
+                    "duration_ms": int((time.perf_counter() - started) * 1000),
+                }
+                await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
+                return result
+        payload |= {"ok": False, "error_code": code.value}
+        await self.audit.append(AuditEvent(type="tool.call", ctx=ctx, payload=payload))
+        return _fail(call, code, message, started)
+
+
+def _leaks(result: ToolResult, cred: Credential) -> bool:
+    shown = result.model_dump_json()
+    return any(
+        len(v) >= 6 and v in shown for v in (s.get_secret_value() for s in cred.values.values())
+    )
 
 
 def _fail(call: ToolCall, code: ToolErrorCode, message: str, started: float) -> ToolResult:

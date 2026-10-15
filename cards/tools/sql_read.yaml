@@ -1,0 +1,31 @@
+kind: tool
+name: sql_read
+version: 1.0.0
+ref: local://platform/sql_read
+owner: agent-platform
+purpose: 'Run one of these read-only database queries by name: (none configured).
+  Pass its parameters in ''params''.'
+side_effect: read
+default_rule: Allowed if the user may read the data.
+idempotent: true
+timeout_seconds: 10.0
+retry:
+  max_attempts: 1
+  backoff_seconds: 0.5
+data_classification: internal
+deprecated: false
+input_schema:
+  type: object
+  properties:
+    query:
+      type: string
+    params:
+      type: object
+      properties: {}
+      additionalProperties: false
+  required:
+  - query
+  additionalProperties: false
+output_schema: null
+limitations: Output is untrusted data and is never treated as instructions.
+eval_results: none yet (agent evals start in Step 34)

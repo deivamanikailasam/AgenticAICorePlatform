@@ -136,8 +136,9 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | tool | echo | dummy | `agent_contracts.dummies.tools:EchoTool` | Returns its arguments unchanged. |
 | tool | rag_core_search | implemented | `agent_tools.ragcore:RagCoreSearchTool` | Search company documents through Project 0's rag-core, with the caller's own permissions. |
 | tool | sandbox_python | implemented | `agent_tools.sandbox_tool:SandboxPythonTool` | Run a short Python program in an isolated sandbox (no network) and return its output. |
+| tool | sql_read | implemented | `agent_tools.sql_read:SqlReadTool` |  |
 | tool | word_count | implemented | `agent_tools.builtin:WordCountTool` | Counts words and characters in a text. |
-| tool_executor | authorising | implemented | `agent_tools.authorising:AuthorisingToolExecutor` | AuthorisingToolExecutor(inner: 'ToolExecutor', registry: 'ToolRegistry', pdp: 'PolicyDecisionPoint', audit: 'AuditSink', limiter: 'RateLimiter' = <factory>, grants: 'Mapping[str, ToolGrant] | None' = None, default_rate_limit_per_minute: 'int | None' = None) |
+| tool_executor | authorising | implemented | `agent_tools.authorising:AuthorisingToolExecutor` | AuthorisingToolExecutor(inner: 'ToolExecutor', registry: 'ToolRegistry', pdp: 'PolicyDecisionPoint', audit: 'AuditSink', limiter: 'RateLimiter' = <factory>, grants: 'Mapping[str, ToolGrant] | None' = None, default_rate_limit_per_minute: 'int | None' = None, broker: 'CredentialBroker | None' = None) |
 | tool_executor | local | dummy | `agent_contracts.dummies.tools:LocalToolExecutor` | Validates arguments, enforces timeouts and replays results for repeated idempotency keys. |
 | tool_executor | platform | implemented | `agent_tools.executor:PlatformToolExecutor` | Validates, de-duplicates, times out, retries safely and spills large outputs to S3. |
 | tool_executor | retrying | dummy | `agent_contracts.dummies.tools:RetryingToolExecutor` | Like ``local`` but honours each tool's retry policy for idempotent tools. |

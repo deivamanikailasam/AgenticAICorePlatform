@@ -103,6 +103,11 @@ class ToolRef(_Spec):
     alias: Annotated[str | None, Field(pattern=r"^[a-z][a-z0-9_]{0,62}$")] = None
     approval: Approval | None = None
     rate_limit_per_minute: int | None = Field(default=None, ge=1)
+    #: a short-lived credential issued for each call from this OpenBao role (Step 29), e.g.
+    #: ``agent-db/creds/tool-reader``. The tool receives it at call time; the model never does.
+    credentials: Annotated[
+        str | None, Field(pattern=r"^[a-z0-9][a-z0-9-]*/creds/[a-z0-9][a-z0-9-]*$")
+    ] = None
     config: dict[str, Any] = Field(default_factory=dict)
 
     @property

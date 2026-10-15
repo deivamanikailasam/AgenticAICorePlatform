@@ -20,6 +20,7 @@ from agent_compiler.run import Admit, executors_for, functions_for
 from agent_contracts.interfaces import (
     AuditSink,
     Checkpointer,
+    CredentialBroker,
     Guardrail,
     ModelClient,
     PolicyDecisionPoint,
@@ -57,10 +58,12 @@ from agent_tools.mcp import McpClientPool
 from agent_tools.ragcore import RagCoreSearchTool
 from agent_tools.registry import InMemoryToolRegistry
 from agent_tools.secrets import EnvSecretResolver, SecretResolver
+from agent_tools.sql_read import SqlReadTool
 
 ModelFactory = Callable[[AgentSpec], ModelClient]
 MemoryFactory = Callable[[AgentSpec], Awaitable[MemoryService | None]]
 REMEMBER = "local://platform/remember"
+SQL_READ = "local://platform/sql_read"
 #: always on, whatever the spec lists (Step 27; turning them off needs an ADR)
 BASELINE_GUARDRAILS = ("prompt_injection", "secret_leak")
 
@@ -129,7 +132,10 @@ class Assembly:
         admit: Admit | None = None,
         budgets: RunBudgets | None = None,
         ledger: UsageLedger | None = None,
+        broker: CredentialBroker | None = None,
     ) -> None:
+        # Step 29: short-lived credentials for tools whose grant names a source (OpenBao)
+        self.broker = broker
         # every model call's tokens and cost (Postgres in deployments: cost dashboards and
         # reconciliation with the gateway, Step 26)
         self.ledger = ledger or UsageLedger()
@@ -183,6 +189,15 @@ class Assembly:
                 continue  # needs the run's memory service: registered in build()
             if scheme == "local" and rest.startswith("platform/") and rest[9:] in builtin:
                 await registry.register(builtin[rest[9:]]())
+            elif tool.ref == SQL_READ:
+                cfg = tool.config
+                await registry.register(
+                    SqlReadTool(
+                        queries=cfg.get("queries"),
+                        database=str(cfg.get("database", "agent")),
+                        host=cfg.get("host"),
+                    )
+                )
             elif tool.ref == "mcp://rag-core/search":
                 await registry.register(RagCoreSearchTool(self.rag_core_url, self.exchanger))
             elif scheme == "mcp":
@@ -232,6 +247,7 @@ class Assembly:
                             self.pdp,
                             self.audit,
                             grants=grants_for(plan),
+                            broker=self.broker,
                         ),
                         self.tool_circuits,
                     ),

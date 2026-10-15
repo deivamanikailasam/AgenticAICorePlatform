@@ -218,6 +218,7 @@ def compile_spec(
                 "approval": t.approval is not None and t.approval.required,
                 "approvers": t.approval.approvers if t.approval is not None else None,
                 "rate_limit_per_minute": t.rate_limit_per_minute,
+                "credentials": t.credentials,
             }
             for t in spec.tools
         ],

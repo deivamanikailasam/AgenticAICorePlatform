@@ -968,6 +968,19 @@
           "title": "Config",
           "type": "object"
         },
+        "credentials": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][a-z0-9-]*/creds/[a-z0-9][a-z0-9-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credentials"
+        },
         "rate_limit_per_minute": {
           "anyOf": [
             {

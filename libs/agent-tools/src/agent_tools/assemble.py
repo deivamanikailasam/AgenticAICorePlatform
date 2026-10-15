@@ -4,7 +4,7 @@
   ``mcp://erp/post_payment`` → ``erp__post_payment``; ``local://platform/calculator`` →
   ``calculator``; ``mcp://rag-core/search`` → ``search``; ``sandbox://python`` → ``python``.
 * ``tool_names(plan)`` — spec tool name → registry name (for tool nodes).
-* ``grants_for(plan)`` — registry name → ``ToolGrant`` (rate limit), so policy sees exactly the
+* ``grants_for(plan)`` — registry name → ``ToolGrant`` (rate limit, call-time credential source), so policy sees exactly the
   tools the spec grants. The spec's ``approval`` is enforced by the APPROVAL node the compiler
   puts in front of the tool, so the grant does not ask again; approvals that *policy* requires
   still stop the call until Step 28 hands approval evidence to policy (fail closed).
@@ -44,7 +44,8 @@ def tool_names(plan: ExecutablePlan) -> dict[str, str]:
 def grants_for(plan: ExecutablePlan) -> dict[str, ToolGrant]:
     return {
         registry_name(str(t["ref"])): ToolGrant(
-            rate_limit_per_minute=t.get("rate_limit_per_minute")
+            rate_limit_per_minute=t.get("rate_limit_per_minute"),
+            credentials=t.get("credentials"),
         )
         for t in _tools(plan)
     }

@@ -265,4 +265,5 @@ breakers open; each also has its own natural end (below).
 | `alias` | string or null |  |  |
 | `approval` | Approval or null |  |  |
 | `rate_limit_per_minute` | integer or null |  |  |
+| `credentials` | string or null |  |  |
 | `config` | object |  |  |
