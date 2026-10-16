@@ -45,8 +45,10 @@ start, and Australia's automated-decision transparency duties from 10 December 2
      waiting for a person.
    - `GET /v1/me/export` and `POST /v1/admin/export` give a person their data (APP 12).
    - All of it is audited.
-5. **Owners are roles bound to people.** The roles are platform, security, privacy and
-   finance-platform, each held today by the single maintainer and split as people join.
+5. **Owners are roles bound to people.** Eight roles, each with a stated responsibility:
+   security architect, AI safety lead, privacy officer, SRE lead, platform lead, release
+   manager, audit and compliance lead, finance controls owner. All are held today by the single
+   maintainer (owner decision, 2026-10-16) and are split as people join.
 
 ## Alternatives considered
 | Option | Why not (or when it would win) |

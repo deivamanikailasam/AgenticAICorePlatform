@@ -34,9 +34,14 @@ FRAMEWORKS = {
 }
 
 
+def person_of(owner: Any) -> str:
+    """An owner role is ``"@person"`` or ``{person: "@person", responsibility: ...}``."""
+    return str(owner.get("person", "")) if isinstance(owner, Mapping) else str(owner or "")
+
+
 @dataclass(frozen=True)
 class Model:
-    owners: dict[str, str]
+    owners: dict[str, Any]
     components: dict[str, dict[str, Any]]
     controls: dict[str, dict[str, Any]]
 
@@ -82,7 +87,7 @@ class Model:
             owner = t.get("owner")
             if not owner:
                 out.append(f"{where}: no owner")
-            elif not str(self.owners.get(str(owner), "")).startswith("@"):
+            elif not person_of(self.owners.get(str(owner))).startswith("@"):
                 out.append(f"{where}: owner role {owner!r} names no person or team")
             if not t.get("controls"):
                 out.append(f"{where}: no control")
@@ -135,11 +140,18 @@ def render_threats(model: Model) -> str:
         "controls in the [control matrix](control-matrix.md). Every threat has an owner, a control",
         "and an automated test; `just threat-check` (part of `just check`) enforces it.",
         "",
-        f"**{len(model.threats())} threats across {len(model.components)} components.** Owners: "
-        + ", ".join(f"{role} ({who})" for role, who in model.owners.items())
-        + ".",
+        f"**{len(model.threats())} threats across {len(model.components)} components.**",
         "",
+        "## Owners",
+        "",
+        "| Role | Held by | Accountable for | Threats |",
+        "|---|---|---|---|",
     ]
+    for role, owner in model.owners.items():
+        owned = [str(t["id"]) for t in model.threats() if t.get("owner") == role]
+        what = owner.get("responsibility", "") if isinstance(owner, Mapping) else ""
+        lines.append(f"| {role} | {person_of(owner)} | {what} | {', '.join(owned) or '-'} |")
+    lines.append("")
     for name, comp in model.components.items():
         lines += [
             f"## {comp.get('name', name)}",

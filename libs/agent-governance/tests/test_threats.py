@@ -54,6 +54,21 @@ def test_a_complete_model_has_no_problems(tmp_path: Path) -> None:
     assert m.test_refs() == {"t.py::test_x"}
 
 
+def test_an_owner_role_can_name_a_person_and_a_responsibility(tmp_path: Path) -> None:
+    role = {"person": "@sam", "responsibility": "identity and policy"}
+    m = model(
+        tmp_path,
+        {"owners": {"security": role}, "components": {"api": component()}},
+        {"controls": {"C1": GOOD_CONTROL}},
+    )
+    assert m.problems(tmp_path, set()) == []
+    assert "| security | @sam | identity and policy | T1 |" in render_threats(m)
+    nobody = {"owners": {"security": {"responsibility": "x"}}, "components": {"api": component()}}
+    (other := tmp_path / "b").mkdir()
+    m = model(other, nobody, {"controls": {"C1": GOOD_CONTROL}})
+    assert "api/T1: owner role 'security' names no person or team" in m.problems(other, set())
+
+
 def test_every_rule_is_enforced(tmp_path: Path) -> None:
     bad_threat = {
         "id": "T1",

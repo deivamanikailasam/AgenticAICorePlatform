@@ -8,13 +8,34 @@
 # STRIDE: S spoofing, T tampering, R repudiation, I information disclosure, D denial of service,
 # E elevation of privilege.
 
-# Owner roles, each held by a named person or team (governance/approvers.yaml). Single
-# maintainer today (owner decision 2026-10-15); split these as people join.
+# Owner roles: who answers for each threat. Each role names a person (or team) and what the
+# role is accountable for. Single maintainer today (owner decision 2026-10-16): every role is
+# held by @deivamanikailasam; hand roles to people or teams as they join.
 owners:
-  platform: "@deivamanikailasam"
-  security: "@deivamanikailasam"
-  privacy: "@deivamanikailasam"
-  finance-platform: "@deivamanikailasam"
+  security-architect:
+    person: "@deivamanikailasam"
+    responsibility: identity, authentication and authorisation, tool and gateway security, encryption, sandbox isolation
+  ai-safety-lead:
+    person: "@deivamanikailasam"
+    responsibility: prompt injection and goal hijack, memory poisoning, rogue agents, red team and eval gates
+  privacy-officer:
+    person: "@deivamanikailasam"
+    responsibility: personal data, tenant isolation of data, retention, access, erasure and transparency to people
+  sre-lead:
+    person: "@deivamanikailasam"
+    responsibility: availability, capacity, cascading failures, durability and alerting
+  platform-lead:
+    person: "@deivamanikailasam"
+    responsibility: runtime correctness, run reconstruction and lineage of decisions
+  release-manager:
+    person: "@deivamanikailasam"
+    responsibility: supply chain, images and packages, spec review and promotion
+  audit-compliance-lead:
+    person: "@deivamanikailasam"
+    responsibility: the audit trail, attribution of actions and evidence for regulators
+  finance-controls-owner:
+    person: "@deivamanikailasam"
+    responsibility: approval rules for payments and other irreversible business actions
 
 components:
   agent-api:
@@ -25,7 +46,7 @@ components:
       - id: T01
         stride: S
         title: A caller impersonates a user or approver to start runs or approve payments
-        owner: security
+        owner: security-architect
         controls: [C05, C03]
         asi: [ASI03, ASI09]
         tests:
@@ -34,7 +55,7 @@ components:
       - id: T02
         stride: T
         title: A run is resumed or forked to replay an approval or change what was approved
-        owner: platform
+        owner: security-architect
         controls: [C03, C21]
         asi: [ASI09]
         tests:
@@ -43,7 +64,7 @@ components:
       - id: T03
         stride: R
         title: A requester denies starting a run or an approver denies approving
-        owner: security
+        owner: audit-compliance-lead
         controls: [C09]
         asi: [ASI09]
         tests:
@@ -51,7 +72,7 @@ components:
       - id: T04
         stride: I
         title: One tenant or user reads another's runs, transcripts or memories
-        owner: privacy
+        owner: privacy-officer
         controls: [C06, C19]
         asi: [ASI03]
         tests:
@@ -60,7 +81,7 @@ components:
       - id: T05
         stride: D
         title: Floods of runs or runaway agents exhaust workers, budget or the model gateway
-        owner: platform
+        owner: sre-lead
         controls: [C12]
         asi: [ASI08]
         tests:
@@ -69,7 +90,7 @@ components:
       - id: T06
         stride: E
         title: A requester approves their own irreversible action
-        owner: finance-platform
+        owner: finance-controls-owner
         controls: [C03]
         asi: [ASI03]
         tests:
@@ -84,7 +105,7 @@ components:
       - id: T07
         stride: T
         title: Instructions in a tool result, document or peer agent's output hijack the agent's goal
-        owner: security
+        owner: ai-safety-lead
         controls: [C04, C01, C03]
         asi: [ASI01, ASI07]
         tests:
@@ -94,7 +115,7 @@ components:
       - id: T08
         stride: I
         title: The model is talked into revealing data or exfiltrating it through markdown links
-        owner: privacy
+        owner: ai-safety-lead
         controls: [C04, C18]
         asi: [ASI01]
         tests:
@@ -102,7 +123,7 @@ components:
       - id: T09
         stride: D
         title: Loops, ping-pong handoffs or failing models cascade through a team
-        owner: platform
+        owner: sre-lead
         controls: [C12]
         asi: [ASI08]
         tests:
@@ -111,7 +132,7 @@ components:
       - id: T10
         stride: E
         title: A hijacked agent calls tools beyond its grants or beyond value limits
-        owner: security
+        owner: ai-safety-lead
         controls: [C01, C02]
         asi: [ASI02]
         tests:
@@ -120,7 +141,7 @@ components:
       - id: T11
         stride: R
         title: Nobody can show what the agent saw and decided when a run is questioned
-        owner: platform
+        owner: platform-lead
         controls: [C09, C21]
         tests:
           - libs/agent-audit/tests/test_audit.py::test_every_event_carries_versions_and_the_trace_id
@@ -135,7 +156,7 @@ components:
       - id: T12
         stride: S
         title: A rogue MCP server or A2A agent poses as a trusted one
-        owner: security
+        owner: security-architect
         controls: [C13]
         asi: [ASI04, ASI07]
         tests:
@@ -144,7 +165,7 @@ components:
       - id: T13
         stride: T
         title: A poisoned MCP tool description steers the model
-        owner: security
+        owner: ai-safety-lead
         controls: [C04, C13]
         asi: [ASI04]
         tests:
@@ -152,7 +173,7 @@ components:
       - id: T14
         stride: I
         title: Credentials leak to the model, logs or tool results
-        owner: security
+        owner: security-architect
         controls: [C07, C20]
         asi: [ASI03]
         tests:
@@ -161,7 +182,7 @@ components:
       - id: T15
         stride: E
         title: A tool acts with the platform's identity instead of the user's down-scoped one
-        owner: security
+        owner: security-architect
         controls: [C07]
         asi: [ASI03]
         tests:
@@ -169,7 +190,7 @@ components:
       - id: T16
         stride: D
         title: A slow or failing tool stalls runs
-        owner: platform
+        owner: sre-lead
         controls: [C12, C21]
         asi: [ASI08]
         tests:
@@ -177,7 +198,7 @@ components:
       - id: T17
         stride: R
         title: A tool call cannot be traced to the user, agent and credential lease
-        owner: security
+        owner: audit-compliance-lead
         controls: [C09, C07]
         tests:
           - libs/agent-audit/tests/test_audit.py::test_arguments_are_hashed_and_recorded_redacted
@@ -190,7 +211,7 @@ components:
       - id: T18
         stride: D
         title: An unreachable or misconfigured policy engine lets calls through
-        owner: security
+        owner: security-architect
         controls: [C01]
         tests:
           - redteam:asi02-opa-unreachable-denies
@@ -198,14 +219,14 @@ components:
       - id: T19
         stride: T
         title: A policy change silently loosens what agents may do
-        owner: security
+        owner: security-architect
         controls: [C01, C15]
         tests:
           - libs/agent-tools/tests/test_authorising.py::test_spec_cannot_loosen_a_deny
       - id: T20
         stride: E
         title: A cross-tenant or ungranted request is allowed
-        owner: security
+        owner: security-architect
         controls: [C01, C06]
         asi: [ASI03]
         tests:
@@ -224,7 +245,7 @@ components:
       - id: T21
         stride: S
         title: An unauthenticated caller uses the platform's tools or agents
-        owner: security
+        owner: security-architect
         controls: [C05, C01]
         asi: [ASI07]
         tests:
@@ -233,7 +254,7 @@ components:
       - id: T22
         stride: I
         title: A caller sees another tenant's data through the gateway
-        owner: privacy
+        owner: privacy-officer
         controls: [C06]
         asi: [ASI03]
         tests:
@@ -241,7 +262,7 @@ components:
       - id: T23
         stride: T
         title: Push notifications are sent to an attacker's host
-        owner: security
+        owner: security-architect
         controls: [C13]
         asi: [ASI07]
         tests:
@@ -249,21 +270,21 @@ components:
       - id: T24
         stride: E
         title: A published agent's path is used to reach an unpublished one
-        owner: security
+        owner: security-architect
         controls: [C05, C14]
         tests:
           - services/a2a-gateway/tests/test_a2a.py::test_each_agent_answers_only_on_its_own_path
       - id: T25
         stride: R
         title: Gateway calls cannot be attributed
-        owner: security
+        owner: audit-compliance-lead
         controls: [C09]
         tests:
           - redteam:asi02-gateway-calls-policy-checked-live
       - id: T26
         stride: D
         title: Callers flood the gateways
-        owner: platform
+        owner: sre-lead
         controls: [C01, C12]
         tests:
           - redteam:asi02-rate-limit-per-tool-and-agent
@@ -276,7 +297,7 @@ components:
       - id: T27
         stride: E
         title: Generated code escapes to the host or reaches the network
-        owner: security
+        owner: security-architect
         controls: [C11]
         asi: [ASI05]
         tests:
@@ -286,7 +307,7 @@ components:
       - id: T28
         stride: D
         title: Fork bombs, memory hogs or endless loops starve the host
-        owner: platform
+        owner: sre-lead
         controls: [C11]
         asi: [ASI05]
         tests:
@@ -295,7 +316,7 @@ components:
       - id: T29
         stride: S
         title: Someone other than the platform submits code to the runner
-        owner: security
+        owner: security-architect
         controls: [C11, C05]
         tests:
           - redteam:asi05-sandbox-runner-needs-token
@@ -312,7 +333,7 @@ components:
       - id: T30
         stride: T
         title: A poisoned document writes a persistent instruction into memory
-        owner: security
+        owner: ai-safety-lead
         controls: [C10, C04]
         asi: [ASI06]
         tests:
@@ -320,7 +341,7 @@ components:
       - id: T31
         stride: I
         title: One user's memories surface in another user's run
-        owner: privacy
+        owner: privacy-officer
         controls: [C10, C06]
         asi: [ASI06]
         tests:
@@ -328,7 +349,7 @@ components:
       - id: T32
         stride: R
         title: Nobody can tell where a remembered fact came from
-        owner: privacy
+        owner: privacy-officer
         controls: [C10, C09]
         asi: [ASI06]
         tests:
@@ -336,7 +357,7 @@ components:
       - id: T33
         stride: E
         title: Personal data is kept past its purpose or after an erasure request
-        owner: privacy
+        owner: privacy-officer
         controls: [C19, C10]
         tests:
           - redteam:asi06-ttl-capped
@@ -353,14 +374,14 @@ components:
       - id: T34
         stride: I
         title: A database dump exposes transcripts and run state
-        owner: privacy
+        owner: privacy-officer
         controls: [C08]
         tests:
           - libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row
       - id: T35
         stride: T
         title: A stored checkpoint is altered or moved to another tenant's thread
-        owner: security
+        owner: security-architect
         controls: [C08, C09]
         tests:
           - libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row
@@ -368,7 +389,7 @@ components:
       - id: T36
         stride: D
         title: A restart loses runs in flight or repeats side effects
-        owner: platform
+        owner: sre-lead
         controls: [C21]
         tests:
           - services/agent-api/tests/test_api.py::test_a_running_run_resumes_from_its_last_checkpoint_after_a_restart
@@ -376,7 +397,7 @@ components:
       - id: T37
         stride: E
         title: Transcripts are kept longer than the retention policy allows
-        owner: privacy
+        owner: privacy-officer
         controls: [C19]
         tests:
           - services/agent-api/tests/test_data_lifecycle.py::test_retention_prunes_finished_runs_but_never_a_run_waiting_for_a_person
@@ -392,7 +413,7 @@ components:
       - id: T38
         stride: T
         title: An administrator edits or deletes audit events to hide an action
-        owner: security
+        owner: audit-compliance-lead
         controls: [C09]
         tests:
           - libs/agent-audit/tests/test_audit.py::test_tampering_with_one_event_is_detected
@@ -400,14 +421,14 @@ components:
       - id: T39
         stride: R
         title: Concurrent writers break the chain so no event can be trusted
-        owner: security
+        owner: audit-compliance-lead
         controls: [C09]
         tests:
           - libs/agent-audit/tests/test_audit.py::test_concurrent_writers_keep_one_unbroken_chain
       - id: T40
         stride: I
         title: The audit trail itself leaks personal data or secrets
-        owner: privacy
+        owner: privacy-officer
         controls: [C09, C18, C20]
         tests:
           - libs/agent-audit/tests/test_audit.py::test_arguments_are_hashed_and_recorded_redacted
@@ -424,7 +445,7 @@ components:
       - id: T41
         stride: T
         title: An unreviewed or edited spec runs in staging or production
-        owner: platform
+        owner: release-manager
         controls: [C14, C15]
         asi: [ASI10]
         tests:
@@ -433,7 +454,7 @@ components:
       - id: T42
         stride: E
         title: A compromised or rogue agent keeps acting after it should be stopped
-        owner: security
+        owner: ai-safety-lead
         controls: [C14]
         asi: [ASI10]
         tests:
@@ -443,7 +464,7 @@ components:
       - id: T43
         stride: S
         title: A tampered image or package is deployed
-        owner: security
+        owner: release-manager
         controls: [C13]
         asi: [ASI04]
         tests:
@@ -451,14 +472,14 @@ components:
       - id: T44
         stride: R
         title: Nobody can show which spec, prompts and models produced a decision
-        owner: platform
+        owner: platform-lead
         controls: [C15, C09]
         tests:
           - libs/agent-governance/tests/test_governance.py::test_lineage_hashes_match_the_audit_trail_versions
       - id: T45
         stride: D
         title: A change that degrades quality, safety or cost merges unnoticed
-        owner: platform
+        owner: ai-safety-lead
         controls: [C16]
         tests:
           - libs/agent-evals/tests/test_gates.py::test_a_change_that_lowers_task_success_beyond_the_threshold_is_blocked
@@ -466,7 +487,7 @@ components:
       - id: T49
         stride: R
         title: People affected by an agent's decision cannot find out that an AI system was involved or how it is governed
-        owner: privacy
+        owner: privacy-officer
         controls: [C22, C15]
         tests:
           - libs/agent-governance/tests/test_governance.py::test_every_spec_gets_an_agent_card_with_the_required_fields
@@ -482,7 +503,7 @@ components:
       - id: T46
         stride: I
         title: Prompts, outputs or personal data leak into traces and dashboards
-        owner: privacy
+        owner: privacy-officer
         controls: [C17, C18]
         tests:
           - libs/agent-telemetry/tests/test_spans.py::test_content_is_redacted_and_only_for_the_langfuse_exporter
@@ -490,14 +511,14 @@ components:
       - id: T47
         stride: D
         title: A slow or absent collector holds up runs
-        owner: platform
+        owner: sre-lead
         controls: [C17]
         tests:
           - services/agent-api/tests/test_telemetry.py::test_a_team_run_is_one_trace_with_genai_spans
       - id: T48
         stride: R
         title: Rogue behaviour goes unnoticed because nothing alerts on it
-        owner: platform
+        owner: ai-safety-lead
         controls: [C17, C14]
         asi: [ASI10]
         tests:

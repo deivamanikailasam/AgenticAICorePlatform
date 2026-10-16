@@ -5,7 +5,20 @@ STRIDE per component, mapped to the OWASP Top 10 for Agentic Applications and to
 controls in the [control matrix](control-matrix.md). Every threat has an owner, a control
 and an automated test; `just threat-check` (part of `just check`) enforces it.
 
-**49 threats across 11 components.** Owners: platform (@deivamanikailasam), security (@deivamanikailasam), privacy (@deivamanikailasam), finance-platform (@deivamanikailasam).
+**49 threats across 11 components.**
+
+## Owners
+
+| Role | Held by | Accountable for | Threats |
+|---|---|---|---|
+| security-architect | @deivamanikailasam | identity, authentication and authorisation, tool and gateway security, encryption, sandbox isolation | T01, T02, T12, T14, T15, T18, T19, T20, T21, T23, T24, T27, T29, T35 |
+| ai-safety-lead | @deivamanikailasam | prompt injection and goal hijack, memory poisoning, rogue agents, red team and eval gates | T07, T08, T10, T13, T30, T42, T45, T48 |
+| privacy-officer | @deivamanikailasam | personal data, tenant isolation of data, retention, access, erasure and transparency to people | T04, T22, T31, T32, T33, T34, T37, T40, T49, T46 |
+| sre-lead | @deivamanikailasam | availability, capacity, cascading failures, durability and alerting | T05, T09, T16, T26, T28, T36, T47 |
+| platform-lead | @deivamanikailasam | runtime correctness, run reconstruction and lineage of decisions | T11, T44 |
+| release-manager | @deivamanikailasam | supply chain, images and packages, spec review and promotion | T41, T43 |
+| audit-compliance-lead | @deivamanikailasam | the audit trail, attribution of actions and evidence for regulators | T03, T17, T25, T38, T39 |
+| finance-controls-owner | @deivamanikailasam | approval rules for payments and other irreversible business actions | T06 |
 
 ## Run API (agent-api)
 
@@ -14,12 +27,12 @@ and an automated test; `just threat-check` (part of `just check`) enforces it.
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T01 | Spoofing | A caller impersonates a user or approver to start runs or approve payments | security | C05, C03 | ASI03, ASI09 | `services/agent-api/tests/test_api.py::test_every_call_needs_a_valid_token`<br>`services/agent-api/tests/test_api.py::test_approval_comes_from_the_approvers_verified_token` |
-| T02 | Tampering | A run is resumed or forked to replay an approval or change what was approved | platform | C03, C21 | ASI09 | `services/agent-api/tests/test_api.py::test_generic_resume_cannot_answer_an_approval_and_cancel_works`<br>`redteam:asi09-approval-bound-to-exact-call` |
-| T03 | Repudiation | A requester denies starting a run or an approver denies approving | security | C09 | ASI09 | `services/agent-api/tests/test_audit_trail.py::test_an_approved_payment_leaves_a_complete_versioned_trail` |
-| T04 | Information disclosure | One tenant or user reads another's runs, transcripts or memories | privacy | C06, C19 | ASI03 | `services/agent-api/tests/test_api.py::test_other_tenants_cannot_see_runs`<br>`services/agent-api/tests/test_data_lifecycle.py::test_a_person_exports_their_own_data_and_nobody_elses` |
-| T05 | Denial of service | Floods of runs or runaway agents exhaust workers, budget or the model gateway | platform | C12 | ASI08 | `redteam:asi08-repeating-agent-stopped`<br>`redteam:asi08-handoff-ping-pong-is-cut` |
-| T06 | Elevation of privilege | A requester approves their own irreversible action | finance-platform | C03 | ASI03 | `redteam:asi03-self-approval-does-not-count`<br>`apps/invoice-triage/tests/test_end_to_end.py::test_requester_cannot_approve_their_own_payment` |
+| T01 | Spoofing | A caller impersonates a user or approver to start runs or approve payments | security-architect | C05, C03 | ASI03, ASI09 | `services/agent-api/tests/test_api.py::test_every_call_needs_a_valid_token`<br>`services/agent-api/tests/test_api.py::test_approval_comes_from_the_approvers_verified_token` |
+| T02 | Tampering | A run is resumed or forked to replay an approval or change what was approved | security-architect | C03, C21 | ASI09 | `services/agent-api/tests/test_api.py::test_generic_resume_cannot_answer_an_approval_and_cancel_works`<br>`redteam:asi09-approval-bound-to-exact-call` |
+| T03 | Repudiation | A requester denies starting a run or an approver denies approving | audit-compliance-lead | C09 | ASI09 | `services/agent-api/tests/test_audit_trail.py::test_an_approved_payment_leaves_a_complete_versioned_trail` |
+| T04 | Information disclosure | One tenant or user reads another's runs, transcripts or memories | privacy-officer | C06, C19 | ASI03 | `services/agent-api/tests/test_api.py::test_other_tenants_cannot_see_runs`<br>`services/agent-api/tests/test_data_lifecycle.py::test_a_person_exports_their_own_data_and_nobody_elses` |
+| T05 | Denial of service | Floods of runs or runaway agents exhaust workers, budget or the model gateway | sre-lead | C12 | ASI08 | `redteam:asi08-repeating-agent-stopped`<br>`redteam:asi08-handoff-ping-pong-is-cut` |
+| T06 | Elevation of privilege | A requester approves their own irreversible action | finance-controls-owner | C03 | ASI03 | `redteam:asi03-self-approval-does-not-count`<br>`apps/invoice-triage/tests/test_end_to_end.py::test_requester_cannot_approve_their_own_payment` |
 
 ## Agent runtime and patterns (in-process agents, teams, models)
 
@@ -28,11 +41,11 @@ and an automated test; `just threat-check` (part of `just check`) enforces it.
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T07 | Tampering | Instructions in a tool result, document or peer agent's output hijack the agent's goal | security | C04, C01, C03 | ASI01, ASI07 | `redteam:asi01-invoice-notes-call-payment-tool`<br>`redteam:asi01-injected-document-never-reaches-model`<br>`redteam:asi07-worker-output-is-data` |
-| T08 | Information disclosure | The model is talked into revealing data or exfiltrating it through markdown links | privacy | C04, C18 | ASI01 | `redteam:asi01-hidden-characters-and-markdown-exfiltration` |
-| T09 | Denial of service | Loops, ping-pong handoffs or failing models cascade through a team | platform | C12 | ASI08 | `redteam:asi08-failing-worker-circuit-and-team-budget`<br>`redteam:asi08-child-spend-rolls-up` |
-| T10 | Elevation of privilege | A hijacked agent calls tools beyond its grants or beyond value limits | security | C01, C02 | ASI02 | `redteam:asi02-payment-over-limit-even-when-approved`<br>`redteam:asi01-tool-outside-allowlist-refused` |
-| T11 | Repudiation | Nobody can show what the agent saw and decided when a run is questioned | platform | C09, C21 | - | `libs/agent-audit/tests/test_audit.py::test_every_event_carries_versions_and_the_trace_id` |
+| T07 | Tampering | Instructions in a tool result, document or peer agent's output hijack the agent's goal | ai-safety-lead | C04, C01, C03 | ASI01, ASI07 | `redteam:asi01-invoice-notes-call-payment-tool`<br>`redteam:asi01-injected-document-never-reaches-model`<br>`redteam:asi07-worker-output-is-data` |
+| T08 | Information disclosure | The model is talked into revealing data or exfiltrating it through markdown links | ai-safety-lead | C04, C18 | ASI01 | `redteam:asi01-hidden-characters-and-markdown-exfiltration` |
+| T09 | Denial of service | Loops, ping-pong handoffs or failing models cascade through a team | sre-lead | C12 | ASI08 | `redteam:asi08-failing-worker-circuit-and-team-budget`<br>`redteam:asi08-child-spend-rolls-up` |
+| T10 | Elevation of privilege | A hijacked agent calls tools beyond its grants or beyond value limits | ai-safety-lead | C01, C02 | ASI02 | `redteam:asi02-payment-over-limit-even-when-approved`<br>`redteam:asi01-tool-outside-allowlist-refused` |
+| T11 | Repudiation | Nobody can show what the agent saw and decided when a run is questioned | platform-lead | C09, C21 | - | `libs/agent-audit/tests/test_audit.py::test_every_event_carries_versions_and_the_trace_id` |
 
 Not applicable:
 - **Spoofing**: the runtime has no endpoint of its own; callers are authenticated by the run API and the worker (T01)
@@ -44,12 +57,12 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T12 | Spoofing | A rogue MCP server or A2A agent poses as a trusted one | security | C13 | ASI04, ASI07 | `redteam:asi04-unlisted-mcp-server-refused`<br>`redteam:asi04-rogue-key-agent-card-refused` |
-| T13 | Tampering | A poisoned MCP tool description steers the model | security | C04, C13 | ASI04 | `redteam:asi04-poisoned-mcp-tool-description` |
-| T14 | Information disclosure | Credentials leak to the model, logs or tool results | security | C07, C20 | ASI03 | `redteam:asi03-per-call-credentials-revoked`<br>`services/agent-api/tests/test_telemetry.py::test_content_redactor_removes_secrets_and_withholds_without_pii_check` |
-| T15 | Elevation of privilege | A tool acts with the platform's identity instead of the user's down-scoped one | security | C07 | ASI03 | `redteam:asi03-exchanged-token-never-the-users` |
-| T16 | Denial of service | A slow or failing tool stalls runs | platform | C12, C21 | ASI08 | `services/agent-api/tests/test_chaos.py::test_repeated_tool_timeouts_open_the_tool_circuit` |
-| T17 | Repudiation | A tool call cannot be traced to the user, agent and credential lease | security | C09, C07 | - | `libs/agent-audit/tests/test_audit.py::test_arguments_are_hashed_and_recorded_redacted` |
+| T12 | Spoofing | A rogue MCP server or A2A agent poses as a trusted one | security-architect | C13 | ASI04, ASI07 | `redteam:asi04-unlisted-mcp-server-refused`<br>`redteam:asi04-rogue-key-agent-card-refused` |
+| T13 | Tampering | A poisoned MCP tool description steers the model | ai-safety-lead | C04, C13 | ASI04 | `redteam:asi04-poisoned-mcp-tool-description` |
+| T14 | Information disclosure | Credentials leak to the model, logs or tool results | security-architect | C07, C20 | ASI03 | `redteam:asi03-per-call-credentials-revoked`<br>`services/agent-api/tests/test_telemetry.py::test_content_redactor_removes_secrets_and_withholds_without_pii_check` |
+| T15 | Elevation of privilege | A tool acts with the platform's identity instead of the user's down-scoped one | security-architect | C07 | ASI03 | `redteam:asi03-exchanged-token-never-the-users` |
+| T16 | Denial of service | A slow or failing tool stalls runs | sre-lead | C12, C21 | ASI08 | `services/agent-api/tests/test_chaos.py::test_repeated_tool_timeouts_open_the_tool_circuit` |
+| T17 | Repudiation | A tool call cannot be traced to the user, agent and credential lease | audit-compliance-lead | C09, C07 | - | `libs/agent-audit/tests/test_audit.py::test_arguments_are_hashed_and_recorded_redacted` |
 
 ## Policy decision point (OPA, Cerbos, OpenFGA)
 
@@ -58,9 +71,9 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T18 | Denial of service | An unreachable or misconfigured policy engine lets calls through | security | C01 | - | `redteam:asi02-opa-unreachable-denies`<br>`services/mcp-gateway/tests/test_gateway.py::test_unknown_policy_engine_refuses_to_start` |
-| T19 | Tampering | A policy change silently loosens what agents may do | security | C01, C15 | - | `libs/agent-tools/tests/test_authorising.py::test_spec_cannot_loosen_a_deny` |
-| T20 | Elevation of privilege | A cross-tenant or ungranted request is allowed | security | C01, C06 | ASI03 | `redteam:asi03-cross-tenant-invoice-lookup`<br>`redteam:asi03-cross-tenant-denied-and-audited` |
+| T18 | Denial of service | An unreachable or misconfigured policy engine lets calls through | security-architect | C01 | - | `redteam:asi02-opa-unreachable-denies`<br>`services/mcp-gateway/tests/test_gateway.py::test_unknown_policy_engine_refuses_to_start` |
+| T19 | Tampering | A policy change silently loosens what agents may do | security-architect | C01, C15 | - | `libs/agent-tools/tests/test_authorising.py::test_spec_cannot_loosen_a_deny` |
+| T20 | Elevation of privilege | A cross-tenant or ungranted request is allowed | security-architect | C01, C06 | ASI03 | `redteam:asi03-cross-tenant-invoice-lookup`<br>`redteam:asi03-cross-tenant-denied-and-audited` |
 
 Not applicable:
 - **Spoofing**: the policy engine is reached only from inside the platform network on 127.0.0.1 or the cluster network; callers present no identity to it
@@ -74,12 +87,12 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T21 | Spoofing | An unauthenticated caller uses the platform's tools or agents | security | C05, C01 | ASI07 | `redteam:asi07-a2a-inbound-needs-token-and-policy`<br>`services/mcp-gateway/tests/test_gateway.py::test_refused_calls_never_reach_the_tool` |
-| T22 | Information disclosure | A caller sees another tenant's data through the gateway | privacy | C06 | ASI03 | `redteam:asi03-cross-tenant-gateway-live` |
-| T23 | Tampering | Push notifications are sent to an attacker's host | security | C13 | ASI07 | `redteam:asi07-push-only-to-allowlisted-hosts` |
-| T24 | Elevation of privilege | A published agent's path is used to reach an unpublished one | security | C05, C14 | - | `services/a2a-gateway/tests/test_a2a.py::test_each_agent_answers_only_on_its_own_path` |
-| T25 | Repudiation | Gateway calls cannot be attributed | security | C09 | - | `redteam:asi02-gateway-calls-policy-checked-live` |
-| T26 | Denial of service | Callers flood the gateways | platform | C01, C12 | - | `redteam:asi02-rate-limit-per-tool-and-agent` |
+| T21 | Spoofing | An unauthenticated caller uses the platform's tools or agents | security-architect | C05, C01 | ASI07 | `redteam:asi07-a2a-inbound-needs-token-and-policy`<br>`services/mcp-gateway/tests/test_gateway.py::test_refused_calls_never_reach_the_tool` |
+| T22 | Information disclosure | A caller sees another tenant's data through the gateway | privacy-officer | C06 | ASI03 | `redteam:asi03-cross-tenant-gateway-live` |
+| T23 | Tampering | Push notifications are sent to an attacker's host | security-architect | C13 | ASI07 | `redteam:asi07-push-only-to-allowlisted-hosts` |
+| T24 | Elevation of privilege | A published agent's path is used to reach an unpublished one | security-architect | C05, C14 | - | `services/a2a-gateway/tests/test_a2a.py::test_each_agent_answers_only_on_its_own_path` |
+| T25 | Repudiation | Gateway calls cannot be attributed | audit-compliance-lead | C09 | - | `redteam:asi02-gateway-calls-policy-checked-live` |
+| T26 | Denial of service | Callers flood the gateways | sre-lead | C01, C12 | - | `redteam:asi02-rate-limit-per-tool-and-agent` |
 
 ## Code sandbox (sandbox-runner, gVisor / Firecracker / Kata)
 
@@ -88,9 +101,9 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T27 | Elevation of privilege | Generated code escapes to the host or reaches the network | security | C11 | ASI05 | `redteam:asi05-gvisor-no-network`<br>`redteam:asi05-gvisor-no-host-files`<br>`redteam:asi05-microvm-config-no-network-read-only` |
-| T28 | Denial of service | Fork bombs, memory hogs or endless loops starve the host | platform | C11 | ASI05 | `redteam:asi05-gvisor-fork-bomb`<br>`redteam:asi05-gvisor-memory-cap` |
-| T29 | Spoofing | Someone other than the platform submits code to the runner | security | C11, C05 | - | `redteam:asi05-sandbox-runner-needs-token` |
+| T27 | Elevation of privilege | Generated code escapes to the host or reaches the network | security-architect | C11 | ASI05 | `redteam:asi05-gvisor-no-network`<br>`redteam:asi05-gvisor-no-host-files`<br>`redteam:asi05-microvm-config-no-network-read-only` |
+| T28 | Denial of service | Fork bombs, memory hogs or endless loops starve the host | sre-lead | C11 | ASI05 | `redteam:asi05-gvisor-fork-bomb`<br>`redteam:asi05-gvisor-memory-cap` |
+| T29 | Spoofing | Someone other than the platform submits code to the runner | security-architect | C11, C05 | - | `redteam:asi05-sandbox-runner-needs-token` |
 
 Not applicable:
 - **Tampering**: each run gets a fresh sandbox; nothing persists between runs that could be tampered with
@@ -104,10 +117,10 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T30 | Tampering | A poisoned document writes a persistent instruction into memory | security | C10, C04 | ASI06 | `redteam:asi06-poisoned-document-no-persistent-instruction` |
-| T31 | Information disclosure | One user's memories surface in another user's run | privacy | C10, C06 | ASI06 | `redteam:asi06-no-cross-user-leaks` |
-| T32 | Repudiation | Nobody can tell where a remembered fact came from | privacy | C10, C09 | ASI06 | `redteam:asi06-provenance-stamped-and-audited` |
-| T33 | Elevation of privilege | Personal data is kept past its purpose or after an erasure request | privacy | C19, C10 | - | `redteam:asi06-ttl-capped`<br>`services/agent-api/tests/test_erasure.py::test_one_request_erases_a_user_everywhere_and_nobody_else` |
+| T30 | Tampering | A poisoned document writes a persistent instruction into memory | ai-safety-lead | C10, C04 | ASI06 | `redteam:asi06-poisoned-document-no-persistent-instruction` |
+| T31 | Information disclosure | One user's memories surface in another user's run | privacy-officer | C10, C06 | ASI06 | `redteam:asi06-no-cross-user-leaks` |
+| T32 | Repudiation | Nobody can tell where a remembered fact came from | privacy-officer | C10, C09 | ASI06 | `redteam:asi06-provenance-stamped-and-audited` |
+| T33 | Elevation of privilege | Personal data is kept past its purpose or after an erasure request | privacy-officer | C19, C10 | - | `redteam:asi06-ttl-capped`<br>`services/agent-api/tests/test_erasure.py::test_one_request_erases_a_user_everywhere_and_nobody_else` |
 
 Not applicable:
 - **Spoofing**: memory is reached only through the platform's memory service with the run's own scope
@@ -120,10 +133,10 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T34 | Information disclosure | A database dump exposes transcripts and run state | privacy | C08 | - | `libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row` |
-| T35 | Tampering | A stored checkpoint is altered or moved to another tenant's thread | security | C08, C09 | - | `libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row`<br>`services/agent-api/tests/test_audit_trail.py::test_an_approved_payment_leaves_a_complete_versioned_trail` |
-| T36 | Denial of service | A restart loses runs in flight or repeats side effects | platform | C21 | - | `services/agent-api/tests/test_api.py::test_a_running_run_resumes_from_its_last_checkpoint_after_a_restart`<br>`services/agent-api/tests/test_api.py::test_a_paused_run_survives_a_restart_and_can_be_approved` |
-| T37 | Elevation of privilege | Transcripts are kept longer than the retention policy allows | privacy | C19 | - | `services/agent-api/tests/test_data_lifecycle.py::test_retention_prunes_finished_runs_but_never_a_run_waiting_for_a_person` |
+| T34 | Information disclosure | A database dump exposes transcripts and run state | privacy-officer | C08 | - | `libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row` |
+| T35 | Tampering | A stored checkpoint is altered or moved to another tenant's thread | security-architect | C08, C09 | - | `libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row`<br>`services/agent-api/tests/test_audit_trail.py::test_an_approved_payment_leaves_a_complete_versioned_trail` |
+| T36 | Denial of service | A restart loses runs in flight or repeats side effects | sre-lead | C21 | - | `services/agent-api/tests/test_api.py::test_a_running_run_resumes_from_its_last_checkpoint_after_a_restart`<br>`services/agent-api/tests/test_api.py::test_a_paused_run_survives_a_restart_and_can_be_approved` |
+| T37 | Elevation of privilege | Transcripts are kept longer than the retention policy allows | privacy-officer | C19 | - | `services/agent-api/tests/test_data_lifecycle.py::test_retention_prunes_finished_runs_but_never_a_run_waiting_for_a_person` |
 
 Not applicable:
 - **Spoofing**: only platform services with their own database roles connect; there is no user-facing endpoint
@@ -136,9 +149,9 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T38 | Tampering | An administrator edits or deletes audit events to hide an action | security | C09 | - | `libs/agent-audit/tests/test_audit.py::test_tampering_with_one_event_is_detected`<br>`libs/agent-audit/tests/test_audit.py::test_the_trail_is_append_only` |
-| T39 | Repudiation | Concurrent writers break the chain so no event can be trusted | security | C09 | - | `libs/agent-audit/tests/test_audit.py::test_concurrent_writers_keep_one_unbroken_chain` |
-| T40 | Information disclosure | The audit trail itself leaks personal data or secrets | privacy | C09, C18, C20 | - | `libs/agent-audit/tests/test_audit.py::test_arguments_are_hashed_and_recorded_redacted` |
+| T38 | Tampering | An administrator edits or deletes audit events to hide an action | audit-compliance-lead | C09 | - | `libs/agent-audit/tests/test_audit.py::test_tampering_with_one_event_is_detected`<br>`libs/agent-audit/tests/test_audit.py::test_the_trail_is_append_only` |
+| T39 | Repudiation | Concurrent writers break the chain so no event can be trusted | audit-compliance-lead | C09 | - | `libs/agent-audit/tests/test_audit.py::test_concurrent_writers_keep_one_unbroken_chain` |
+| T40 | Information disclosure | The audit trail itself leaks personal data or secrets | privacy-officer | C09, C18, C20 | - | `libs/agent-audit/tests/test_audit.py::test_arguments_are_hashed_and_recorded_redacted` |
 
 Not applicable:
 - **Spoofing**: services write with their own database role; events carry the verified caller from the request (T01)
@@ -152,12 +165,12 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T41 | Tampering | An unreviewed or edited spec runs in staging or production | platform | C14, C15 | ASI10 | `redteam:asi10-draft-agent-refused-in-prod`<br>`libs/agent-registry/tests/test_sync_and_gate.py::test_the_gate_allows_everything_in_dev_and_only_approved_in_staging` |
-| T42 | Elevation of privilege | A compromised or rogue agent keeps acting after it should be stopped | security | C14 | ASI10 | `redteam:asi10-agent-kill-switch-stops-every-tool`<br>`redteam:asi10-tenant-kill-switch-stops-every-tool`<br>`redteam:asi10-deprecated-and-retired-refused` |
-| T43 | Spoofing | A tampered image or package is deployed | security | C13 | ASI04 | `redteam:asi04-images-pinned-by-digest` |
-| T44 | Repudiation | Nobody can show which spec, prompts and models produced a decision | platform | C15, C09 | - | `libs/agent-governance/tests/test_governance.py::test_lineage_hashes_match_the_audit_trail_versions` |
-| T45 | Denial of service | A change that degrades quality, safety or cost merges unnoticed | platform | C16 | - | `libs/agent-evals/tests/test_gates.py::test_a_change_that_lowers_task_success_beyond_the_threshold_is_blocked`<br>`libs/agent-evals/tests/test_gates.py::test_a_cost_increase_above_the_limit_needs_explicit_approval` |
-| T49 | Repudiation | People affected by an agent's decision cannot find out that an AI system was involved or how it is governed | privacy | C22, C15 | - | `libs/agent-governance/tests/test_governance.py::test_every_spec_gets_an_agent_card_with_the_required_fields`<br>`services/agent-api/tests/test_hitl.py::test_an_irreversible_tool_waits_and_reviewers_see_what_they_approve` |
+| T41 | Tampering | An unreviewed or edited spec runs in staging or production | release-manager | C14, C15 | ASI10 | `redteam:asi10-draft-agent-refused-in-prod`<br>`libs/agent-registry/tests/test_sync_and_gate.py::test_the_gate_allows_everything_in_dev_and_only_approved_in_staging` |
+| T42 | Elevation of privilege | A compromised or rogue agent keeps acting after it should be stopped | ai-safety-lead | C14 | ASI10 | `redteam:asi10-agent-kill-switch-stops-every-tool`<br>`redteam:asi10-tenant-kill-switch-stops-every-tool`<br>`redteam:asi10-deprecated-and-retired-refused` |
+| T43 | Spoofing | A tampered image or package is deployed | release-manager | C13 | ASI04 | `redteam:asi04-images-pinned-by-digest` |
+| T44 | Repudiation | Nobody can show which spec, prompts and models produced a decision | platform-lead | C15, C09 | - | `libs/agent-governance/tests/test_governance.py::test_lineage_hashes_match_the_audit_trail_versions` |
+| T45 | Denial of service | A change that degrades quality, safety or cost merges unnoticed | ai-safety-lead | C16 | - | `libs/agent-evals/tests/test_gates.py::test_a_change_that_lowers_task_success_beyond_the_threshold_is_blocked`<br>`libs/agent-evals/tests/test_gates.py::test_a_cost_increase_above_the_limit_needs_explicit_approval` |
+| T49 | Repudiation | People affected by an agent's decision cannot find out that an AI system was involved or how it is governed | privacy-officer | C22, C15 | - | `libs/agent-governance/tests/test_governance.py::test_every_spec_gets_an_agent_card_with_the_required_fields`<br>`services/agent-api/tests/test_hitl.py::test_an_irreversible_tool_waits_and_reviewers_see_what_they_approve` |
 
 Not applicable:
 - **Information disclosure**: the repository holds no personal data; secrets are scanned out of every commit (C20)
@@ -169,9 +182,9 @@ Not applicable:
 
 | ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
 |---|---|---|---|---|---|---|
-| T46 | Information disclosure | Prompts, outputs or personal data leak into traces and dashboards | privacy | C17, C18 | - | `libs/agent-telemetry/tests/test_spans.py::test_content_is_redacted_and_only_for_the_langfuse_exporter`<br>`libs/agent-telemetry/tests/test_spans.py::test_content_is_withheld_when_redaction_is_unavailable` |
-| T47 | Denial of service | A slow or absent collector holds up runs | platform | C17 | - | `services/agent-api/tests/test_telemetry.py::test_a_team_run_is_one_trace_with_genai_spans` |
-| T48 | Repudiation | Rogue behaviour goes unnoticed because nothing alerts on it | platform | C17, C14 | ASI10 | `redteam:asi10-behaviour-metrics-emitted`<br>`redteam:asi10-budget-spike-alert-live` |
+| T46 | Information disclosure | Prompts, outputs or personal data leak into traces and dashboards | privacy-officer | C17, C18 | - | `libs/agent-telemetry/tests/test_spans.py::test_content_is_redacted_and_only_for_the_langfuse_exporter`<br>`libs/agent-telemetry/tests/test_spans.py::test_content_is_withheld_when_redaction_is_unavailable` |
+| T47 | Denial of service | A slow or absent collector holds up runs | sre-lead | C17 | - | `services/agent-api/tests/test_telemetry.py::test_a_team_run_is_one_trace_with_genai_spans` |
+| T48 | Repudiation | Rogue behaviour goes unnoticed because nothing alerts on it | ai-safety-lead | C17, C14 | ASI10 | `redteam:asi10-behaviour-metrics-emitted`<br>`redteam:asi10-budget-spike-alert-live` |
 
 Not applicable:
 - **Spoofing**: exporters push to configured collectors only; telemetry is not an input to any decision
