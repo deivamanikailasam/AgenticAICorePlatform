@@ -24,6 +24,14 @@ dependencies = [
 [project.scripts]
 agent-api = "agent_api.__main__:main"
 
+[project.entry-points."agent_platform.eval_apps"]
+"hello-workflow" = "agent_api.eval_apps:hello_workflow"
+"support-handoff" = "agent_api.eval_apps:support_handoff"
+"research-report" = "agent_api.eval_apps:research_report"
+"review-chat" = "agent_api.eval_apps:review_chat"
+"batch-summary" = "agent_api.eval_apps:batch_summary"
+"policy-debate" = "agent_api.eval_apps:policy_debate"
+
 [tool.uv.sources]
 agent-audit = { workspace = true }
 agent-evals = { workspace = true }

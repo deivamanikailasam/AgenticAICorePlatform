@@ -61,6 +61,7 @@ eval-label-sheet report rubric:
 # Regenerate the golden task sets from their seeded generators
 eval-tasks:
     uv run python -m invoice_triage.eval_tasks
+    uv run python -m agent_evals.generators
 
 # Tests that need Project 0 (or the stand-in stack) running
 test-integration *args:
