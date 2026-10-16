@@ -1,0 +1,94 @@
+# The platform MCP server (Step 8): Keycloak auth, OPA on every call, audit.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-gateway
+  labels: { app.kubernetes.io/name: mcp-gateway }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app.kubernetes.io/name: mcp-gateway }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: mcp-gateway, app.kubernetes.io/part-of: agent-platform }
+    spec:
+      serviceAccountName: mcp-gateway
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector: { matchLabels: { app.kubernetes.io/name: mcp-gateway } }
+      containers:
+        - name: mcp-gateway
+          image: agent-platform/mcp-gateway
+          command: ["mcp-gateway"]
+          ports:
+            - { name: http, containerPort: 8090 }
+          envFrom:
+            - configMapRef: { name: agent-platform-env }
+          env:
+            - { name: MCP_GATEWAY_HOST, value: "0.0.0.0" }
+            - { name: MCP_GATEWAY_PORT, value: "8090" }
+            - { name: MCP_GATEWAY_AUDIT_FILE, value: /tmp/mcp-gateway-audit.jsonl }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 384Mi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            failureThreshold: 6
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 3
+            failureThreshold: 40
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: openbao-token, mountPath: /var/run/secrets/openbao, readOnly: true }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        - name: openbao-token
+          projected:
+            sources:
+              - serviceAccountToken: { audience: openbao, expirationSeconds: 600, path: token }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-gateway
+  labels: { app.kubernetes.io/name: mcp-gateway }
+spec:
+  selector: { app.kubernetes.io/name: mcp-gateway }
+  # MCP sessions and A2A tasks live in the replica that opened them: keep a client on one replica
+  sessionAffinity: ClientIP
+  ports:
+    - { name: http, port: 8090, targetPort: http }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mcp-gateway
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: mcp-gateway }

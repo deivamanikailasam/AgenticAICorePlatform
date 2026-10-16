@@ -1,0 +1,21 @@
+# Workers scale on the backlog of the `agent-platform` task queue (KEDA's Temporal scaler).
+# Limits are set per environment by patching minReplicaCount and maxReplicaCount.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: agent-worker
+spec:
+  scaleTargetRef: { name: agent-worker }
+  minReplicaCount: 2
+  maxReplicaCount: 6
+  pollingInterval: 15
+  cooldownPeriod: 300
+  triggers:
+    - type: temporal
+      metadata:
+        endpoint: temporal-frontend.temporal.svc:7233
+        namespace: default
+        taskQueue: agent-platform
+        queueTypes: workflow,activity
+        targetQueueSize: "5"
+        activationTargetQueueSize: "0"

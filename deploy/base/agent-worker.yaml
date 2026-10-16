@@ -1,0 +1,80 @@
+# Temporal worker (Step 19): runs durable agents' nodes as activities. Scales on the task
+# queue's backlog (KEDA, per overlay).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-worker
+  labels: { app.kubernetes.io/name: agent-worker, agent-platform/specs: mounted }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app.kubernetes.io/name: agent-worker }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: agent-worker, app.kubernetes.io/part-of: agent-platform }
+    spec:
+      serviceAccountName: agent-worker
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      # activities heartbeat; give a running one time to finish before Temporal retries it
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector: { matchLabels: { app.kubernetes.io/name: agent-worker } }
+      containers:
+        - name: agent-worker
+          image: agent-platform/agent-worker
+          command: ["agent-worker"]
+          envFrom:
+            - configMapRef: { name: agent-platform-env }
+          env:
+            - { name: AGENT_API_AGENTS_DIR, value: /app/agents }
+            - { name: AGENT_REGISTRY_FILE, value: /tmp/agents.db }
+            - { name: AGENT_WORKER_AUDIT_FILE, value: /tmp/agent-worker-audit.jsonl }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 384Mi }
+            limits: { memory: 512Mi }
+          readinessProbe:
+            exec:
+              command: ["python", "-c", "import os,socket;h,p=os.environ['TEMPORAL_ADDRESS'].rsplit(':',1);socket.create_connection((h,int(p)),2)"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["python", "-c", "import os,socket;h,p=os.environ['TEMPORAL_ADDRESS'].rsplit(':',1);socket.create_connection((h,int(p)),2)"]
+            periodSeconds: 20
+            failureThreshold: 6
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: openbao-token, mountPath: /var/run/secrets/openbao, readOnly: true }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        - name: openbao-token
+          projected:
+            sources:
+              - serviceAccountToken: { audience: openbao, expirationSeconds: 600, path: token }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: agent-worker
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: agent-worker }

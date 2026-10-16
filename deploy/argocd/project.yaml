@@ -1,0 +1,24 @@
+# What Project A's applications may deploy and where. Only this repository and Temporal's chart
+# (pinned commit) are sources; only the platform's and Temporal's namespaces are destinations;
+# the only cluster-scoped object allowed is a Namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: agent-platform
+spec:
+  description: Project A, the agentic AI core platform
+  sourceRepos:
+    - https://github.com/deivamanikailasam/AgenticAICorePlatform.git
+    - https://github.com/temporalio/helm-charts.git
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: agent-platform-dev }
+    - { server: https://kubernetes.default.svc, namespace: agent-platform-staging }
+    - { server: https://kubernetes.default.svc, namespace: agent-platform-prod }
+    - { server: https://kubernetes.default.svc, namespace: temporal-staging }
+    - { server: https://kubernetes.default.svc, namespace: temporal-prod }
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }
+  namespaceResourceBlacklist:
+    - { group: "", kind: ResourceQuota }
+    - { group: "", kind: LimitRange }
+  orphanedResources: { warn: true }

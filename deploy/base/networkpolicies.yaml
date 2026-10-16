@@ -1,0 +1,105 @@
+# Deny by default (Step 38). Each service may receive only from the callers listed and send only
+# to DNS, Project 0's namespace on its service ports, Temporal, and each other where needed.
+# External egress (allowlisted MCP servers, A2A agents) is not opened here: it goes through the
+# cluster's egress proxy with a per-host allowlist (docs/setup/production.md).
+# The Project 0 namespace is assumed to be `rag-platform` (VERIFY-ON-MAC).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: egress-dns-and-project-0 }
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/part-of: agent-platform } }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+          podSelector: { matchLabels: { k8s-app: kube-dns } }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: rag-platform } }
+      ports:
+        - { protocol: TCP, port: 4000 } # LiteLLM
+        - { protocol: TCP, port: 5432 } # Postgres (agent database, audit)
+        - { protocol: TCP, port: 6379 } # Valkey
+        - { protocol: TCP, port: 8080 } # Keycloak
+        - { protocol: TCP, port: 8181 } # OPA
+        - { protocol: TCP, port: 8200 } # OpenBao
+        - { protocol: TCP, port: 4318 } # OTel collector (OTLP/HTTP)
+        - { protocol: TCP, port: 3000 } # Presidio, Langfuse
+        - { protocol: TCP, port: 8000 } # rag-core
+        - { protocol: TCP, port: 6333 } # Qdrant
+        - { protocol: TCP, port: 8333 } # S3 (SeaweedFS)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: agent-api }
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: agent-api } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: a2a-gateway } }
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agent-api } } # run owner forwarding
+        - namespaceSelector: { matchLabels: { agent-platform/ingress: "true" } }
+      ports:
+        - { protocol: TCP, port: 8091 }
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: mcp-gateway } }
+      ports:
+        - { protocol: TCP, port: 8090 }
+    - to:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agent-api } }
+      ports:
+        - { protocol: TCP, port: 8091 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: mcp-gateway }
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: mcp-gateway } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agent-api } }
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agent-worker } }
+        - namespaceSelector: { matchLabels: { agent-platform/ingress: "true" } }
+      ports:
+        - { protocol: TCP, port: 8090 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: a2a-gateway }
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: a2a-gateway } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { agent-platform/ingress: "true" } }
+      ports:
+        - { protocol: TCP, port: 8092 }
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agent-api } }
+      ports:
+        - { protocol: TCP, port: 8091 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: agent-worker }
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: agent-worker } }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: mcp-gateway } }
+      ports:
+        - { protocol: TCP, port: 8090 }

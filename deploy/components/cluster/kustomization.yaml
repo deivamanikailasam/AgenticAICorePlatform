@@ -1,0 +1,27 @@
+# What staging and prod add to the base (Step 38): the Temporal cluster in its own namespace
+# instead of the dev server, workers that scale on the task queue's backlog (KEDA), and every
+# replica of a service on a different node where the cluster has the nodes.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - worker-scaling.yaml
+  - temporal-egress.yaml
+patches:
+  - target: { kind: Deployment, name: "agent-api|mcp-gateway|a2a-gateway" }
+    patch: |-
+      - op: add
+        path: /spec/template/spec/affinity
+        value:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                podAffinityTerm:
+                  topologyKey: kubernetes.io/hostname
+                  labelSelector:
+                    matchExpressions:
+                      - { key: app.kubernetes.io/part-of, operator: In, values: [agent-platform] }
+  # KEDA owns the worker's replica count
+  - target: { kind: Deployment, name: agent-worker }
+    patch: |-
+      - op: remove
+        path: /spec/replicas

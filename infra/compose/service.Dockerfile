@@ -10,6 +10,8 @@ COPY pyproject.toml uv.lock platform.yaml ./
 COPY policies/openfga/relations.yaml ./policies/openfga/relations.yaml
 COPY libs ./libs
 COPY services ./services
+# the schema migrations, run by the deployment's pre-sync Job (Step 38)
+COPY scripts/__init__.py scripts/migrate.py ./scripts/
 RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -s /run/secrets/extra_ca ]; then export SSL_CERT_FILE=/run/secrets/extra_ca; fi; \
     uv sync --frozen --no-dev --package "${PACKAGE}"

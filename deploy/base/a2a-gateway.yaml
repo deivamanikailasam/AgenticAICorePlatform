@@ -1,0 +1,96 @@
+# The A2A gateway (Step 24): signed Agent Cards; tasks run through agent-api as the caller.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: a2a-gateway
+  labels: { app.kubernetes.io/name: a2a-gateway, agent-platform/specs: mounted }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app.kubernetes.io/name: a2a-gateway }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: a2a-gateway, app.kubernetes.io/part-of: agent-platform }
+    spec:
+      serviceAccountName: a2a-gateway
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector: { matchLabels: { app.kubernetes.io/name: a2a-gateway } }
+      containers:
+        - name: a2a-gateway
+          image: agent-platform/a2a-gateway
+          command: ["a2a-gateway"]
+          ports:
+            - { name: http, containerPort: 8092 }
+          envFrom:
+            - configMapRef: { name: agent-platform-env }
+          env:
+            - { name: A2A_GATEWAY_HOST, value: "0.0.0.0" }
+            - { name: A2A_GATEWAY_PORT, value: "8092" }
+            - { name: A2A_GATEWAY_AGENTS_DIR, value: /app/agents }
+            - { name: A2A_GATEWAY_AUDIT_FILE, value: /tmp/a2a-gateway-audit.jsonl }
+            - { name: AGENT_API_URL, value: http://agent-api:8091 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 384Mi }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            failureThreshold: 6
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 3
+            failureThreshold: 40
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: openbao-token, mountPath: /var/run/secrets/openbao, readOnly: true }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        - name: openbao-token
+          projected:
+            sources:
+              - serviceAccountToken: { audience: openbao, expirationSeconds: 600, path: token }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: a2a-gateway
+  labels: { app.kubernetes.io/name: a2a-gateway }
+spec:
+  selector: { app.kubernetes.io/name: a2a-gateway }
+  # MCP sessions and A2A tasks live in the replica that opened them: keep a client on one replica
+  sessionAffinity: ClientIP
+  ports:
+    - { name: http, port: 8092, targetPort: http }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: a2a-gateway
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: a2a-gateway }

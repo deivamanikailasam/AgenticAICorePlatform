@@ -1,0 +1,11 @@
+# Argo CD's view of Project A (Step 38): one project, an application per environment for the
+# platform, and the Temporal cluster for staging and prod. Argo CD itself is installed from
+# deploy/argocd/install (pinned release and image digests).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - project.yaml
+  - platform-apps.yaml
+  - temporal-staging.yaml
+  - temporal-prod.yaml

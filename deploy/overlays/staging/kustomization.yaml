@@ -1,0 +1,36 @@
+# staging: changed only by a reviewed pull request (`just promote`); Argo CD syncs it. 2 replicas of
+# each stateless service, workers scaled by KEDA between 1 and 4, Temporal cluster in
+# namespace temporal-staging. Images by digest only.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: agent-platform-staging
+resources:
+  - namespace.yaml
+  - ../../base
+components:
+  - ../../components/cluster
+configMapGenerator:
+  - name: agent-platform-env
+    envs: [env.properties]
+replicas:
+  - { name: agent-api, count: 2 }
+  - { name: mcp-gateway, count: 2 }
+  - { name: a2a-gateway, count: 2 }
+patches:
+  - target: { kind: ScaledObject, name: agent-worker }
+    patch: |-
+      - { op: replace, path: /spec/minReplicaCount, value: 1 }
+      - { op: replace, path: /spec/maxReplicaCount, value: 4 }
+      - { op: replace, path: /spec/triggers/0/metadata/endpoint, value: "temporal-frontend.temporal-staging.svc:7233" }
+  - target: { kind: NetworkPolicy, name: egress-temporal-cluster }
+    patch: |-
+      - op: replace
+        path: /spec/egress/0/to/0/namespaceSelector/matchLabels/kubernetes.io~1metadata.name
+        value: temporal-staging
+# images from commit f1ee58d45b000f66361d02f8bccc1dc83bd75316 (images workflow; signed, scanned)
+images:
+  - { name: agent-platform/agent-api, newName: ghcr.io/deivamanikailasam/agent-platform/agent-api, digest: "sha256:824be6c71e5fab4abca302aa93068abb92963d2bea01ac5b6ec5af1ff5386bdf" }
+  - { name: agent-platform/agent-worker, newName: ghcr.io/deivamanikailasam/agent-platform/agent-worker, digest: "sha256:047534bd0868b7b53de92aa9eb6e5a91956aca80f27df69f44f2ade2d93b8544" }
+  - { name: agent-platform/mcp-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/mcp-gateway, digest: "sha256:9275d3596bb083b6c8618d01b85fff3758b73f6b60436c76c0ed0d963d0f7581" }
+  - { name: agent-platform/a2a-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/a2a-gateway, digest: "sha256:269067560c2b62609dee1d8baf4da77512b723fb772b21a8a542e0fe61dfd29e" }
+  - { name: agent-platform/ops, newName: ghcr.io/deivamanikailasam/agent-platform/ops, digest: "sha256:d757362095ad316726632767a3568ff38a7af7849ffdb5693fe718a94770f5cd" }

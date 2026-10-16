@@ -19,7 +19,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check
+check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check deploy-config-check
 
 lint:
     uv run ruff check .
@@ -69,6 +69,24 @@ threat-model:
 
 threat-check:
     uv run python -m scripts.threat_model check
+
+# Step 38: deployment. deploy-config regenerates the specs ConfigMap from agents/; deploy-check
+# renders every overlay, validates it (Kubernetes 1.37 schemas) and applies deploy_policy (needs
+# kustomize and kubeconform, see ci.yml); deploy-images pins an overlay to a commit's images.
+deploy-config:
+    uv run python -m scripts.deploy_config write
+
+deploy-config-check:
+    uv run python -m scripts.deploy_config check
+
+deploy-check:
+    uv run python -m scripts.deploy check
+
+deploy-images env commit:
+    uv run python -m scripts.deploy images {{env}} {{commit}}
+
+deploy-render env:
+    uv run python -m scripts.deploy render {{env}}
 
 # Step 35: red-team suite (OWASP ASI01-ASI10). Scenario attacks need OPA with the policies loaded
 # (`just provision-policies`). Fails on any high/critical finding. e.g. just redteam --tier sandbox

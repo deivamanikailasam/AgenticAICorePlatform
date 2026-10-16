@@ -1,0 +1,59 @@
+# dev follows main as it merges.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agent-platform-dev
+  labels: { agent-platform/env: dev }
+spec:
+  project: agent-platform
+  source:
+    repoURL: https://github.com/deivamanikailasam/AgenticAICorePlatform.git
+    targetRevision: main
+    path: deploy/overlays/dev
+  destination: { server: https://kubernetes.default.svc, namespace: agent-platform-dev }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=false, PruneLast=true]
+    retry:
+      limit: 5
+      backoff: { duration: 10s, factor: 2, maxDuration: 3m }
+---
+# staging and prod also follow main, but their overlays change only through reviewed promotion
+# pull requests (CODEOWNERS on deploy/overlays/{staging,prod}).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agent-platform-staging
+  labels: { agent-platform/env: staging }
+spec:
+  project: agent-platform
+  source:
+    repoURL: https://github.com/deivamanikailasam/AgenticAICorePlatform.git
+    targetRevision: main
+    path: deploy/overlays/staging
+  destination: { server: https://kubernetes.default.svc, namespace: agent-platform-staging }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=false, PruneLast=true]
+    retry:
+      limit: 5
+      backoff: { duration: 10s, factor: 2, maxDuration: 3m }
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agent-platform-prod
+  labels: { agent-platform/env: prod }
+spec:
+  project: agent-platform
+  source:
+    repoURL: https://github.com/deivamanikailasam/AgenticAICorePlatform.git
+    targetRevision: main
+    path: deploy/overlays/prod
+  destination: { server: https://kubernetes.default.svc, namespace: agent-platform-prod }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=false, PruneLast=true]
+    retry:
+      limit: 5
+      backoff: { duration: 10s, factor: 2, maxDuration: 3m }

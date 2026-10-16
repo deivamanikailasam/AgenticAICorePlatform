@@ -1,0 +1,7 @@
+# Temporal's namespace for staging and its database password from OpenBao (External Secrets).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: temporal-staging
+resources:
+  - namespace.yaml
+  - external-secret.yaml

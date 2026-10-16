@@ -1,0 +1,6 @@
+# A single Temporal development server for the dev environment (as in compose, Step 19): state in
+# a SQLite file on a small volume. Staging and prod use the Temporal cluster (deploy/argocd).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - temporal.yaml

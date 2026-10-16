@@ -53,6 +53,12 @@ def migrate(dsn: str) -> list[str]:
 
 
 def main() -> int:
+    try:  # in a service image: the DSN may be an OpenBao reference (Step 38)
+        from agent_tools.secrets import resolve_env_references
+
+        resolve_env_references(("AGENT_DB_DSN",))
+    except ImportError:
+        pass
     dsn = os.environ.get("AGENT_DB_DSN")
     if not dsn:
         print("set AGENT_DB_DSN (just with-secrets just migrate)")

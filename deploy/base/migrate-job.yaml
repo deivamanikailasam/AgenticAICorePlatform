@@ -1,0 +1,53 @@
+# Schema migrations before every sync (Argo CD PreSync hook, Step 38). Uses its own database
+# credential with DDL rights (`db-migrate`); the services' runtime credential has none. Applied
+# files are recorded with their SHA-256, so a re-run is a no-op and a changed migration fails.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: agent-db-migrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: agent-db-migrate, app.kubernetes.io/part-of: agent-platform }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: agent-db-migrate
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: migrate
+          image: agent-platform/agent-api
+          command: ["python", "-m", "scripts.migrate"]
+          workingDir: /app
+          envFrom:
+            - configMapRef: { name: agent-platform-env }
+          env:
+            - { name: AGENT_DB_DSN, value: "${secret:agent-platform/db-migrate#dsn}" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: openbao-token, mountPath: /var/run/secrets/openbao, readOnly: true }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 16Mi }
+        - name: openbao-token
+          projected:
+            sources:
+              - serviceAccountToken: { audience: openbao, expirationSeconds: 600, path: token }

@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  labels: { app.kubernetes.io/name: temporal }
+spec:
+  replicas: 1
+  strategy: { type: Recreate } # one writer for the SQLite file
+  selector:
+    matchLabels: { app.kubernetes.io/name: temporal }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: temporal, app.kubernetes.io/part-of: agent-platform }
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: temporal
+          image: docker.io/temporalio/temporal:1.9.1@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+          args: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/home/temporal/data/temporal.db", "--ui-port", "8233"]
+          ports:
+            - { name: grpc, containerPort: 7233 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+          readinessProbe:
+            exec: { command: ["temporal", "operator", "cluster", "health", "--address", "127.0.0.1:7233"] }
+            periodSeconds: 5
+          volumeMounts:
+            - { name: data, mountPath: /home/temporal/data }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: temporal-data }
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: temporal-data }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  labels: { app.kubernetes.io/name: temporal }
+spec:
+  selector: { app.kubernetes.io/name: temporal }
+  ports:
+    - { name: grpc, port: 7233, targetPort: grpc }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: temporal-dev }
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: temporal } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agent-api } }
+        - podSelector: { matchLabels: { app.kubernetes.io/name: agent-worker } }
+      ports:
+        - { protocol: TCP, port: 7233 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: egress-temporal-dev }
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/part-of: agent-platform } }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: temporal } }
+      ports:
+        - { protocol: TCP, port: 7233 }

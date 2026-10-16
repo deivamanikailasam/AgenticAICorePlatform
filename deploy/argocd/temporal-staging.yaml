@@ -1,0 +1,62 @@
+# The Temporal cluster for staging (Step 38): Temporal's Helm chart 1.7.0 at a pinned commit, images
+# by digest, 2 replicas of each service, Postgres persistence. The database password is the
+# Secret `temporal-db`, synced from OpenBao (staging mount) by External Secrets Operator; it is
+# never in Git. Prerequisites (VERIFY-ON-MAC): External Secrets Operator, the `temporal` and
+# `temporal_visibility` databases and their role in Project 0's Postgres.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: temporal-staging
+  labels: { agent-platform/env: staging }
+spec:
+  project: agent-platform
+  sources:
+    - repoURL: https://github.com/temporalio/helm-charts.git
+      targetRevision: ab89869a913207bd191e60a90193512bd9adcb80 # temporal-1.7.0
+      path: charts/temporal
+      helm:
+        releaseName: temporal
+        valuesObject:
+          server:
+            replicaCount: 2
+            image: { repository: temporalio/server, tag: "1.32.0@sha256:c3e752127759616bb1615e0f9ba0e21635aeb5fdeb922de4f371c350955f46ae" }
+            securityContext: { runAsNonRoot: true, runAsUser: 1000, fsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+            frontend:
+              containerSecurityContext: &hardened { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+            history: { containerSecurityContext: *hardened }
+            matching: { containerSecurityContext: *hardened }
+            worker: { containerSecurityContext: *hardened }
+            config:
+              persistence:
+                numHistoryShards: 512
+                datastores:
+                  default:
+                    sql: &sql
+                      pluginName: postgres12
+                      driverName: postgres12
+                      databaseName: temporal
+                      connectAddr: postgres.rag-platform.svc:5432
+                      user: temporal_staging
+                      existingSecret: temporal-db
+                      secretKey: password
+                      maxConns: 20
+                  visibility:
+                    sql:
+                      <<: *sql
+                      databaseName: temporal_visibility
+          admintools:
+            image: { repository: temporalio/admin-tools, tag: "1.32.0@sha256:a9f84fb9a374b2374fe2e67c8efc0468ff3f1c66c8a0b14597ec86e349e62bca" }
+            securityContext: { runAsNonRoot: true, runAsUser: 1000, seccompProfile: { type: RuntimeDefault } }
+            containerSecurityContext: *hardened
+          web:
+            enabled: false
+          schema:
+            securityContext: { runAsNonRoot: true, runAsUser: 1000, seccompProfile: { type: RuntimeDefault } }
+            containerSecurityContext: *hardened
+    - repoURL: https://github.com/deivamanikailasam/AgenticAICorePlatform.git
+      targetRevision: main
+      path: deploy/temporal/staging
+  destination: { server: https://kubernetes.default.svc, namespace: temporal-staging }
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=false]
