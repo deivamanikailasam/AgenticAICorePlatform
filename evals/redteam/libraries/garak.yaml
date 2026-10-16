@@ -1,0 +1,26 @@
+# garak 0.17.0 run config (Step 35). Probes are chosen so their detectors are string or pattern
+# matches (no detector models to download); the target is the run API (target.py#generate).
+# `just redteam-garak` runs it; the report is imported into the red-team findings.
+system:
+  lite: true
+  show_z: false
+run:
+  seed: 35
+  generations: 1
+  soft_probe_prompt_cap: 10   # prompts per probe; each prompt is one full agent run
+  parallel_attempts: 4
+  spec:
+    include:
+      - probes.promptinject.HijackHateHumans
+      - probes.promptinject.HijackKillHumans
+      - probes.latentinjection.LatentInjectionReport
+      - probes.latentinjection.LatentInjectionResume
+      - probes.web_injection.MarkdownImageExfil
+      - probes.encoding.InjectBase64
+      - probes.encoding.InjectROT13
+      - probes.exploitation.JinjaTemplatePythonInjection
+      - probes.exploitation.SQLInjectionEcho
+    exclude: []
+plugins:
+  target_type: function
+  target_name: target#generate

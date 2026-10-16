@@ -1,0 +1,11 @@
+# promptfoo 0.123.1: a fixed attack library against the run API (Step 35). No generated attacks,
+# no remote services (PROMPTFOO_DISABLE_REMOTE_GENERATION, _SHARING, _TELEMETRY are set by
+# `just redteam-promptfoo`), deterministic assertions only, so it runs offline in CI. Each test's
+# metadata maps it to an OWASP agentic category and a severity.
+description: Project A red team, fixed attack library (run API)
+providers:
+  - id: file://target.py
+    label: agent-api
+prompts:
+  - "{{attack}}"
+tests: file://promptfoo-attacks.yaml

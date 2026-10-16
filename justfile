@@ -68,6 +68,22 @@ redteam *args:
 redteam-check:
     uv run python -m scripts.redteam check
 
+# Attack libraries against a running agent-api (AGENT_REDTEAM_* in evals/redteam/libraries/target.py)
+redteam-promptfoo:
+    uv run python -m scripts.redteam_libraries promptfoo
+
+# VERIFY-ON-MAC: promptfoo attacks generated and graded by the local model for all ten ASI categories
+redteam-promptfoo-generate:
+    uv run python -m scripts.redteam_libraries promptfoo --generate --report evals/results/redteam/promptfoo-generated.json
+
+# garak lives in its own environment (it brings torch); CPU wheels only
+redteam-garak-install:
+    uv venv -q --allow-existing --python 3.12 .tmp/garak
+    uv pip install -q --python .tmp/garak/bin/python --torch-backend cpu garak==0.17.0
+
+redteam-garak:
+    uv run python -m scripts.redteam_libraries garak
+
 # Release gate: red-team reports must cover every category with no open high/critical finding
 release-gate *reports:
     uv run python -m scripts.redteam gate {{reports}}
