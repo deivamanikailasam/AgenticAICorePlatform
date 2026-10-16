@@ -317,6 +317,12 @@ class McpClientPool:
         ) as span:
             own: _Connection | None = None
             try:
+                # defence in depth: only allowlisted tools are registered, and a direct call for
+                # any other tool is refused here too, before the server is contacted (Step 33)
+                if cfg.allowed_tools and tool not in cfg.allowed_tools:
+                    raise McpServerRefusedError(
+                        f"MCP tool '{tool}' is not on server '{server_name}''s allowlist"
+                    )
                 if cfg.auth.kind == "on_behalf_of":
                     own = await self._on_behalf_of(cfg)
                     client = await own.get()

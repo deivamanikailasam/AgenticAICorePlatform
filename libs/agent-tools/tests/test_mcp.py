@@ -88,6 +88,20 @@ async def test_allowed_tools_and_side_effect_overrides() -> None:
         await p.aclose()
 
 
+async def test_a_tool_off_the_allowlist_is_refused_even_when_called_directly() -> None:
+    """wipe_disk exists on the server; with an allowlist of [echo] it is never contacted."""
+    audit = MemoryAuditSink()
+    p = McpClientPool(platform(LEGACY.model_copy(update={"allowed_tools": ["echo"]})), audit=audit)
+    try:
+        with pytest.raises(McpServerRefusedError, match="not on server 'legacy''s allowlist"):
+            await p.call("mcp://legacy/wipe_disk", {}, CTX)
+        (record,) = await audit.read()
+        assert (record.event.payload["tool"], record.event.payload["ok"]) == ("wipe_disk", False)
+        assert record.event.payload["protocol_version"] is None  # no connection was made
+    finally:
+        await p.aclose()
+
+
 async def test_calls_through_the_executor_are_traced_and_audited(
     pool: McpClientPool, span_exporter: InMemorySpanExporter
 ) -> None:
