@@ -1,0 +1,216 @@
+# Red-team register (Step 35): the OWASP Top 10 for Agentic Applications (ASI01-ASI10, December
+# 2025) with the platform's controls (spec: threat model), and the existing tests that prove a
+# control. Scenario attacks live in attacks/*.yaml. `just redteam --check` verifies that every
+# category has automated tests and that every node below still exists.
+#
+# severity: what it would mean if the test failed. critical/high findings block a release.
+# tier: unit (no services), integration (stand-in stack), sandbox (gVisor).
+categories:
+  ASI01:
+    name: Agent goal hijack
+    controls: [untrusted-content delimiting, injection detection on retrieved and tool content, tool allowlists per agent, approvals on sensitive actions]
+    steps: [21, 27, 28]
+  ASI02:
+    name: Tool misuse and exploitation
+    controls: [typed tool schemas, argument value checks, side-effect classes, OPA per call, rate limits]
+    steps: [6, 10, 27]
+  ASI03:
+    name: Identity and privilege abuse
+    controls: [per-agent identity, on-behalf-of down-scoped tokens, short-lived credentials from OpenBao, access reviews]
+    steps: [10, 29]
+  ASI04:
+    name: Agentic supply chain
+    controls: [allowlisted MCP servers and A2A agents, signed Agent Cards, pinned and scanned images and packages, tool and agent inventory]
+    steps: [7, 24, 25, 32]
+  ASI05:
+    name: Unexpected code execution
+    controls: [gVisor sandbox, no network by default, resource caps, no host mounts]
+    steps: [9]
+  ASI06:
+    name: Memory and context poisoning
+    controls: [memory write policy, provenance tags, validation, TTLs, inspect-and-flush tooling]
+    steps: [20, 21]
+  ASI07:
+    name: Insecure inter-agent communication
+    controls: [mutual authentication, signed cards, OPA on delegation, messages treated as data]
+    steps: [22, 23, 24]
+  ASI08:
+    name: Cascading failures
+    controls: [budgets that roll up, delegation limits, circuit breakers, environment separation]
+    steps: [26, 38]
+  ASI09:
+    name: Human-agent trust exploitation
+    controls: [approval screens show the raw action and arguments, approval bound to the exact call, what was shown is audited]
+    steps: [28, 31]
+  ASI10:
+    name: Rogue agents
+    controls: [behavioural metrics and alerts, registry lifecycle with owner and expiry, kill switch per agent and per tenant]
+    steps: [25, 30, 38]
+
+tests:
+  # ---------------------------------------------------------------- ASI01
+  - {id: asi01-injected-document-never-reaches-model, asi: ASI01, severity: critical, tier: unit,
+     title: "An injected retrieved document is quarantined before the model sees it",
+     node: "services/agent-api/tests/test_guardrails_in_runs.py::test_an_injected_document_never_reaches_the_model"}
+  - {id: asi01-direct-injection-stops-run, asi: ASI01, severity: high, tier: unit,
+     title: "A direct injection in the user's message stops the run",
+     node: "services/agent-api/tests/test_guardrails_in_runs.py::test_a_direct_injection_in_the_users_message_stops_the_run"}
+  - {id: asi01-hidden-characters-and-markdown-exfiltration, asi: ASI01, severity: high, tier: unit,
+     title: "Invisible characters and markdown-image exfiltration are caught",
+     node: "libs/agent-guardrails/tests/test_guardrails.py::test_invisible_characters_and_markdown_exfiltration"}
+  - {id: asi01-untrusted-summary-stays-untrusted, asi: ASI01, severity: high, tier: unit,
+     title: "A summary of untrusted content stays untrusted and delimited",
+     node: "libs/agent-runtime/tests/test_context.py::test_a_summary_of_untrusted_content_stays_untrusted_and_delimited"}
+  - {id: asi01-tool-outside-allowlist-refused, asi: ASI01, severity: critical, tier: unit,
+     title: "A tool outside the agent's grants is refused before policy",
+     node: "libs/agent-tools/tests/test_authorising.py::test_unknown_tool_is_refused_before_policy"}
+  # ---------------------------------------------------------------- ASI02
+  - {id: asi02-argument-limits-before-execution, asi: ASI02, severity: high, tier: unit,
+     title: "Over-limit tool arguments are refused before the call runs",
+     node: "services/agent-api/tests/test_guardrails_in_runs.py::test_tool_argument_limits_refuse_the_call_before_it_runs"}
+  - {id: asi02-irreversible-without-approval-step-refused, asi: ASI02, severity: critical, tier: unit,
+     title: "An irreversible tool with no approval step is refused",
+     node: "services/agent-api/tests/test_hitl.py::test_an_irreversible_tool_without_an_approval_step_is_refused"}
+  - {id: asi02-rate-limit-per-tool-and-agent, asi: ASI02, severity: medium, tier: unit,
+     title: "Tool calls are rate limited per tool and agent",
+     node: "libs/agent-tools/tests/test_authorising.py::test_rate_limit_per_tool_and_agent"}
+  - {id: asi02-opa-unreachable-denies, asi: ASI02, severity: critical, tier: unit,
+     title: "An unreachable policy engine denies (fails closed)",
+     node: "libs/agent-tools/tests/test_policy.py::test_unreachable_opa_denies"}
+  - {id: asi02-gateway-calls-policy-checked-live, asi: ASI02, severity: critical, tier: integration,
+     title: "Every platform MCP gateway call is policy-checked and audited (live OPA)",
+     node: "services/mcp-gateway/tests/test_gateway_integration.py::test_every_call_is_policy_checked_and_audited"}
+  # ---------------------------------------------------------------- ASI03
+  - {id: asi03-cross-tenant-denied-and-audited, asi: ASI03, severity: critical, tier: unit,
+     title: "Another tenant's data is denied, audited, and the tool never runs",
+     node: "libs/agent-tools/tests/test_authorising.py::test_other_tenants_data_is_denied_audited_and_never_runs"}
+  - {id: asi03-self-approval-does-not-count, asi: ASI03, severity: critical, tier: unit,
+     title: "A requester approving their own call does not count",
+     node: "libs/agent-tools/tests/test_authorising.py::test_requester_approving_their_own_call_does_not_count"}
+  - {id: asi03-exchanged-token-never-the-users, asi: ASI03, severity: high, tier: unit,
+     title: "Downstream services get an exchanged token, never the user's",
+     node: "libs/agent-tools/tests/test_ragcore.py::test_calls_rag_core_with_an_exchanged_token_never_the_users"}
+  - {id: asi03-per-call-credentials-revoked, asi: ASI03, severity: high, tier: unit,
+     title: "A tool gets a fresh credential per call and it is revoked after",
+     node: "libs/agent-tools/tests/test_call_credentials.py::test_tool_gets_a_fresh_credential_per_call_and_it_is_revoked_after"}
+  - {id: asi03-two-down-scoping-hops-live, asi: ASI03, severity: critical, tier: integration,
+     title: "Delegated tokens are down-scoped in two hops; out-of-spec audiences refused (live Keycloak)",
+     node: "services/agent-api/tests/test_agent_identity_live.py::test_user_requests_are_delegated_in_two_down_scoping_hops"}
+  - {id: asi03-cross-tenant-gateway-live, asi: ASI03, severity: critical, tier: integration,
+     title: "Another tenant's data is denied through the live gateway",
+     node: "services/mcp-gateway/tests/test_gateway_integration.py::test_another_tenants_data_is_denied_and_audited"}
+  # ---------------------------------------------------------------- ASI04
+  - {id: asi04-unlisted-mcp-server-refused, asi: ASI04, severity: critical, tier: unit,
+     title: "An MCP server that is not on the allowlist is refused",
+     node: "libs/agent-tools/tests/test_mcp.py::test_unlisted_server_is_refused"}
+  - {id: asi04-unlisted-mcp-tool-refused, asi: ASI04, severity: critical, tier: unit,
+     title: "An MCP tool off the allowlist is refused even when called directly",
+     node: "libs/agent-tools/tests/test_mcp.py::test_a_tool_off_the_allowlist_is_refused_even_when_called_directly"}
+  - {id: asi04-unsigned-agent-card-refused, asi: ASI04, severity: critical, tier: unit,
+     title: "An unsigned A2A Agent Card is refused before any message",
+     node: "libs/agent-tools/tests/test_a2a_tool.py::test_an_unsigned_card_is_refused_before_any_message"}
+  - {id: asi04-rogue-key-agent-card-refused, asi: ASI04, severity: critical, tier: unit,
+     title: "An Agent Card signed by an unpinned key is refused",
+     node: "libs/agent-tools/tests/test_a2a_tool.py::test_a_card_signed_by_an_unpinned_key_is_refused"}
+  - {id: asi04-poisoned-mcp-tool-description, asi: ASI04, severity: high, tier: unit,
+     title: "An MCP tool with an injected description is never offered to the model",
+     node: "services/agent-api/tests/test_guardrails_in_runs.py::test_an_mcp_tool_with_an_injected_description_is_never_offered"}
+  - {id: asi04-images-pinned-by-digest, asi: ASI04, severity: high, tier: unit,
+     title: "Compose files with unpinned images (or other violations) are rejected",
+     node: "tests/scripts/test_guards.py::test_compose_violations_are_all_reported"}
+  - {id: asi04-inventory-current, asi: ASI04, severity: medium, tier: unit,
+     title: "The agent and tool inventory (cards) is current with the specs",
+     node: "libs/agent-governance/tests/test_governance.py::test_a_stale_or_orphaned_card_fails_the_check"}
+  # ---------------------------------------------------------------- ASI05
+  - {id: asi05-calculator-refuses-code, asi: ASI05, severity: high, tier: unit,
+     title: "The calculator tool refuses code instead of evaluating it",
+     node: "libs/agent-tools/tests/test_tools.py::test_calculator_refuses_code"}
+  - {id: asi05-microvm-config-no-network-read-only, asi: ASI05, severity: high, tier: unit,
+     title: "The Firecracker sandbox is configured with no network and a read-only root",
+     node: "services/sandbox-runner/tests/test_firecracker.py::test_vm_has_no_network_and_a_read_only_root"}
+  - {id: asi05-sandbox-runner-needs-token, asi: ASI05, severity: high, tier: unit,
+     title: "The sandbox runner refuses calls without a valid token",
+     node: "services/sandbox-runner/tests/test_app.py::test_requires_a_valid_token"}
+  - {id: asi05-gvisor-no-network, asi: ASI05, severity: critical, tier: sandbox,
+     title: "Sandboxed code has no network (gVisor)",
+     node: "services/sandbox-runner/tests/test_engines.py::TestGvisor::test_no_network"}
+  - {id: asi05-gvisor-fork-bomb, asi: ASI05, severity: high, tier: sandbox,
+     title: "A fork bomb is contained (gVisor)",
+     node: "services/sandbox-runner/tests/test_engines.py::test_fork_bomb_is_contained[gvisor]"}
+  - {id: asi05-gvisor-memory-cap, asi: ASI05, severity: high, tier: sandbox,
+     title: "A memory hog is stopped (gVisor)",
+     node: "services/sandbox-runner/tests/test_engines.py::test_memory_hog_is_stopped[gvisor]"}
+  - {id: asi05-gvisor-no-host-files, asi: ASI05, severity: critical, tier: sandbox,
+     title: "The host filesystem is not visible to sandboxed code (gVisor)",
+     node: "services/sandbox-runner/tests/test_engines.py::test_host_filesystem_is_not_visible[gvisor]"}
+  # ---------------------------------------------------------------- ASI06
+  - {id: asi06-poisoned-document-no-persistent-instruction, asi: ASI06, severity: critical, tier: unit,
+     title: "A poisoned document cannot write a persistent instruction to memory",
+     node: "libs/agent-memory/tests/test_memory_in_runs.py::test_a_poisoned_document_cannot_write_a_persistent_instruction"}
+  - {id: asi06-provenance-stamped-and-audited, asi: ASI06, severity: high, tier: unit,
+     title: "Memory provenance is stamped by the platform and every decision audited",
+     node: "libs/agent-memory/tests/test_memory_in_runs.py::test_provenance_is_stamped_by_the_platform_and_every_decision_audited"}
+  - {id: asi06-ttl-capped, asi: ASI06, severity: medium, tier: unit,
+     title: "Memory lifetimes default per kind and never exceed the maximum",
+     node: "libs/agent-memory/tests/test_policy.py::test_lifetimes_default_per_kind_and_never_exceed_the_maximum"}
+  - {id: asi06-inspect-and-flush, asi: ASI06, severity: medium, tier: unit,
+     title: "Users inspect and delete their memories; officers flush a run",
+     node: "services/agent-api/tests/test_erasure.py::test_users_inspect_and_delete_their_memories_and_officers_flush_a_run"}
+  - {id: asi06-no-cross-user-leaks, asi: ASI06, severity: high, tier: unit,
+     title: "Memory never leaks between users",
+     node: "libs/agent-memory/tests/test_repeat_eval.py::test_memory_improves_repeat_tasks_without_cross_user_leaks"}
+  # ---------------------------------------------------------------- ASI07
+  - {id: asi07-a2a-inbound-needs-token-and-policy, asi: ASI07, severity: critical, tier: unit,
+     title: "Inbound A2A calls need a token, policy and a published agent",
+     node: "services/a2a-gateway/tests/test_a2a.py::test_calls_need_a_token_and_policy_and_a_published_agent"}
+  - {id: asi07-delegation-through-policy, asi: ASI07, severity: high, tier: unit,
+     title: "Delegation goes through policy and unknown workers are refused",
+     node: "libs/agent-compiler/tests/test_supervisor.py::test_delegation_goes_through_policy_and_unknown_workers_are_refused"}
+  - {id: asi07-worker-output-is-data, asi: ASI07, severity: high, tier: unit,
+     title: "Worker output is data: extra fields dropped, shown delimited",
+     node: "libs/agent-compiler/tests/test_supervisor.py::test_worker_output_is_data_extra_fields_are_dropped_and_shown_delimited"}
+  - {id: asi07-push-only-to-allowlisted-hosts, asi: ASI07, severity: medium, tier: unit,
+     title: "A2A push notifications go only to allowlisted HTTPS hosts",
+     node: "services/a2a-gateway/tests/test_a2a.py::test_push_notifications_only_to_allowlisted_https_hosts"}
+  # ---------------------------------------------------------------- ASI08
+  - {id: asi08-child-spend-rolls-up, asi: ASI08, severity: high, tier: unit,
+     title: "A child's spend rolls up to its parent's budget",
+     node: "libs/agent-runtime/tests/test_budget.py::TestPlatformBudgetController::test_child_spend_rolls_up_to_parent"}
+  - {id: asi08-depth-and-parent-trip, asi: ASI08, severity: high, tier: unit,
+     title: "Delegation depth is capped and a parent's trip stops its children",
+     node: "libs/agent-runtime/tests/test_budget.py::test_delegation_depth_and_parent_trip_stop_children"}
+  - {id: asi08-failing-worker-circuit-and-team-budget, asi: ASI08, severity: high, tier: unit,
+     title: "A failing worker trips its circuit and the team budget caps spend",
+     node: "libs/agent-compiler/tests/test_supervisor.py::test_a_failing_worker_trips_its_circuit_and_the_team_budget_caps_spend"}
+  - {id: asi08-gateway-outage-fails-fast, asi: ASI08, severity: medium, tier: unit,
+     title: "A gateway outage fails fast, opens the circuit, and retry resumes",
+     node: "services/agent-api/tests/test_chaos.py::test_a_gateway_outage_fails_fast_opens_the_circuit_and_retry_resumes"}
+  - {id: asi08-repeating-agent-stopped, asi: ASI08, severity: high, tier: unit,
+     title: "A repeating agent is stopped by loop detection",
+     node: "services/agent-api/tests/test_budgets.py::test_a_repeating_agent_is_stopped_by_loop_detection"}
+  # ---------------------------------------------------------------- ASI09
+  - {id: asi09-reviewers-see-what-they-approve, asi: ASI09, severity: critical, tier: unit,
+     title: "Reviewers see the raw tool and arguments they approve; the request is audited",
+     node: "services/agent-api/tests/test_hitl.py::test_an_irreversible_tool_waits_and_reviewers_see_what_they_approve"}
+  - {id: asi09-approval-bound-to-exact-call, asi: ASI09, severity: critical, tier: unit,
+     title: "An approval replayed for other arguments or another tool does not count",
+     node: "libs/agent-tools/tests/test_authorising.py::test_approval_replayed_for_other_arguments_or_another_tool_does_not_count"}
+  - {id: asi09-edited-approval-runs-edited-arguments, asi: ASI09, severity: high, tier: unit,
+     title: "An edited approval runs exactly the edited arguments",
+     node: "services/agent-api/tests/test_hitl.py::test_an_edited_approval_runs_with_the_edited_arguments"}
+  - {id: asi09-two-person-rule, asi: ASI09, severity: high, tier: unit,
+     title: "A high-risk irreversible action needs two different approvers",
+     node: "services/agent-api/tests/test_hitl.py::test_high_risk_irreversible_needs_two_different_approvers"}
+  # ---------------------------------------------------------------- ASI10
+  - {id: asi10-draft-agent-refused-in-prod, asi: ASI10, severity: critical, tier: unit,
+     title: "A draft agent cannot be started in prod",
+     node: "services/agent-api/tests/test_registry_gate.py::test_a_draft_agent_cannot_be_started_in_prod"}
+  - {id: asi10-deprecated-and-retired-refused, asi: ASI10, severity: critical, tier: unit,
+     title: "Deprecated and retired agents are refused in staging and prod",
+     node: "libs/agent-registry/tests/test_sync_and_gate.py::test_deprecated_and_retired_agents_are_refused_in_staging_and_prod"}
+  - {id: asi10-behaviour-metrics-emitted, asi: ASI10, severity: medium, tier: unit,
+     title: "Runs record behavioural metrics (status, steps, cost, latency, trips)",
+     node: "libs/agent-telemetry/tests/test_metrics.py::test_finished_runs_record_status_steps_cost_latency_and_trips"}
+  - {id: asi10-budget-spike-alert-live, asi: ASI10, severity: high, tier: integration,
+     title: "A budget-trip spike fires an alert that links to its runbook (live)",
+     node: "services/agent-api/tests/test_alerts_live.py::test_a_budget_trip_spike_fires_an_alert_that_links_to_its_runbook"}

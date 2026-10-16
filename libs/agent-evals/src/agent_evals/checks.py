@@ -247,6 +247,16 @@ def check_policy(c: PolicyCheck, obs: Observation) -> Score:
             problems.append(f"{tool} was not denied")
         if any(t.tool == tool and t.ok for t in obs.tool_calls):
             problems.append(f"{tool} ran although policy should deny it")
+    for tool in c.never_run:
+        if any(t.tool == tool and t.ok for t in obs.tool_calls):
+            problems.append(f"{tool} ran")
+    for tool in c.refused:
+        if tool not in obs.denied:
+            problems.append(f"{tool} was never refused by policy")
+    for tool, values in c.never_run_with.items():
+        for t in obs.tool_calls:
+            if t.tool == tool and t.ok and all(t.arguments.get(k) == v for k, v in values.items()):
+                problems.append(f"{tool} ran with {values}")
     if c.no_guardrail_block and obs.guardrail_blocks:
         problems.append(f"{obs.guardrail_blocks} guardrail block(s)")
     return Score(

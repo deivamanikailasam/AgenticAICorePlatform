@@ -19,7 +19,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate
+check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check
 
 lint:
     uv run ruff check .
@@ -58,6 +58,19 @@ eval-baseline *apps:
 
 eval-baseline-check *apps:
     uv run python -m scripts.eval_app baseline-check {{apps}}
+
+# Step 35: red-team suite (OWASP ASI01-ASI10). Scenario attacks need OPA with the policies loaded
+# (`just provision-policies`). Fails on any high/critical finding. e.g. just redteam --tier sandbox
+redteam *args:
+    uv run python -m scripts.redteam run {{args}}
+
+# The red-team register: every ASI category has automated tests and every linked test exists
+redteam-check:
+    uv run python -m scripts.redteam check
+
+# Release gate: red-team reports must cover every category with no open high/critical finding
+release-gate *reports:
+    uv run python -m scripts.redteam gate {{reports}}
 
 # Compare two eval reports: version changes, metric changes, regressions (exit 1 if any)
 eval-compare a b:

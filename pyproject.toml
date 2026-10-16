@@ -70,12 +70,13 @@ ignore_missing_imports = true  # A2A gRPC binding (Step 24): grpcio ships no inl
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "-q -m 'not integration and not mac and not sandbox and not microvm' --strict-markers --import-mode=importlib"
+addopts = "-q -m 'not integration and not mac and not sandbox and not microvm and not redteam' --strict-markers --import-mode=importlib"
 markers = [
     "integration: needs the Project 0 services (or the stand-in stack) running",
     "mac: needs Project 0 itself on the Mac (real models, real realms); VERIFY-ON-MAC",
     "sandbox: runs containers through Docker with a sandbox runtime (gVisor); skipped where unavailable",
     "microvm: boots Firecracker microVMs (needs /dev/kvm and the assets from scripts/install_firecracker.sh)",
+    "redteam: red-team scenario attacks (Step 35); need OPA with Project A's policies; run by `just redteam`",
 ]
 testpaths = ["tests", "libs", "services", "apps"]
 pythonpath = ["."]

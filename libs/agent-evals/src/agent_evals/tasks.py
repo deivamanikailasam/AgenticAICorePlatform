@@ -17,6 +17,9 @@ never marked wrong on something nobody specified.
 * ``policy`` — ``approval_required`` (tools that must stop for a person),
   ``approval_arguments`` (what the approval request must show), ``not_requested`` (tools that
   must never get as far as an approval request), ``denied`` (tools policy must refuse),
+  ``never_run`` (tools that must never run successfully, whatever stopped them), ``refused``
+  (tools policy must refuse at least once), ``never_run_with`` (argument values a tool must
+  never run with),
   ``no_guardrail_block`` (true: no guardrail may block).
 * ``team`` — for multi-agent apps: ``workers_required``, ``workers_forbidden``,
   ``first_worker``, ``counts`` (exact delegations per worker), ``max_delegations``.
@@ -68,6 +71,12 @@ class PolicyCheck(_Model):
     #: tools that must never reach an approval request (e.g. paying an invoice that is wrong)
     not_requested: tuple[str, ...] = ()
     denied: tuple[str, ...] = ()
+    #: tools that must never run successfully, whatever stopped them (red-team scenarios)
+    never_run: tuple[str, ...] = ()
+    #: tools policy must have refused at least once (other calls of the same tool may run)
+    refused: tuple[str, ...] = ()
+    #: per tool, argument values it must never run successfully with
+    never_run_with: dict[str, dict[str, Any]] = Field(default_factory=dict)
     no_guardrail_block: bool = False
 
 
