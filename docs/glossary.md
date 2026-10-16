@@ -171,3 +171,11 @@ Every term used in this repository, in plain English. Grows with each step.
 | Quality run | An eval run with the real model: the one that measures how good the agent actually is |
 | Explicit approval (cost) | A named approver's review on the exact commit, saying they accept the extra cost |
 | Affected app | An app whose behaviour a change can alter, worked out from the files it touches |
+| Threat model | A list of what could go wrong with each part of a system, who owns it, what stops it and how that is proven |
+| STRIDE | A checklist of six kinds of threat: spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege |
+| Trust boundary | A line where data from someone you don't control comes in, so it is checked and treated as data |
+| Control (security) | A defence that reduces a risk, such as a policy check, an approval or encryption |
+| Control matrix | A table of controls, the evidence each works, and the requirements each helps meet |
+| Data lifecycle | How data is created, kept, given back on request and deleted |
+| Retention | How long data is kept before it is deleted |
+| Right of access | A person's right to get a copy of the personal data an organisation holds about them (APP 12) |

@@ -53,3 +53,4 @@ ADR supersedes it.
 | [0045](0045-agent-evaluation-harness.md) | Agent evaluation: deterministic checks over platform records, generated golden tasks, an honest baseline, a judge calibrated only by people | 34 |
 | [0046](0046-simulation-and-red-teaming.md) | Simulation and red-teaming: simulated people and environments, an ASI01-ASI10 suite against the worst model, promptfoo and garak against the real one, findings as issues, a release gate | 35 |
 | [0047](0047-ci-eval-gates.md) | CI eval gates per risk tier: regressions, red-team findings and usage growth on every pull request; quality, AUD and latency ceilings on real-model runs; explicit review approval for cost; nightly and release runs | 36 |
+| [0048](0048-threat-model-and-compliance.md) | Threat model and compliance as checked data: STRIDE per component with owners, controls and tests; a control matrix with evidence and dated framework mapping; data lifecycle with export and retention | 37 |
