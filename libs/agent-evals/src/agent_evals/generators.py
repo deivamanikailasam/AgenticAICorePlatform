@@ -359,6 +359,76 @@ def policy_debate(rng: random.Random) -> list[Task]:
     return tasks
 
 
+# ---------------------------------------------------------------- multi-turn (Step 35)
+
+OPENERS = [
+    "Hi, something is wrong with my account.",
+    "Hello, I need some help please.",
+    "Your service is not working for me.",
+    "I have a problem.",
+]
+CONVERSATION_GOALS = [
+    (
+        "billing",
+        "get a refund for a double charge",
+        "I was charged twice on invoice {n} and I want a refund.",
+        ["refund"],
+    ),
+    (
+        "tech",
+        "get back into the account after a login error",
+        "I get a login error every time; my password reset email never arrives.",
+        ["password"],
+    ),
+]
+
+
+def support_conversations(rng: random.Random) -> list[Task]:
+    """Simulated customers (persona, goal, patience) talking to the support team over several
+    turns. A vague customer opens unclearly and gets specific only when the reply doesn't help;
+    whether they reach their goal follows from their patience: with tolerance 0 one unhelpful
+    reply makes them leave, so the goal is not met."""
+    tasks: list[Task] = []
+    for i in range(24):
+        kind, description, specific, success = CONVERSATION_GOALS[i % 2]
+        style = ("vague", "direct")[(i // 2) % 2]
+        tolerance = (i // 4) % 3  # 0, 1, 2
+        opener = rng.choice(OPENERS)
+        goal_met = style == "direct" or tolerance >= 1
+        user = {
+            "persona": {"name": f"customer-{i}", "style": style, "traits": [rng.choice(NAMES)]},
+            "goal": {
+                "description": description,
+                "utterances": [opener, specific.format(n=f"INV-{rng.randrange(1000, 9999)}")],
+                "success": {"contains": success},
+            },
+            "patience": {"max_turns": 4, "tolerance": tolerance},
+        }
+        tasks.append(
+            _task(
+                "support-handoff",
+                f"conversation-{kind}-{i:03d}",
+                {"_user": user},
+                {
+                    "conversation": {"goal_met": goal_met, "max_turns": 2 if goal_met else 1},
+                    "team": {
+                        "first_worker": "triage",
+                        "workers_forbidden": ["tech" if kind == "billing" else "billing"],
+                    },
+                },
+                f"{style}-tolerance-{tolerance}",
+                f"a {style} customer who wants to {description}, tolerating {tolerance} "
+                "unhelpful replies",
+            )
+        )
+    return tasks
+
+
+CONVERSATIONS: dict[str, Callable[[random.Random], list[Task]]] = {
+    "support-handoff": support_conversations,
+}
+
+
 GENERATORS: dict[str, Callable[[random.Random], list[Task]]] = {
     "hello-workflow": hello_workflow,
     "support-handoff": support_handoff,
@@ -377,19 +447,28 @@ def path_for(app: str) -> Path:
     return ROOT / "evals" / "apps" / app / "tasks.jsonl"
 
 
+def build_conversations(app: str) -> list[Task]:
+    return CONVERSATIONS[app](random.Random(f"step-35-{app}"))  # noqa: S311 - reproducible
+
+
+def conversations_path(app: str) -> Path:
+    return ROOT / "evals" / "apps" / app / "conversations.jsonl"
+
+
 def main(argv: list[str]) -> int:
     stale = []
-    for app in GENERATORS:
-        tasks = build(app)
+    sets = [(app, build(app), path_for(app)) for app in GENERATORS]
+    sets += [(app, build_conversations(app), conversations_path(app)) for app in CONVERSATIONS]
+    for app, tasks, path in sets:
         if argv and argv[0] == "--check":
-            tmp = path_for(app).with_suffix(".tmp")
+            tmp = path.with_suffix(".tmp")
             dump_tasks(tasks, tmp)
-            if not path_for(app).exists() or tmp.read_text() != path_for(app).read_text():
-                stale.append(app)
+            if not path.exists() or tmp.read_text() != path.read_text():
+                stale.append(f"{app}/{path.name}")
             tmp.unlink()
         else:
-            dump_tasks(tasks, path_for(app))
-            print(f"eval-tasks: wrote {len(tasks)} {app} tasks")
+            dump_tasks(tasks, path)
+            print(f"eval-tasks: wrote {len(tasks)} {app} tasks to {path.name}")
     if argv and argv[0] == "--check":
         print(f"eval-tasks: {'stale: ' + ', '.join(stale) if stale else 'up to date'}")
     return 1 if stale else 0

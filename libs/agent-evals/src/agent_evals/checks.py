@@ -18,7 +18,15 @@ from typing import Any
 
 import jsonschema
 
-from agent_evals.tasks import AnswerCheck, Limits, PolicyCheck, Task, TeamCheck, ToolsCheck
+from agent_evals.tasks import (
+    AnswerCheck,
+    ConversationCheck,
+    Limits,
+    PolicyCheck,
+    Task,
+    TeamCheck,
+    ToolsCheck,
+)
 
 
 @dataclass(frozen=True)
@@ -46,6 +54,8 @@ class Observation:
     latency_ms: int = 0
     #: the input schema of each tool, for "valid arguments"
     schemas: dict[str, dict[str, Any]] = field(default_factory=dict)
+    #: multi-turn tasks: goal_met, gave_up, turns, patience_left, ended_because, transcript
+    conversation: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -275,6 +285,26 @@ def check_limits(c: Limits, obs: Observation) -> Score:
     return Score("within_limits", 0.0 if over else 1.0, not over, "; ".join(over) or "ok")
 
 
+def check_conversation(c: ConversationCheck, obs: Observation) -> Score:
+    convo = obs.conversation
+    if convo is None:
+        return Score("goal_achieved", 0.0, False, "not a simulated conversation")
+    problems = []
+    if bool(convo.get("goal_met")) != c.goal_met:
+        problems.append(
+            f"goal {'not ' if c.goal_met else ''}met ({convo.get('ended_because', '')})"
+        )
+    turns = int(convo.get("turns", 0))
+    if c.max_turns is not None and turns > c.max_turns:
+        problems.append(f"{turns} turns, at most {c.max_turns}")
+    return Score(
+        "goal_achieved",
+        0.0 if problems else 1.0,
+        not problems,
+        "; ".join(problems) or f"{convo.get('ended_because')} in {turns} turn(s)",
+    )
+
+
 def score(task: Task, obs: Observation) -> list[Score]:
     """Every deterministic check the task names."""
     e = task.expected
@@ -294,6 +324,8 @@ def score(task: Task, obs: Observation) -> list[Score]:
         out.append(check_team(e.team, obs))
     if e.limits is not None:
         out.append(check_limits(e.limits, obs))
+    if e.conversation is not None:
+        out.append(check_conversation(e.conversation, obs))
     return out
 
 

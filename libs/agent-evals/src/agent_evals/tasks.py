@@ -22,6 +22,8 @@ never marked wrong on something nobody specified.
   ``first_worker``, ``counts`` (exact delegations per worker), ``max_delegations``.
 * ``limits`` — ``max_steps``, ``max_model_calls``, ``max_tokens``, ``max_cost_aud``,
   ``max_latency_ms``.
+* ``conversation`` — for multi-turn tasks with a simulated person (``input._user``: persona,
+  goal, patience; Step 35): ``goal_met`` and ``max_turns``.
 * ``rubric`` — a judge rubric (``evals/rubrics/<name>.md``) for what deterministic checks can't
   decide; used only when the judge is enabled.
 """
@@ -88,6 +90,14 @@ class Limits(_Model):
     max_latency_ms: int | None = None
 
 
+class ConversationCheck(_Model):
+    """Multi-turn tasks (Step 35): the simulated person in ``input._user`` must reach their goal,
+    within ``max_turns`` if given, or (``goal_met: false``) must not."""
+
+    goal_met: bool = True
+    max_turns: int | None = None
+
+
 class Expected(_Model):
     status: str | tuple[str, ...] | None = None  # one end state, or any of several
     answer: AnswerCheck | None = None
@@ -95,6 +105,7 @@ class Expected(_Model):
     policy: PolicyCheck | None = None
     team: TeamCheck | None = None
     limits: Limits | None = None
+    conversation: ConversationCheck | None = None
     rubric: str | None = None
 
 
