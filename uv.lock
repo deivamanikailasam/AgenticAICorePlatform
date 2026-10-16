@@ -113,6 +113,7 @@ dependencies = [
     { name = "agent-telemetry" },
     { name = "agent-tools" },
     { name = "httpx" },
+    { name = "pyyaml" },
     { name = "starlette" },
     { name = "uvicorn" },
 ]
@@ -132,6 +133,7 @@ requires-dist = [
     { name = "agent-telemetry", editable = "libs/agent-telemetry" },
     { name = "agent-tools", editable = "libs/agent-tools" },
     { name = "httpx", specifier = ">=0.28.1,<0.29" },
+    { name = "pyyaml", specifier = ">=6.0.3,<7" },
     { name = "starlette", specifier = ">=0.48" },
     { name = "uvicorn", specifier = ">=0.54.0,<1" },
 ]

@@ -1,0 +1,34 @@
+# Data lifecycle (Step 37): how long the platform keeps each kind of data, and how a person
+# gets a copy or has it erased. Values are owner policy (decision delegated 2026-10-16,
+# ADR 0048), to be confirmed by legal and privacy review before production; they are not
+# derived from any law. `POST /v1/admin/retention` applies them; `GET /v1/me/export` and
+# `POST /v1/admin/export` give a person their data; `POST /v1/admin/erasure` erases it.
+retention:
+  runs:
+    days: 90
+    what: finished runs (succeeded, failed, stopped, cancelled) and their event logs, which are the transcripts
+    never: runs still running or waiting for a person
+  checkpoints:
+    days: 30
+    keep_last: 1     # the newest checkpoint of each thread stays, so a thread can be resumed
+    what: run state snapshots (encrypted, bound to tenant, thread and checkpoint)
+  memory:
+    what: long-term memory items
+    rule: each item expires by its kind's lifetime (memory policy, Step 20); expired items are purged
+  audit:
+    days: 2555       # about 7 years
+    what: the hash-chained audit trail (digests and redacted arguments, never run content)
+    rule: append-only; not pruned by this job and not affected by erasure (it holds no content), the erasure itself is audited
+  traces:
+    where: Project 0's Langfuse and Tempo (content only in Langfuse, redacted)
+    rule: Project 0's retention settings; VERIFY-ON-MAC
+  eval_and_redteam_reports:
+    where: CI artefacts (git-ignored), published cards in git
+    rule: CI's artefact retention; published results stay with the commit that made them
+
+finished_statuses: [succeeded, failed, stopped, cancelled]
+
+access:
+  export: a person exports their own runs (with event logs), threads and memories; a privacy officer of the tenant can export anyone's (APP 12)
+  erasure: a privacy officer erases a person's runs, event logs, checkpoint threads and memories in one request (Step 20)
+  correction: memories are deleted and re-stated by the person (APP 13); runs are records of what happened and are not edited

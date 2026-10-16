@@ -99,6 +99,7 @@ services:
       AGENT_API_HOST: 0.0.0.0
       AGENT_API_PORT: "8091"
       AGENT_API_AGENTS_DIR: /app/agents
+      AGENT_DATA_LIFECYCLE: /app/governance/data-lifecycle.yaml
       AGENT_API_AUDIT_FILE: /tmp/agent-api-audit.jsonl
       # Step 31: the shared hash-chained audit trail (else the local file above, dev only)
       AGENT_AUDIT_DSN: ${AGENT_AUDIT_DSN_INTERNAL:-}
@@ -122,6 +123,7 @@ services:
       SECRET__KEYCLOAK__AGENT_PLATFORM__CLIENT_SECRET: ${AGENT_PLATFORM_CLIENT_SECRET_DEV:-}
     volumes:
       - ../../agents:/app/agents:ro
+      - ../../governance/data-lifecycle.yaml:/app/governance/data-lifecycle.yaml:ro
     ports: ["127.0.0.1:8091:8091"]
     mem_limit: 512m
     healthcheck:

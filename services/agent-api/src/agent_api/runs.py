@@ -25,7 +25,7 @@ import json
 import time
 from collections.abc import AsyncIterator, Coroutine, Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +62,9 @@ from agent_api.agui import Translator
 from agent_api.assembly import Assembly
 from agent_api.desk import ApprovalDesk, ApprovalExpiredError
 from agent_api.store import MemoryRunStore, RunStore
+
+# runs that have ended: the only ones retention may prune
+TERMINAL = ("succeeded", "failed", "stopped", "cancelled")
 
 
 @dataclass(frozen=True)
@@ -745,6 +748,85 @@ class RunManager:
                 type="subject.erased",
                 ctx=RunContext(tenant_id=tenant, user_id=who.user, agent_id="agent-api"),
                 payload={"subject": user, "requested_by": who.user, **counts},
+            )
+        )
+        return counts
+
+    # ------------------------------------------------------------ export and retention (Step 37)
+
+    RETENTION_ROLES = frozenset({"privacy-officer", "platform-operator"})
+
+    async def export_subject(self, tenant: str, user: str, who: Principal) -> dict[str, Any]:
+        """Access (APP 12): everything the platform holds about one person in one tenant, their
+        runs with event logs, their threads and every agent's memories about them. A person may
+        export their own; a privacy officer of the tenant anyone's. Audited."""
+        own = (who.tenant, who.user) == (tenant, user)
+        if not own and (self.PRIVACY_ROLE not in who.roles or who.tenant != tenant):
+            raise PermissionError("export needs your own data or the privacy-officer role")
+        records = [
+            r for r in await self.store.records() if (r["tenant"], r["user"]) == (tenant, user)
+        ]
+        runs = [r | {"events": await self.store.events(r["run_id"])} for r in records]
+        memories: dict[str, list[dict[str, Any]]] = {}
+        for name, spec in self.agents.items():
+            memory = await self.assembly.memory_factory(spec)
+            if memory is None:
+                continue
+            scope = MemoryScope(tenant_id=tenant, user_id=user, agent_id=name)
+            items = [i for i in await memory.store.items(scope) if i.scope.user_id == user]
+            if items:
+                memories[name] = [i.model_dump(mode="json") for i in items]
+        await self.assembly.audit.append(
+            AuditEvent(
+                type="subject.exported",
+                ctx=RunContext(tenant_id=tenant, user_id=who.user, agent_id="agent-api"),
+                payload={
+                    "subject": user,
+                    "requested_by": who.user,
+                    "runs": len(runs),
+                    "memories": sum(len(v) for v in memories.values()),
+                },
+            )
+        )
+        return {
+            "tenant": tenant,
+            "user": user,
+            "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
+            "runs": runs,
+            "threads": sorted({r["thread_id"] for r in records}),
+            "memories": memories,
+        }
+
+    async def apply_retention(self, policy: Mapping[str, Any], who: Principal) -> dict[str, int]:
+        """Retention (governance/data-lifecycle.yaml): prune finished runs and their event
+        logs, old checkpoints (keeping each thread's newest) and expired memories. Audited."""
+        if not self.RETENTION_ROLES & set(who.roles):
+            raise PermissionError("retention needs the privacy-officer or platform-operator role")
+        rules = policy["retention"]
+        finished = tuple(policy.get("finished_statuses") or TERMINAL)
+        now = datetime.now(UTC)
+        pruned = await self.store.prune(now - timedelta(days=int(rules["runs"]["days"])), finished)
+        for run_id in pruned:
+            self.runs.pop(run_id, None)
+        checkpoints = 0
+        cp = self.assembly.checkpointer
+        if cp is not None and hasattr(cp, "prune"):
+            checkpoints = await cp.prune(
+                timedelta(days=int(rules["checkpoints"]["days"])),
+                int(rules["checkpoints"].get("keep_last", 1)),
+            )
+        memories = 0
+        for spec in self.agents.values():
+            memory = await self.assembly.memory_factory(spec)
+            purge = getattr(getattr(memory, "store", None), "purge_expired", None)
+            if purge is not None:
+                memories += await purge()
+        counts = {"runs": len(pruned), "checkpoints": checkpoints, "memories": memories}
+        await self.assembly.audit.append(
+            AuditEvent(
+                type="retention.applied",
+                ctx=RunContext(tenant_id=who.tenant, user_id=who.user, agent_id="agent-api"),
+                payload={"requested_by": who.user, **counts},
             )
         )
         return counts

@@ -79,6 +79,10 @@ CATALOGUE: dict[str, EventType] = {
         EventType("memory.flushed", "A run's memories were removed", ()),
         EventType("subject.erased", "A person's data was erased", ()),
         EventType(
+            "subject.exported", "A person's data was exported (access request)", ("subject",)
+        ),
+        EventType("retention.applied", "Retention pruned old runs, checkpoints and memories", ()),
+        EventType(
             "agent.delegate",
             "A team delegated work to a worker (policy decision)",
             ("worker", "effect"),

@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
+from collections.abc import Collection
+from datetime import datetime
 from typing import Any
 
 import psycopg
@@ -35,6 +37,12 @@ class RunStore(ABC):
     @abstractmethod
     async def erase(self, tenant: str, user: str) -> int:
         """Right to erasure: delete the user's runs and their events; returns the run count."""
+
+    @abstractmethod
+    async def prune(self, before: datetime, statuses: Collection[str]) -> list[str]:
+        """Retention (Step 37): delete runs in one of ``statuses`` last changed before
+        ``before``, with their event logs; returns their ids. Runs that are still going or
+        waiting for a person are never in ``statuses``."""
 
 
 class MemoryRunStore(RunStore):
@@ -62,6 +70,18 @@ class MemoryRunStore(RunStore):
             del self._runs[k]
             self._events.pop(k, None)
         return len(doomed)
+
+    async def prune(self, before: datetime, statuses: Collection[str]) -> list[str]:
+        cutoff = before.isoformat(timespec="seconds")
+        doomed = [
+            k
+            for k, r in self._runs.items()
+            if r["status"] in statuses and str(r.get("updated_at") or r["created_at"]) < cutoff
+        ]
+        for k in doomed:
+            del self._runs[k]
+            self._events.pop(k, None)
+        return doomed
 
 
 class PostgresRunStore(RunStore):
@@ -141,3 +161,19 @@ class PostgresRunStore(RunStore):
                 (tenant, user),
             )
         return cur.rowcount
+
+    async def prune(self, before: datetime, statuses: Collection[str]) -> list[str]:
+        async with await self._conn() as conn, conn.transaction():
+            rows = await (
+                await conn.execute(
+                    "delete from agent_runtime.runs where updated_at < %s and status = any(%s)"
+                    " returning run_id",
+                    (before, list(statuses)),
+                )
+            ).fetchall()
+            ids = [r[0] for r in rows]
+            if ids:
+                await conn.execute(
+                    "delete from agent_runtime.run_events where run_id = any(%s)", (ids,)
+                )
+        return ids

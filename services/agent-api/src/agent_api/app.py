@@ -16,6 +16,9 @@
 ``GET  /v1/threads/{id}/checkpoints``      time travel: a thread's checkpoints
 ``POST /v1/threads/{id}/fork``             time travel: continue from an earlier checkpoint
 ``POST /v1/admin/erasure``                 right to erasure for one user (privacy officer)
+``GET  /v1/me/export``                     access: the caller's own runs, event logs, memories
+``POST /v1/admin/export``                  access for one user (privacy officer)
+``POST /v1/admin/retention``               apply governance/data-lifecycle.yaml (officers)
 ``GET  /v1/memories?agent=A``              inspect: what agent A remembers for the caller
 ``DELETE /v1/memories/{agent}/{id}``       the caller deletes one of their own memories
 ``POST /v1/admin/memory/flush``            flush every memory one run wrote (officers)
@@ -30,10 +33,13 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
 from collections.abc import AsyncIterator, Awaitable, Callable
 from importlib import resources
+from pathlib import Path
 from typing import Any, Protocol
 
+import yaml
 from agent_tools.auth import tenant_of
 from mcp.server.auth.provider import AccessToken
 from starlette.applications import Starlette
@@ -43,6 +49,14 @@ from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from agent_api.runs import ConflictError, Principal, RunManager
+
+# Step 37: retention policy (owner policy, governance/data-lifecycle.yaml); AGENT_DATA_LIFECYCLE overrides
+LIFECYCLE = Path(__file__).resolve().parents[4] / "governance" / "data-lifecycle.yaml"
+
+
+def load_lifecycle() -> dict[str, Any] | None:
+    path = Path(os.environ.get("AGENT_DATA_LIFECYCLE", str(LIFECYCLE)))
+    return dict(yaml.safe_load(path.read_text())) if path.exists() else None
 
 
 class TokenVerifier(Protocol):
@@ -229,6 +243,22 @@ def build_app(
         tenant = str(data.get("tenant") or who.tenant)
         return JSONResponse({"erased": await manager.erase_subject(tenant, data["user"], who)})
 
+    async def my_export(request: Request, who: Principal) -> Response:
+        return JSONResponse(await manager.export_subject(who.tenant, who.user, who))
+
+    async def export(request: Request, who: Principal) -> Response:
+        data = await body(request)
+        if not isinstance(data.get("user"), str) or not data["user"]:
+            raise ValueError("'user' is required")
+        tenant = str(data.get("tenant") or who.tenant)
+        return JSONResponse(await manager.export_subject(tenant, data["user"], who))
+
+    async def retention(request: Request, who: Principal) -> Response:
+        policy = await asyncio.to_thread(load_lifecycle)
+        if policy is None:
+            return JSONResponse({"error": "no retention policy configured"}, 503)
+        return JSONResponse({"pruned": await manager.apply_retention(policy, who)})
+
     async def memories(request: Request, who: Principal) -> Response:
         agent = request.query_params.get("agent", "")
         return JSONResponse({"memories": await manager.memories(agent, who)})
@@ -313,6 +343,9 @@ def build_app(
             Route("/v1/threads/{thread_id}/checkpoints", guarded(checkpoints)),
             Route("/v1/threads/{thread_id}/fork", guarded(fork), methods=["POST"]),
             Route("/v1/admin/erasure", guarded(erasure), methods=["POST"]),
+            Route("/v1/me/export", guarded(my_export)),
+            Route("/v1/admin/export", guarded(export), methods=["POST"]),
+            Route("/v1/admin/retention", guarded(retention), methods=["POST"]),
             Route("/v1/memories", guarded(memories)),
             Route("/v1/memories/{agent}/{item_id}", guarded(forget), methods=["DELETE"]),
             Route("/v1/admin/memory/flush", guarded(flush), methods=["POST"]),
