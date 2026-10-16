@@ -1,0 +1,59 @@
+name: release
+
+# Step 35: the release gate. A release (a v* tag, or a manual run) goes ahead only when the whole
+# red-team suite (unit, integration and sandbox tiers) and the attack libraries have run on this
+# commit with no high or critical finding, every OWASP agentic category has an executed test,
+# and no high or critical red-team issue is open. Publishing jobs (later steps) must
+# `needs: redteam-gate`.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  redteam-gate:
+    name: red-team release gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      issues: write
+    env:
+      UV_FROZEN: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.11.32"
+          python-version: "3.12"
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - run: sudo ./scripts/install_gvisor.sh && sudo systemctl restart docker
+      - run: uv sync --all-packages
+      - run: just redteam-garak-install
+      - run: just standin-up
+      - name: red-team suite and attack libraries on this commit
+        run: |
+          set -a; . tests/stack/standin.env; set +a
+          export P0_POSTGRES_DSN_INTERNAL=postgresql://agent_health:standin-only@postgres:5432/postgres
+          export AGENT_DB_DSN_INTERNAL=postgresql://agent_app:standin-only@postgres:5432/agent
+          export AGENT_AUDIT_DSN_INTERNAL=$AGENT_DB_DSN_INTERNAL
+          just provision
+          just migrate
+          just up
+          export AGENT_REDTEAM_USER=alice AGENT_REDTEAM_PASSWORD=standin-only AGENT_REDTEAM_PROVIDER=stand-in
+          # every step writes its report even when it finds something; the gate decides below
+          just redteam --tier unit --tier integration --tier sandbox --report evals/results/redteam/suite.json || true
+          just redteam-promptfoo || true
+          just redteam-garak || true
+      - name: findings to issues
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: just redteam-issues evals/results/redteam/suite.json evals/results/redteam/promptfoo.json evals/results/redteam/garak.json
+      - name: release gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: just release-gate evals/results/redteam/suite.json evals/results/redteam/promptfoo.json evals/results/redteam/garak.json --github

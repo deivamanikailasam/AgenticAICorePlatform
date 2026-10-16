@@ -26,6 +26,9 @@ jobs:
     name: attack libraries (promptfoo, garak)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write # findings become issues (main, schedule and manual runs)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
@@ -51,5 +54,10 @@ jobs:
           just redteam-promptfoo || status=1
           just redteam-garak || status=1
           exit $status
+      - name: red-team findings to issues
+        if: always() && (github.ref == 'refs/heads/main' || github.event_name != 'push')
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: just redteam-issues evals/results/redteam/promptfoo.json evals/results/redteam/garak.json
       - if: failure()
         run: docker compose -f tests/stack/compose.p0-standin.yaml logs --tail=200

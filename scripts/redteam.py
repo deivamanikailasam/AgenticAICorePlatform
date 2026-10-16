@@ -9,7 +9,8 @@
 pytest session, writes the report (every attack's outcome, coverage per ASI category, findings)
 and fails on any high or critical finding or on a category with no executed test. ``check``
 fails if a category has no automated test or a linked test no longer exists. ``gate`` merges
-reports (e.g. the integration and sandbox tiers) and applies the release rule.
+reports (e.g. the integration and sandbox tiers, the attack libraries) and applies the release
+rule; with ``--github`` an open high or critical red-team issue also blocks.
 """
 
 from __future__ import annotations
@@ -105,11 +106,22 @@ def check() -> int:
     return 1 if problems else 0
 
 
-def gate_reports(paths: list[Path]) -> int:
+def gate_reports(paths: list[Path], github: bool = False) -> int:
     reports = [Report.load(p) for p in paths if p.exists()]
     missing = [str(p) for p in paths if not p.exists()]
     report = merge(reports) if reports else None
-    decision = gate(report)
+    issues: list[dict[str, object]] = []
+    if github:
+        from scripts.redteam_issues import GitHub, open_blocking
+
+        repo, token = os.environ.get("GITHUB_REPOSITORY"), os.environ.get("GITHUB_TOKEN")
+        if not repo or not token:
+            print(
+                "release-gate: --github needs GITHUB_REPOSITORY and GITHUB_TOKEN", file=sys.stderr
+            )
+            return 2
+        issues = list(open_blocking(GitHub(repo, token)))
+    decision = gate(report, issues)
     if missing:
         print(f"release-gate: missing report(s): {', '.join(missing)}", file=sys.stderr)
     if report is not None:
@@ -131,12 +143,13 @@ def main(argv: list[str]) -> int:
     sub.add_parser("check")
     g = sub.add_parser("gate")
     g.add_argument("reports", nargs="+", type=Path)
+    g.add_argument("--github", action="store_true", help="also refuse on open high/critical issues")
     args = parser.parse_args(argv)
     if args.cmd == "run":
         return run(tuple(args.tier or ("unit", "integration")), args.report.resolve())
     if args.cmd == "check":
         return check()
-    return gate_reports(args.reports)
+    return gate_reports(args.reports, args.github)
 
 
 if __name__ == "__main__":

@@ -88,6 +88,10 @@ redteam-garak:
 release-gate *reports:
     uv run python -m scripts.redteam gate {{reports}}
 
+# Red-team findings as GitHub issues: open, reopen, comment, close by fingerprint (CI on main)
+redteam-issues *reports:
+    uv run python -m scripts.redteam_issues sync {{reports}}
+
 # Compare two eval reports: version changes, metric changes, regressions (exit 1 if any)
 eval-compare a b:
     uv run python -m scripts.eval_app compare {{a}} {{b}}

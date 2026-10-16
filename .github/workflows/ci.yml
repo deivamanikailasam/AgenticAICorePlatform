@@ -49,6 +49,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     needs: check
+    permissions:
+      contents: read
+      issues: write # Step 35: red-team findings become issues (main only)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
@@ -78,6 +81,11 @@ jobs:
           just eval-baseline-check
           # Step 35: red-team suite (ASI01-ASI10) against the live OPA; high/critical findings fail
           just redteam --tier unit --tier integration --report evals/results/redteam/integration.json
+      - name: red-team findings to issues
+        if: always() && github.ref == 'refs/heads/main' && hashFiles('evals/results/redteam/integration.json') != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: just redteam-issues evals/results/redteam/integration.json
       - if: failure()
         run: docker compose -f tests/stack/compose.p0-standin.yaml logs --tail=200
 
@@ -86,6 +94,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     needs: check
+    permissions:
+      contents: read
+      issues: write # Step 35: red-team findings become issues (main only)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
@@ -98,6 +109,11 @@ jobs:
       - run: just test-sandbox
       # Step 35: the sandbox tier of the red-team suite (ASI05 under gVisor)
       - run: just redteam --tier sandbox --report evals/results/redteam/sandbox.json
+      - name: red-team findings to issues
+        if: always() && github.ref == 'refs/heads/main' && hashFiles('evals/results/redteam/sandbox.json') != ''
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: just redteam-issues evals/results/redteam/sandbox.json
 
   microvm:
     name: sandbox (Firecracker, Kata; KVM)
