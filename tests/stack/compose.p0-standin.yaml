@@ -86,6 +86,9 @@ services:
       LITELLM_MASTER_KEY: ${STANDIN_LITELLM_MASTER_KEY:-sk-standin-only}
       DATABASE_URL: postgresql://postgres:${STANDIN_PG_PASSWORD:-standin-only}@postgres:5432/litellm
       STORE_MODEL_IN_DB: "False"
+      # the bundled cost map, not one fetched from GitHub at start: offline and deterministic;
+      # the fetch's failure warning also crashes v1.105.1 behind a TLS-inspecting proxy
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
     volumes:
       - ./config/litellm.yaml:/app/config.yaml:ro
     ports: ["127.0.0.1:4000:4000"]
