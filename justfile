@@ -50,6 +50,15 @@ test-chaos *args:
 eval-app app *args:
     uv run python -m scripts.eval_app run {{app}} {{args}}
 
+# Mechanics baseline (Step 34): every reference app on the stand-in gateway (mock models). Not
+# model quality: it pins the harness and the platform's deterministic behaviour so CI catches
+# regressions. `eval-baseline-check` re-runs and fails on any task that stopped passing.
+eval-baseline *apps:
+    uv run python -m scripts.eval_app baseline {{apps}}
+
+eval-baseline-check *apps:
+    uv run python -m scripts.eval_app baseline-check {{apps}}
+
 # Compare two eval reports: version changes, metric changes, regressions (exit 1 if any)
 eval-compare a b:
     uv run python -m scripts.eval_app compare {{a}} {{b}}

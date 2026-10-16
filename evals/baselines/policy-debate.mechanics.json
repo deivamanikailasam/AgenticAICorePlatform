@@ -1,0 +1,439 @@
+{
+ "app": "policy-debate",
+ "dataset": {
+  "path": "evals/apps/policy-debate/tasks.jsonl",
+  "sha256": "2b6ecec7ec032c2fdcdf7f15dbc017c6ed0324736a5995e9ab5cb596a5ccc0d5",
+  "tasks": 100
+ },
+ "kind": "mechanics",
+ "note": "stand-in gateway with canned mock responses: checks the harness and the platform's deterministic parts, not model quality (real-model baseline: VERIFY-ON-MAC)",
+ "provider": {
+  "kind": "stand-in",
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  }
+ },
+ "succeeded": 0,
+ "tasks": {
+  "debate-000": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-001": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-002": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-003": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-004": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-005": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-006": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-007": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-008": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-009": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-010": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-011": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-012": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-013": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-014": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-015": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-016": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-017": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-018": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-019": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-020": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-021": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-022": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-023": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-024": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-025": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-026": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-027": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-028": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-029": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-030": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-031": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-032": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-033": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-034": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-035": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-036": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-037": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-038": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-039": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-040": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-041": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-042": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-043": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-044": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-045": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-046": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-047": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-048": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-049": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-050": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-051": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-052": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-053": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-054": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-055": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-056": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-057": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-058": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-059": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-060": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-061": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-062": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-063": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-064": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-065": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-066": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-067": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-068": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-069": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-070": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-071": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-072": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-073": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-074": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-075": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-076": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-077": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-078": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-079": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-080": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-081": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-082": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-083": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-084": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-085": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-086": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-087": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-088": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-089": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-090": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-091": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-092": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-093": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-094": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-095": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-096": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-097": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-098": {
+   "status": "stopped",
+   "success": false
+  },
+  "debate-099": {
+   "status": "stopped",
+   "success": false
+  }
+ },
+ "versions": {
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  },
+  "plan_hash": "085c70dd7634be8627d720d475fd39daf5c971e4521781e27bdacf4009d9abaf",
+  "prompts": {},
+  "spec": "0.1.0",
+  "spec_hash": "9c03d68e2eab1bd2d6a97d407596f0eaa9ee5ba66e440d82f44c046dc653ed84",
+  "tools": {}
+ }
+}

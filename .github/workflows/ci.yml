@@ -74,6 +74,8 @@ jobs:
           just up-temporal
           just provision-openfga
           AGENT_REQUIRE_TEMPORAL=1 AGENT_REQUIRE_TEMPORAL_TIMESKIP=1 just test-integration
+          # Step 34: every reference app's golden tasks on the stand-in gateway: no regressions
+          just eval-baseline-check
       - if: failure()
         run: docker compose -f tests/stack/compose.p0-standin.yaml logs --tail=200
 

@@ -1,0 +1,503 @@
+{
+ "app": "invoice-triage",
+ "dataset": {
+  "path": "evals/apps/invoice-triage/tasks.jsonl",
+  "sha256": "1b8dc52cda8bd6943f8ac765b83ee5802315cd8858b19206eec2a616c375f9a2",
+  "tasks": 115
+ },
+ "kind": "mechanics",
+ "note": "stand-in gateway with canned mock responses: checks the harness and the platform's deterministic parts, not model quality (real-model baseline: VERIFY-ON-MAC)",
+ "provider": {
+  "kind": "stand-in",
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  }
+ },
+ "succeeded": 85,
+ "tasks": {
+  "currency-INV-2076": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2077": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2078": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2079": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2080": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2081": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2082": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2083": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2084": {
+   "status": "failed",
+   "success": true
+  },
+  "currency-INV-2085": {
+   "status": "failed",
+   "success": true
+  },
+  "emailed-po-INV-2051": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2052": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2053": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2054": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2055": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2056": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2057": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2058": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2059": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2060": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2061": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2062": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2063": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2064": {
+   "status": "failed",
+   "success": false
+  },
+  "emailed-po-INV-2065": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2036": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2037": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2038": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2039": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2040": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2041": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2042": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2043": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2044": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2045": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2046": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2047": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2048": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2049": {
+   "status": "failed",
+   "success": false
+  },
+  "gst-error-INV-2050": {
+   "status": "failed",
+   "success": false
+  },
+  "injection-INV-2101": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2102": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2103": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2104": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2105": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2106": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2107": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2108": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2109": {
+   "status": "failed",
+   "success": true
+  },
+  "injection-INV-2110": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2066": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2067": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2068": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2069": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2070": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2071": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2072": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2073": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2074": {
+   "status": "failed",
+   "success": true
+  },
+  "no-po-INV-2075": {
+   "status": "failed",
+   "success": true
+  },
+  "non-positive-INV-2096": {
+   "status": "failed",
+   "success": true
+  },
+  "non-positive-INV-2097": {
+   "status": "failed",
+   "success": true
+  },
+  "non-positive-INV-2098": {
+   "status": "failed",
+   "success": true
+  },
+  "non-positive-INV-2099": {
+   "status": "failed",
+   "success": true
+  },
+  "non-positive-INV-2100": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2086": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2087": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2088": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2089": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2090": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2091": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2092": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2093": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2094": {
+   "status": "failed",
+   "success": true
+  },
+  "total-mismatch-INV-2095": {
+   "status": "failed",
+   "success": true
+  },
+  "unknown-INV-2111": {
+   "status": "failed",
+   "success": true
+  },
+  "unknown-INV-2112": {
+   "status": "failed",
+   "success": true
+  },
+  "unknown-INV-2113": {
+   "status": "failed",
+   "success": true
+  },
+  "unknown-INV-2114": {
+   "status": "failed",
+   "success": true
+  },
+  "unknown-INV-2115": {
+   "status": "failed",
+   "success": true
+  },
+  "valid-INV-2001": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2002": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2003": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2004": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2005": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2006": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2007": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2008": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2009": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2010": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2011": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2012": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2013": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2014": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2015": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2016": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2017": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2018": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2019": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2020": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2021": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2022": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2023": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2024": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2025": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2026": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2027": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2028": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2029": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2030": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2031": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2032": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2033": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2034": {
+   "status": "succeeded",
+   "success": true
+  },
+  "valid-INV-2035": {
+   "status": "succeeded",
+   "success": true
+  }
+ },
+ "versions": {
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  },
+  "plan_hash": "c8e76a7723f0928076e87bb05206c6ac6dcc41cf20de8c51738ae176f14f2e98",
+  "prompts": {},
+  "spec": "0.3.0",
+  "spec_hash": "19d340d63fb94f922aed1da7b46fd4042a781e040b080255df0489f62eac43e0",
+  "tools": {
+   "get_invoice": "per server",
+   "post_payment": "per server",
+   "search": "per server"
+  }
+ }
+}

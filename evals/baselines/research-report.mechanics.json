@@ -1,0 +1,439 @@
+{
+ "app": "research-report",
+ "dataset": {
+  "path": "evals/apps/research-report/tasks.jsonl",
+  "sha256": "ac24c3ff51df31ddd54d51120462e5244b5002d468eb83fa1667852e84548222",
+  "tasks": 100
+ },
+ "kind": "mechanics",
+ "note": "stand-in gateway with canned mock responses: checks the harness and the platform's deterministic parts, not model quality (real-model baseline: VERIFY-ON-MAC)",
+ "provider": {
+  "kind": "stand-in",
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  }
+ },
+ "succeeded": 0,
+ "tasks": {
+  "research-000": {
+   "status": "failed",
+   "success": false
+  },
+  "research-001": {
+   "status": "failed",
+   "success": false
+  },
+  "research-002": {
+   "status": "failed",
+   "success": false
+  },
+  "research-003": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-004": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-005": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-006": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-007": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-008": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-009": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-010": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-011": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-012": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-013": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-014": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-015": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-016": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-017": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-018": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-019": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-020": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-021": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-022": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-023": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-024": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-025": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-026": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-027": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-028": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-029": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-030": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-031": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-032": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-033": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-034": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-035": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-036": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-037": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-038": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-039": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-040": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-041": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-042": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-043": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-044": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-045": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-046": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-047": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-048": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-049": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-050": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-051": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-052": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-053": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-054": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-055": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-056": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-057": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-058": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-059": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-060": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-061": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-062": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-063": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-064": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-065": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-066": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-067": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-068": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-069": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-070": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-071": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-072": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-073": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-074": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-075": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-076": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-077": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-078": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-079": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-080": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-081": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-082": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-083": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-084": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-085": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-086": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-087": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-088": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-089": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-090": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-091": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-092": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-093": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-094": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-095": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-096": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-097": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-098": {
+   "status": "stopped",
+   "success": false
+  },
+  "research-099": {
+   "status": "stopped",
+   "success": false
+  }
+ },
+ "versions": {
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  },
+  "plan_hash": "d4cb62ac495b7633ef231f6380cfd5d64a1bde3af2b902472a7c890257be0a9b",
+  "prompts": {},
+  "spec": "0.1.0",
+  "spec_hash": "4e808e167e50794b94990478ed97571345ae6404c8e29852c56ffcdfe17009f8",
+  "tools": {}
+ }
+}

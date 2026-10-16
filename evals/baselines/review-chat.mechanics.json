@@ -1,0 +1,439 @@
+{
+ "app": "review-chat",
+ "dataset": {
+  "path": "evals/apps/review-chat/tasks.jsonl",
+  "sha256": "e7274feb1e72a0af1ae981361be2f663e6b4c6fb1cc544047b1ac08d648593e4",
+  "tasks": 100
+ },
+ "kind": "mechanics",
+ "note": "stand-in gateway with canned mock responses: checks the harness and the platform's deterministic parts, not model quality (real-model baseline: VERIFY-ON-MAC)",
+ "provider": {
+  "kind": "stand-in",
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  }
+ },
+ "succeeded": 0,
+ "tasks": {
+  "review-000": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-001": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-002": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-003": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-004": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-005": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-006": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-007": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-008": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-009": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-010": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-011": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-012": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-013": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-014": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-015": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-016": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-017": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-018": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-019": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-020": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-021": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-022": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-023": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-024": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-025": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-026": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-027": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-028": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-029": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-030": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-031": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-032": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-033": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-034": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-035": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-036": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-037": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-038": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-039": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-040": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-041": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-042": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-043": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-044": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-045": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-046": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-047": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-048": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-049": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-050": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-051": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-052": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-053": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-054": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-055": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-056": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-057": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-058": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-059": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-060": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-061": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-062": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-063": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-064": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-065": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-066": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-067": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-068": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-069": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-070": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-071": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-072": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-073": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-074": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-075": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-076": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-077": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-078": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-079": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-080": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-081": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-082": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-083": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-084": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-085": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-086": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-087": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-088": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-089": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-090": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-091": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-092": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-093": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-094": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-095": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-096": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-097": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-098": {
+   "status": "stopped",
+   "success": false
+  },
+  "review-099": {
+   "status": "stopped",
+   "success": false
+  }
+ },
+ "versions": {
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  },
+  "plan_hash": "49f5a27223f6334c430c39d97cd4ec4140058dc84bf0dc5aa60a1fafb0a82d34",
+  "prompts": {},
+  "spec": "0.1.0",
+  "spec_hash": "e969676112d1108b7301b4a09a82484c59a66b8603ba1c043b98801318ced16b",
+  "tools": {}
+ }
+}

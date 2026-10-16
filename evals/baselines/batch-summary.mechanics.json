@@ -1,0 +1,439 @@
+{
+ "app": "batch-summary",
+ "dataset": {
+  "path": "evals/apps/batch-summary/tasks.jsonl",
+  "sha256": "c4a8caf0f9fbcd2faae192c5f9127ff2c7c92a8fed4072a526189e2a35af21bf",
+  "tasks": 100
+ },
+ "kind": "mechanics",
+ "note": "stand-in gateway with canned mock responses: checks the harness and the platform's deterministic parts, not model quality (real-model baseline: VERIFY-ON-MAC)",
+ "provider": {
+  "kind": "stand-in",
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  }
+ },
+ "succeeded": 6,
+ "tasks": {
+  "batch-000": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-001": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-002": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-003": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-004": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-005": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-006": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-007": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-008": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-009": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-010": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-011": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-012": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-013": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-014": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-015": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-016": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-017": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-018": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-019": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-020": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-021": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-022": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-023": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-024": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-025": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-026": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-027": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-028": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-029": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-030": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-031": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-032": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-033": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-034": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-035": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-036": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-037": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-038": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-039": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-040": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-041": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-042": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-043": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-044": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-045": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-046": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-047": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-048": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-049": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-050": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-051": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-052": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-053": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-054": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-055": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-056": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-057": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-058": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-059": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-060": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-061": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-062": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-063": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-064": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-065": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-066": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-067": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-068": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-069": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-070": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-071": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-072": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-073": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-074": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-075": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-076": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-077": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-078": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-079": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-080": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-081": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-082": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-083": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-084": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-085": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-086": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-087": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-088": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-089": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-090": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-091": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-092": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-093": {
+   "status": "stopped",
+   "success": false
+  },
+  "batch-over-0": {
+   "status": "failed",
+   "success": true
+  },
+  "batch-over-1": {
+   "status": "failed",
+   "success": true
+  },
+  "batch-over-2": {
+   "status": "failed",
+   "success": true
+  },
+  "batch-over-3": {
+   "status": "failed",
+   "success": true
+  },
+  "batch-over-4": {
+   "status": "failed",
+   "success": true
+  },
+  "batch-over-5": {
+   "status": "failed",
+   "success": true
+  }
+ },
+ "versions": {
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  },
+  "plan_hash": "b40544573e1f59f45987d00cc793ca00e963bd0654782783999291c398e9d1dd",
+  "prompts": {},
+  "spec": "0.1.0",
+  "spec_hash": "79e650ea0ad5572bc8c0bcdaea4bda3316cb3afac5d83b1b93a59758c9ae14b4",
+  "tools": {}
+ }
+}
