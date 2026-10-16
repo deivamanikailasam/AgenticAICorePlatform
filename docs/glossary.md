@@ -153,3 +153,15 @@ Every term used in this repository, in plain English. Grows with each step.
 | Calibration (judge) | Measuring how often the judge agrees with people on the same items |
 | Cohen's kappa | Agreement beyond what chance alone would give: 1 is perfect, 0 is chance |
 | Baseline | A committed result that later runs are compared against |
+| User simulator | A program that plays a person talking to an agent: who they are (persona), what they want (goal) and how long they will put up with unhelpful replies (patience) |
+| Environment simulator | Fake tools that answer like real ones and fail on purpose, on a planned schedule |
+| Seeded fault | A failure chosen by a random number generator started from a fixed seed, so the same run fails the same way every time |
+| Red team | People or tools whose job is to attack a system to find weaknesses before real attackers do |
+| OWASP ASI01-ASI10 | The OWASP Top 10 for Agentic Applications (December 2025): the ten main ways AI agents go wrong or get attacked |
+| Obedient adversary | A stand-in model that does whatever any text in front of it says, used to test whether the platform's defences hold when the model is fooled |
+| Canary (red team) | A harmless twin of an attacked case that must succeed, proving the setup works and an attack's "blocked" is real |
+| Canary token | A made-up word an attack asks the agent to say; seeing it in the answer proves the attack worked |
+| Attack library | A ready-made collection of known attack prompts (promptfoo, garak) |
+| Finding | A test of a defence that failed: a weakness to fix |
+| Fingerprint (finding) | A short fixed code for a finding, so the same weakness is tracked as one issue across runs |
+| Release gate | An automatic check that must pass before a version is released |
