@@ -4,9 +4,13 @@
 docker.io/temporalio/temporal:1.9.1@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
 docker.io/kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
 docker.io/library/registry:3.1.2@sha256:ddf754342cfc8acc51a56d5d0ab6af06826461864460636d8bd5c546dab2a7b8
-resolve quay.io/argoproj/argocd:v3.5.3
-resolve ghcr.io/dexidp/dex:v2.45.1
-resolve public.ecr.aws/docker/library/redis:8.2.3-alpine
+quay.io/argoproj/argocd:v3.5.3@sha256:dd3f47d5a5e4da563a7a398506e892481b358a7cec50abdf320c71aa55904bfa
+ghcr.io/dexidp/dex:v2.45.1@sha256:8499afd690c437f52301efd2b05b2455da5bd2dfc20332cd697dc9937f808462
+# Argo CD's manifest pulls Redis from public.ecr.aws (rate-limited); the same image from Docker Hub
+docker.io/library/redis:8.2.3-alpine@sha256:08ad0b1d280850169a790dba1393ff7a90aef951fc19632cf4d3ce4f78e679ba
 resolve ghcr.io/kedacore/keda:2.21.0
 resolve ghcr.io/kedacore/keda-metrics-apiserver:2.21.0
 resolve ghcr.io/kedacore/keda-admission-webhooks:2.21.0
+docker.io/temporalio/server:1.32.0@sha256:c3e752127759616bb1615e0f9ba0e21635aeb5fdeb922de4f371c350955f46ae
+docker.io/temporalio/admin-tools:1.32.0@sha256:a9f84fb9a374b2374fe2e67c8efc0468ff3f1c66c8a0b14597ec86e349e62bca
+docker.io/temporalio/ui:2.54.1@sha256:ff0943fe532b8e33c46cd28b29e81e0ce0b6f55b9ee50a38ef1b437cc4de3fa5

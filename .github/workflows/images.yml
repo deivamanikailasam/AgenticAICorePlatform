@@ -126,18 +126,27 @@ jobs:
         run: |
           set -euo pipefail
           status=0
+          # registries rate-limit anonymous reads: three tries, 10 s apart
+          digest_of() {
+            for _ in 1 2 3; do
+              docker buildx imagetools inspect "$1" --format '{{json .Manifest.Digest}}' 2>/dev/null \
+                | tr -d '"' && return 0
+              sleep 10
+            done
+            echo "::error::cannot resolve $1"; return 1
+          }
           while read -r image; do
             case "$image" in ''|'#'*) continue ;; esac
             if [ "${image%% *}" = "resolve" ]; then
               tag="${image#resolve }"
-              actual=$(docker buildx imagetools inspect "$tag" --format '{{json .Manifest.Digest}}' | tr -d '"')
+              actual=$(digest_of "$tag")
               echo "::warning::not yet pinned: ${tag}@${actual}"
               echo "resolve: ${tag}@${actual}" >> "$GITHUB_STEP_SUMMARY"
               continue
             fi
             tag="${image%@*}"; pinned="${image#*@}"
             if [ "$pinned" = "$image" ]; then echo "::error::$tag has no digest pin"; status=1; continue; fi
-            actual=$(docker buildx imagetools inspect "$tag" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            actual=$(digest_of "$tag")
             echo "$tag -> $actual" >> "$GITHUB_STEP_SUMMARY"
             if [ "$pinned" != "$actual" ]; then
               echo "::warning::$tag is pinned to $pinned; the tag now points at $actual (the pin still holds)"
