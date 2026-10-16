@@ -32,21 +32,24 @@ tests:
   - interval: 1m
     input_series:
       - series: 'agent_platform_runs_total{gen_ai_agent_name="a",agent_platform_tenant_id="t",agent_platform_run_status="succeeded"}'
-        values: '0+60x80'
+        values: '0+60x110'
       - series: 'agent_platform_runs_total{gen_ai_agent_name="a",agent_platform_tenant_id="t",agent_platform_run_status="failed"}'
-        values: '0+0x20 0+30x60'
+        # failures start at 20 m and then hold steady, so at 100 m both burn-rate windows see
+        # exactly 30 failed of 90 runs a minute, whichever rule group promtool evaluates first
+        # (at 80 m the 1 h window straddled the start, and the value depended on that order)
+        values: '0+0x20 0+30x90'
     alert_rule_test:
       - eval_time: 15m
         alertname: AgentRunFailureBudgetBurn
         exp_alerts: []
-      - eval_time: 80m
+      - eval_time: 100m
         alertname: AgentRunFailureBudgetBurn
         exp_alerts:
           - exp_labels:
               severity: page
               team: agent-platform
             exp_annotations:
-              summary: "Run failures are burning the 99% availability SLO fast (32.96% failing)"
+              summary: "Run failures are burning the 99% availability SLO fast (33.33% failing)"
               description: More than 14.4% of runs are failing. Check the gateway, tool circuits and recent deployments.
               runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/run-failures.md
 
