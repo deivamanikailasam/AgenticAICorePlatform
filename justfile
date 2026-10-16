@@ -54,6 +54,10 @@ eval-app app *args:
 eval-compare a b:
     uv run python -m scripts.eval_app compare {{a}} {{b}}
 
+# A CSV for people to label a real-model report's outputs against a rubric (judge calibration)
+eval-label-sheet report rubric:
+    uv run python -m scripts.eval_label_sheet {{report}} {{rubric}}
+
 # Regenerate the golden task sets from their seeded generators
 eval-tasks:
     uv run python -m invoice_triage.eval_tasks

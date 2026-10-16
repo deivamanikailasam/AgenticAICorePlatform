@@ -42,6 +42,7 @@ class TaskResult:
     status: str
     judged: dict[str, str] = field(default_factory=dict)  # rubric -> label
     error: str = ""
+    output: Any = None  # what the agent produced (for human labelling and review)
 
 
 @dataclass

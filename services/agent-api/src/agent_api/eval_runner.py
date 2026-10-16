@@ -235,6 +235,7 @@ async def evaluate(
                 latency_ms=obs.latency_ms,
                 status=obs.status,
                 error=error,
+                output=obs.output,
             )
         )
     return Report(
