@@ -114,6 +114,11 @@ async def _observe(
     blocks = sum(
         1 for e in events if e.type == "guardrail.result" and e.payload.get("action") == "block"
     )
+    delegations = [
+        str(e.payload.get("worker"))
+        for e in events
+        if e.type == "agent.delegate" and e.payload.get("effect") == "allow"
+    ]
     ledger = manager.assembly.ledger
     usage = ledger.total(run.run_id)
     steps = sum(1 for e in run.events if e.get("type") == "STEP_FINISHED")
@@ -130,6 +135,7 @@ async def _observe(
         output=output,
         tool_calls=calls,
         denied=denied,
+        delegations=delegations,
         guardrail_blocks=blocks,
         steps=steps,
         model_calls=ledger.calls(run.run_id),

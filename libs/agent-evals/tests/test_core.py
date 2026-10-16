@@ -268,3 +268,24 @@ def test_approval_requests_show_the_right_arguments() -> None:
     }
     held = score(task(policy={"not_requested": ["post_payment"]}), obs)[0]
     assert held.detail == "post_payment reached an approval request although it must not"
+
+
+def test_team_trajectories_and_word_limits() -> None:
+    obs = Observation(
+        "succeeded",
+        "Refund approved for invoice 12 today",
+        delegations=["triage", "tech", "billing"],
+    )
+    t = task(
+        answer={"max_words": 4},
+        team={
+            "first_worker": "triage",
+            "workers_required": ["billing"],
+            "workers_forbidden": ["tech"],
+            "counts": {"billing": 1},
+            "max_delegations": 2,
+        },
+    )
+    failed = {s.metric: s.detail for s in score(t, obs) if not s.passed}
+    assert failed["answer_correct"] == "6 words, at most 4"
+    assert failed["team_trajectory"] == "delegated to tech; 3 delegations, at most 2"

@@ -10,7 +10,7 @@ never marked wrong on something nobody specified.
   ``stopped`` for a limit, ``failed``).
 * ``answer`` — checks on the final output: ``contains`` / ``not_contains`` (case-insensitive
   substrings), ``regex``, ``equals`` (at ``path`` in a JSON output), ``number`` (``value`` and
-  ``tolerance`` at ``path``).
+  ``tolerance`` at ``path``), ``max_words``.
 * ``tools`` — the trajectory: ``expected`` (the tool calls in order), ``required``, ``forbidden``,
   ``max_extra`` (unnecessary calls allowed beyond ``expected``), ``arguments`` (per tool, values
   the call's arguments must have).
@@ -18,6 +18,8 @@ never marked wrong on something nobody specified.
   ``approval_arguments`` (what the approval request must show), ``not_requested`` (tools that
   must never get as far as an approval request), ``denied`` (tools policy must refuse),
   ``no_guardrail_block`` (true: no guardrail may block).
+* ``team`` — for multi-agent apps: ``workers_required``, ``workers_forbidden``,
+  ``first_worker``, ``counts`` (exact delegations per worker), ``max_delegations``.
 * ``limits`` — ``max_steps``, ``max_model_calls``, ``max_tokens``, ``max_cost_aud``,
   ``max_latency_ms``.
 * ``rubric`` — a judge rubric (``evals/rubrics/<name>.md``) for what deterministic checks can't
@@ -46,6 +48,7 @@ class AnswerCheck(_Model):
     equals: Any = None
     number: float | None = None
     tolerance: float = 0.0
+    max_words: int | None = None
 
 
 class ToolsCheck(_Model):
@@ -66,6 +69,17 @@ class PolicyCheck(_Model):
     no_guardrail_block: bool = False
 
 
+class TeamCheck(_Model):
+    """Multi-agent trajectory: which workers the team delegated to (policy-allowed delegations,
+    from the audit trail), in what order, and how often."""
+
+    workers_required: tuple[str, ...] = ()
+    workers_forbidden: tuple[str, ...] = ()
+    first_worker: str | None = None
+    counts: dict[str, int] = Field(default_factory=dict)  # exact number of delegations per worker
+    max_delegations: int | None = None
+
+
 class Limits(_Model):
     max_steps: int | None = None
     max_model_calls: int | None = None
@@ -79,6 +93,7 @@ class Expected(_Model):
     answer: AnswerCheck | None = None
     tools: ToolsCheck | None = None
     policy: PolicyCheck | None = None
+    team: TeamCheck | None = None
     limits: Limits | None = None
     rubric: str | None = None
 

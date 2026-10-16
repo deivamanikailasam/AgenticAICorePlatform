@@ -18,7 +18,7 @@ from typing import Any
 
 import jsonschema
 
-from agent_evals.tasks import AnswerCheck, Limits, PolicyCheck, Task, ToolsCheck
+from agent_evals.tasks import AnswerCheck, Limits, PolicyCheck, Task, TeamCheck, ToolsCheck
 
 
 @dataclass(frozen=True)
@@ -37,6 +37,7 @@ class Observation:
     approvals_requested: list[str] = field(default_factory=list)  # tools
     approval_arguments: dict[str, dict[str, Any]] = field(default_factory=dict)  # tool -> args
     denied: list[str] = field(default_factory=list)  # tools policy refused
+    delegations: list[str] = field(default_factory=list)  # workers, in order (policy-allowed)
     guardrail_blocks: int = 0
     steps: int = 0
     model_calls: int = 0
@@ -83,27 +84,42 @@ def check_status(expected: str | tuple[str, ...], obs: Observation) -> Score:
     return Score("task_success", 1.0 if ok else 0.0, ok, f"status {obs.status}, expected {want}")
 
 
+def answer_of(output: Any, path: str | None = None) -> Any:
+    """What text checks look at: the value at ``path``, else a team's ``answer`` (team results
+    also carry rounds and costs, which aren't the answer), else the whole output."""
+    if path:
+        return _at(output, path)
+    if isinstance(output, dict) and "answer" in output:
+        return output["answer"]
+    return output
+
+
 def check_answer(c: AnswerCheck, obs: Observation) -> Score:
-    text = _text(obs.output).lower()
+    answer = _text(answer_of(obs.output, c.path if c.equals is None and c.number is None else None))
+    text = answer.lower()
     problems = [f"missing {s!r}" for s in c.contains if s.lower() not in text]
     problems += [f"has {s!r}" for s in c.not_contains if s.lower() in text]
-    if c.regex and not re.search(c.regex, _text(obs.output), re.IGNORECASE | re.DOTALL):
+    if c.regex and not re.search(c.regex, answer, re.IGNORECASE | re.DOTALL):
         problems.append(f"no match for /{c.regex}/")
     if c.equals is not None and _at(obs.output, c.path) != c.equals:
         problems.append(
             f"{c.path or 'output'} = {_at(obs.output, c.path)!r}, expected {c.equals!r}"
         )
     if c.number is not None:
-        found = _at(obs.output, c.path) if c.path else _first_number(_text(obs.output))
+        found = _at(obs.output, c.path) if c.path else _first_number(answer)
         try:
             if abs(float(found) - c.number) > c.tolerance:  # type: ignore[arg-type]
                 problems.append(f"{found} is not {c.number} ± {c.tolerance}")
         except (TypeError, ValueError):
             problems.append(f"no number at {c.path or 'output'}")
+    if c.max_words is not None:
+        words = len(answer.split())
+        if words > c.max_words:
+            problems.append(f"{words} words, at most {c.max_words}")
     checks = (
         len(c.contains)
         + len(c.not_contains)
-        + sum(x is not None for x in (c.regex, c.equals, c.number))
+        + sum(x is not None for x in (c.regex, c.equals, c.number, c.max_words))
     )
     value = 1.0 - len(problems) / checks if checks else 1.0
     return Score("answer_correct", max(0.0, value), not problems, "; ".join(problems) or "ok")
@@ -228,6 +244,22 @@ def check_policy(c: PolicyCheck, obs: Observation) -> Score:
     )
 
 
+def check_team(c: TeamCheck, obs: Observation) -> Score:
+    seen = obs.delegations
+    problems = [f"never delegated to {w}" for w in c.workers_required if w not in seen]
+    problems += [f"delegated to {w}" for w in c.workers_forbidden if w in seen]
+    if c.first_worker is not None and (not seen or seen[0] != c.first_worker):
+        problems.append(f"first worker {seen[0] if seen else 'none'}, expected {c.first_worker}")
+    for worker, n in c.counts.items():
+        if seen.count(worker) != n:
+            problems.append(f"{worker} delegated {seen.count(worker)} time(s), expected {n}")
+    if c.max_delegations is not None and len(seen) > c.max_delegations:
+        problems.append(f"{len(seen)} delegations, at most {c.max_delegations}")
+    return Score(
+        "team_trajectory", 0.0 if problems else 1.0, not problems, "; ".join(problems) or "ok"
+    )
+
+
 def check_limits(c: Limits, obs: Observation) -> Score:
     over = []
     if c.max_steps is not None and obs.steps > c.max_steps:
@@ -258,6 +290,8 @@ def score(task: Task, obs: Observation) -> list[Score]:
         out.append(accuracy)
     if e.policy is not None:
         out.append(check_policy(e.policy, obs))
+    if e.team is not None:
+        out.append(check_team(e.team, obs))
     if e.limits is not None:
         out.append(check_limits(e.limits, obs))
     return out
