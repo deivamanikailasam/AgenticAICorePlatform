@@ -83,9 +83,12 @@ class Verifier:
 
 
 async def run_once(
-    model: ModelClient, tools: list[Tool], task: str = "6*7, and count words"
+    model: ModelClient,
+    tools: list[Tool],
+    task: str = "6*7, and count words",
+    spec_text: str = SPEC,
 ) -> Any:
-    spec = load_spec_text(SPEC)
+    spec = load_spec_text(spec_text)
 
     async def registry(s: Any) -> InMemoryToolRegistry:
         reg = InMemoryToolRegistry()
@@ -108,7 +111,7 @@ async def run_once(
     app = build_app(manager, Verifier())
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
         resp = await c.post(
-            "/v1/agents/counter/runs",
+            f"/v1/agents/{spec.name}/runs",
             json={"input": {"task": task}},
             headers={"Authorization": "Bearer t"},
         )

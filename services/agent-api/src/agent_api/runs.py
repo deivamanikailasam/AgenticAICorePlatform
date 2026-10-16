@@ -669,6 +669,32 @@ class RunManager:
             raise ConflictError("this run waits for an approval: use /approvals")
         self._start(run, run.live().resume(run.handle, run.run_id, payload, run.ctx))
 
+    async def retry(self, run: Run, who: Principal) -> None:
+        """Continue a failed run from its checkpoints (Step 33), e.g. after the gateway or a tool
+        came back. Completed nodes are answered from the checkpoints, so their side effects are
+        not repeated; the node that failed, and everything after it, runs again with the same
+        run id, so tool idempotency keys (``<run>:<node>``) still guard any write in flight."""
+        if (who.tenant, who.user) != (run.owner.tenant, run.owner.user):
+            raise PermissionError("only the requester may retry a run")
+        if run.active or run.status != "failed":
+            raise ConflictError(f"run {run.run_id} is {run.status}, not failed")
+        checkpointer = self.assembly.checkpointer
+        spec = self.agents.get(run.agent)
+        if checkpointer is None or spec is None:
+            raise ConflictError("retrying needs a checkpointer (durable runs)")
+        journal = await load_journal(checkpointer, run.ctx)
+        if journal is not None:
+            # the failed attempt is not replayed: only outcomes that succeeded are kept
+            for node, outcomes in list(journal.entries.items()):
+                kept = [o for o in outcomes if o.outcome != "error"]
+                if kept:
+                    journal.entries[node] = kept
+                else:
+                    del journal.entries[node]
+        run.adapter, run.handle = await self._prepare(spec, run.plan, journal)
+        run.status, run.interrupts = "running", []
+        self._start(run, run.adapter.invoke(run.handle, run.inputs, run.ctx))
+
     async def cancel(self, run: Run, who: Principal) -> None:
         if (who.tenant, who.user) != (run.owner.tenant, run.owner.user):
             raise PermissionError("only the requester may cancel a run")

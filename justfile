@@ -39,6 +39,11 @@ test *args:
 record-cassettes:
     AGENT_RECORD_CASSETTES=1 uv run pytest -k rerecord
 
+# Chaos tests (Step 33): model timeout, gateway down (circuit, retry from checkpoints), slow tool,
+# killed worker (SIGKILL mid-run) and restart; `-m integration` adds the stand-in gateway fallback
+test-chaos *args:
+    uv run pytest services/agent-api/tests/test_chaos.py libs/agent-compiler/tests/test_durable_runs.py services/agent-api/tests/test_api.py -k "chaos or timeout or outage or retry or slow or killed or restart" {{args}}
+
 # Tests that need Project 0 (or the stand-in stack) running
 test-integration *args:
     uv run pytest -m integration {{args}}

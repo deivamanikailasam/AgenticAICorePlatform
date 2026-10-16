@@ -11,6 +11,7 @@
 ``POST /v1/runs/{id}/approvals``           approve or reject, as the caller (verified token)
 ``POST /v1/runs/{id}/resume``              answer a non-approval interrupt (owner only)
 ``POST /v1/runs/{id}/cancel``              cancel (owner only)
+``POST /v1/runs/{id}/retry``               continue a failed run from its checkpoints (owner only)
 ``GET  /v1/threads``                       the caller's threads and their runs
 ``GET  /v1/threads/{id}/checkpoints``      time travel: a thread's checkpoints
 ``POST /v1/threads/{id}/fork``             time travel: continue from an earlier checkpoint
@@ -197,6 +198,11 @@ def build_app(
         await manager.resume(run, who, await body(request))
         return JSONResponse(run.summary(), 202)
 
+    async def retry(request: Request, who: Principal) -> Response:
+        run = manager.get(request.path_params["run_id"], who)
+        await manager.retry(run, who)
+        return JSONResponse(run.summary(), 202)
+
     async def cancel(request: Request, who: Principal) -> Response:
         run = manager.get(request.path_params["run_id"], who)
         await manager.cancel(run, who)
@@ -301,6 +307,7 @@ def build_app(
             Route("/v1/reviews/{run_id}", guarded(review), methods=["POST"]),
             Route("/v1/runs/{run_id}/takeover", guarded(takeover), methods=["POST"]),
             Route("/v1/runs/{run_id}/resume", guarded(resume), methods=["POST"]),
+            Route("/v1/runs/{run_id}/retry", guarded(retry), methods=["POST"]),
             Route("/v1/runs/{run_id}/cancel", guarded(cancel), methods=["POST"]),
             Route("/v1/threads", guarded(threads)),
             Route("/v1/threads/{thread_id}/checkpoints", guarded(checkpoints)),
