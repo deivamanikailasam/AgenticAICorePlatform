@@ -3,7 +3,8 @@
 With OpenBao configured (always in staging and prod, where ``default_resolver`` refuses to start
 without it):
 
-* secrets come from OpenBao, read with the runtime's AppRole;
+* secrets come from OpenBao, read with the runtime's AppRole (or, in Kubernetes, its
+  service-account token);
 * each agent acts as its own Keycloak client ``agent-<name>``: downstream tokens are exchanged
   in two hops, user → platform → agent → service (``DelegatingExchanger``);
 * tools get short-lived credentials from OpenBao, which the agent obtains by logging in with its
@@ -41,7 +42,9 @@ def identity_from_env(settings: Settings) -> Identity:
         settings.token_url, settings.client_id, settings.client_secret, secrets
     )
     bao_url = os.environ.get("P0_OPENBAO_URL")
-    bao_ready = bool(bao_url and os.environ.get("AGENT_BAO_ROLE_ID"))
+    bao_ready = bool(
+        bao_url and (os.environ.get("AGENT_BAO_ROLE_ID") or os.environ.get("AGENT_BAO_K8S_ROLE"))
+    )
     mode = os.environ.get("AGENT_IDENTITY_MODE") or ("per-agent" if bao_ready else "platform")
     if mode not in ("per-agent", "platform"):
         raise SystemExit(f"AGENT_IDENTITY_MODE={mode}: expected per-agent or platform")

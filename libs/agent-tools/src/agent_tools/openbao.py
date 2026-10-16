@@ -104,6 +104,29 @@ class JwtAuth(OpenBaoAuth):
         return await _login(http, url, self.mount, {"role": self.role, "jwt": await self.jwt()})
 
 
+# where the pod's projected service-account token is mounted (deploy/base, audience "openbao")
+K8S_TOKEN_FILE = "/var/run/secrets/openbao/token"  # noqa: S105 - a path, not a secret
+
+
+@dataclass
+class KubernetesAuth(OpenBaoAuth):
+    """The platform's own identity in Kubernetes (Step 38): the pod's projected service-account
+    token, short-lived and rotated by the kubelet, so no secret id is stored anywhere. The file is
+    read again at every login because the kubelet replaces it."""
+
+    role: str
+    token_file: str = K8S_TOKEN_FILE
+    mount: str = "kubernetes"
+
+    async def login(self, http: httpx.AsyncClient, url: str) -> tuple[str, float]:
+        try:
+            with open(self.token_file) as fh:  # noqa: ASYNC230 - a small local file
+                jwt = fh.read().strip()
+        except OSError as exc:
+            raise PermissionError(f"no service-account token at {self.token_file}") from exc
+        return await _login(http, url, self.mount, {"role": self.role, "jwt": jwt})
+
+
 def _errors(resp: httpx.Response) -> str:
     try:
         return "; ".join(str(e) for e in resp.json().get("errors", []))[:300] or resp.reason_phrase

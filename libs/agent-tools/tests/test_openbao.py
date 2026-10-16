@@ -19,6 +19,7 @@ from agent_contracts.testing.contracts import ctx
 from agent_tools.openbao import (
     AppRoleAuth,
     JwtAuth,
+    KubernetesAuth,
     OpenBaoClient,
     OpenBaoCredentialBroker,
     OpenBaoSecretResolver,
@@ -101,6 +102,43 @@ async def test_approle_and_jwt_logins_and_relogin_before_expiry() -> None:
         "role": "agent-triage",
         "jwt": "jwt-of-agent",
     }
+
+
+async def test_kubernetes_login_reads_the_rotated_service_account_token(tmp_path: Any) -> None:
+    token = tmp_path / "token"
+    logins: list[dict[str, Any]] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path.endswith("/login"):
+            logins.append({"path": req.url.path, **json.loads(req.content)})
+            return httpx.Response(200, json={"auth": {"client_token": "tok", "lease_duration": 20}})
+        return httpx.Response(200, json={"data": {"data": {"k": "v"}}})
+
+    client = OpenBaoClient(
+        "http://bao", KubernetesAuth("agent-platform", str(token)), transport=_bao(handler)
+    )
+    with pytest.raises(PermissionError, match="no service-account token"):
+        await client.request("GET", "agent-platform/data/x")
+    token.write_text("sa-jwt-1\n")
+    await client.request("GET", "agent-platform/data/x")
+    token.write_text("sa-jwt-2")  # the kubelet rotated it; the next login uses the new one
+    await client.request("GET", "agent-platform/data/x")
+    assert logins == [
+        {"path": "/v1/auth/kubernetes/login", "role": "agent-platform", "jwt": "sa-jwt-1"},
+        {"path": "/v1/auth/kubernetes/login", "role": "agent-platform", "jwt": "sa-jwt-2"},
+    ]
+
+
+def test_staging_resolver_uses_kubernetes_auth_and_never_the_environment() -> None:
+    from agent_tools.openbao import OpenBaoSecretResolver
+    from agent_tools.secrets import default_resolver
+
+    env = {"AGENT_ENV": "prod", "P0_OPENBAO_URL": "http://bao", "AGENT_BAO_K8S_ROLE": "r"}
+    resolver = default_resolver(env)
+    assert isinstance(resolver, OpenBaoSecretResolver)
+    assert isinstance(resolver.client.auth, KubernetesAuth)
+    with pytest.raises(RuntimeError, match="AGENT_BAO_K8S_ROLE"):
+        default_resolver({"AGENT_ENV": "prod"})
 
 
 async def test_refused_login_is_a_permission_error_without_the_secret() -> None:

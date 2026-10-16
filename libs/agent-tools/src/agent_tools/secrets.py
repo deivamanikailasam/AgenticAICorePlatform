@@ -66,8 +66,10 @@ _default: SecretResolver | None = None
 
 
 def default_resolver(env: Mapping[str, str] | None = None) -> SecretResolver:
-    """The process's resolver, built once from ``P0_OPENBAO_URL``, ``AGENT_BAO_ROLE_ID``,
-    ``AGENT_BAO_SECRET_ID`` and ``AGENT_ENV``."""
+    """The process's resolver, built once from ``P0_OPENBAO_URL``, ``AGENT_ENV`` and the
+    runtime's OpenBao login: ``AGENT_BAO_K8S_ROLE`` (Kubernetes auth with the pod's projected
+    service-account token, Step 38) or ``AGENT_BAO_ROLE_ID`` and ``AGENT_BAO_SECRET_ID``
+    (AppRole, outside Kubernetes)."""
     global _default
     if env is None and _default is not None:
         return _default
@@ -78,12 +80,25 @@ def default_resolver(env: Mapping[str, str] | None = None) -> SecretResolver:
         e.get("AGENT_BAO_ROLE_ID"),
         e.get("AGENT_BAO_SECRET_ID"),
     )
+    k8s_role = e.get("AGENT_BAO_K8S_ROLE")
     resolver: SecretResolver
-    if url and role_id and secret_id:
-        from agent_tools.openbao import AppRoleAuth, OpenBaoClient, OpenBaoSecretResolver
+    if url and (k8s_role or (role_id and secret_id)):
+        from agent_tools.openbao import (
+            K8S_TOKEN_FILE,
+            AppRoleAuth,
+            KubernetesAuth,
+            OpenBaoAuth,
+            OpenBaoClient,
+            OpenBaoSecretResolver,
+        )
 
+        auth: OpenBaoAuth = (
+            KubernetesAuth(k8s_role, e.get("AGENT_BAO_K8S_TOKEN_FILE", K8S_TOKEN_FILE))
+            if k8s_role
+            else AppRoleAuth(str(role_id), str(secret_id))
+        )
         bao = OpenBaoSecretResolver(
-            OpenBaoClient(url, AppRoleAuth(role_id, secret_id)),
+            OpenBaoClient(url, auth),
             mount=e.get("AGENT_BAO_KV_MOUNT", "agent-platform"),
         )
         resolver = (
@@ -93,8 +108,8 @@ def default_resolver(env: Mapping[str, str] | None = None) -> SecretResolver:
         resolver = EnvSecretResolver()
     else:
         raise RuntimeError(
-            f"AGENT_ENV={stage}: secrets come only from OpenBao; set P0_OPENBAO_URL, "
-            "AGENT_BAO_ROLE_ID and AGENT_BAO_SECRET_ID"
+            f"AGENT_ENV={stage}: secrets come only from OpenBao; set P0_OPENBAO_URL and "
+            "AGENT_BAO_K8S_ROLE (Kubernetes) or AGENT_BAO_ROLE_ID and AGENT_BAO_SECRET_ID"
         )
     if env is None:
         _default = resolver
