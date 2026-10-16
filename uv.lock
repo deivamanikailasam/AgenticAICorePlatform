@@ -9,6 +9,7 @@ members = [
     "agent-audit",
     "agent-compiler",
     "agent-contracts",
+    "agent-evals",
     "agent-governance",
     "agent-guardrails",
     "agent-memory",
@@ -202,6 +203,23 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'testing'", specifier = ">=1.4.0,<2" },
 ]
 provides-extras = ["testing"]
+
+[[package]]
+name = "agent-evals"
+version = "0.1.0"
+source = { editable = "libs/agent-evals" }
+dependencies = [
+    { name = "agent-contracts" },
+    { name = "jsonschema" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "jsonschema", specifier = ">=4.26.0,<5" },
+    { name = "pyyaml", specifier = ">=6.0.3,<7" },
+]
 
 [[package]]
 name = "agent-framework-core"
