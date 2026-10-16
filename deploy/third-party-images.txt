@@ -1,0 +1,12 @@
+# Third-party images the deployment uses, pinned by digest (Step 38). The images workflow checks
+# that each pinned tag still resolves; a line `resolve <image:tag>` only prints the current digest
+# so it can be pinned (how a new image is added), and fails nothing.
+docker.io/temporalio/temporal:1.9.1@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+docker.io/kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+docker.io/library/registry:3.1.2@sha256:ddf754342cfc8acc51a56d5d0ab6af06826461864460636d8bd5c546dab2a7b8
+resolve quay.io/argoproj/argocd:v3.5.3
+resolve ghcr.io/dexidp/dex:v2.45.1
+resolve public.ecr.aws/docker/library/redis:8.2.3-alpine
+resolve ghcr.io/kedacore/keda:2.21.0
+resolve ghcr.io/kedacore/keda-metrics-apiserver:2.21.0
+resolve ghcr.io/kedacore/keda-admission-webhooks:2.21.0
