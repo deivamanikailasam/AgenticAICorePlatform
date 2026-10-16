@@ -48,7 +48,7 @@ from starlette.responses import HTMLResponse, JSONResponse, Response, StreamingR
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from agent_api.runs import ConflictError, Principal, RunManager
+from agent_api.runs import ConflictError, Principal, RunElsewhereError, RunManager
 
 # Step 37: retention policy (owner policy, governance/data-lifecycle.yaml); AGENT_DATA_LIFECYCLE overrides
 LIFECYCLE = Path(__file__).resolve().parents[4] / "governance" / "data-lifecycle.yaml"
@@ -78,6 +78,11 @@ def principal_from(token: AccessToken) -> Principal:
 
 Handler = Callable[[Request, Principal], Awaitable[Response]]
 
+# set on a request one replica passes to the replica driving the run (Step 38); such a request
+# is never passed on again
+FORWARDED = "x-agent-platform-forwarded"
+PASSED_HEADERS = ("authorization", "content-type", "accept", "idempotency-key", "last-event-id")
+
 
 def build_app(
     manager: RunManager, verifier: TokenVerifier, sweep_seconds: float = 30.0
@@ -102,6 +107,8 @@ def build_app(
                 )
             try:
                 return await handler(request, who)
+            except RunElsewhereError as moved:
+                return await forward(request, moved.peer)
             except KeyError:
                 return JSONResponse({"error": "not found"}, 404)
             except PermissionError as exc:
@@ -110,6 +117,33 @@ def build_app(
                 return JSONResponse({"error": str(exc)}, 409)
             except (LookupError, ValueError) as exc:
                 return JSONResponse({"error": str(exc)}, 422)
+
+        return endpoint
+
+    async def forward(request: Request, peer: str) -> Response:
+        """Answer from the replica that drives the run (it verifies the token again)."""
+        if request.headers.get(FORWARDED):
+            return JSONResponse({"error": "the run is moving between replicas; retry"}, 503)
+        headers = {k: v for k, v in request.headers.items() if k.lower() in PASSED_HEADERS}
+        headers[FORWARDED] = manager.node or "1"
+        async with manager.peer_client(peer) as client:
+            resp = await client.request(
+                request.method,
+                request.url.path,
+                params=request.query_params,
+                content=await request.body(),
+                headers=headers,
+            )
+        return Response(resp.content, resp.status_code, media_type=resp.headers.get("content-type"))
+
+    def owned(handler: Handler) -> Handler:
+        """Run-scoped calls go to the replica driving the run (Step 38)."""
+
+        async def endpoint(request: Request, who: Principal) -> Response:
+            peer = await manager.locate(request.path_params["run_id"])
+            if peer is not None:
+                return await forward(request, peer)
+            return await handler(request, who)
 
         return endpoint
 
@@ -152,12 +186,21 @@ def build_app(
         run = manager.get(request.path_params["run_id"], who)
         return JSONResponse(run.summary())
 
+    async def run_events(
+        run_id: str, who: Principal, after: int
+    ) -> AsyncIterator[tuple[int, dict[str, Any]]]:
+        """Events from this replica's run, or from the store when another replica drives it."""
+        if await manager.locate(run_id) is None:
+            return manager.events(manager.get(run_id, who), after)
+        await manager.visible_record(run_id, who)
+        return manager.tail(run_id, who, after)
+
     async def events(request: Request, who: Principal) -> Response:
-        run = manager.get(request.path_params["run_id"], who)
         after = int(request.query_params.get("after", request.headers.get("last-event-id", "-1")))
+        source = await run_events(request.path_params["run_id"], who, after)
 
         async def stream() -> AsyncIterator[str]:
-            async for index, event in manager.events(run, after):
+            async for index, event in source:
                 yield f"id: {index}\ndata: {json.dumps(event, separators=(',', ':'))}\n\n"
 
         return StreamingResponse(
@@ -184,7 +227,7 @@ def build_app(
         return JSONResponse({**run.summary(), "outcome": outcome}, 202)
 
     async def inbox(request: Request, who: Principal) -> Response:
-        return JSONResponse({"approvals": manager.inbox(who)})
+        return JSONResponse({"approvals": await manager.inbox(who)})
 
     async def reviews(request: Request, who: Principal) -> Response:
         return JSONResponse({"reviews": manager.review_queue(who)})
@@ -223,7 +266,7 @@ def build_app(
         return JSONResponse(run.summary())
 
     async def threads(request: Request, who: Principal) -> Response:
-        return JSONResponse({"threads": manager.threads(who)})
+        return JSONResponse({"threads": await manager.threads(who)})
 
     async def checkpoints(request: Request, who: Principal) -> Response:
         thread = request.path_params["thread_id"]
@@ -283,11 +326,13 @@ def build_app(
                 await ws.close(code=4401, reason="a valid token is required")
                 return
             try:
-                run = manager.get(ws.path_params["run_id"], who)
+                source = await run_events(
+                    ws.path_params["run_id"], who, int(hello.get("after", -1))
+                )
             except KeyError:
                 await ws.close(code=4404, reason="not found")
                 return
-            async for index, event in manager.events(run, int(hello.get("after", -1))):
+            async for index, event in source:
                 await ws.send_json({"id": index, **event})
             await ws.close(code=1000)
         except WebSocketDisconnect:
@@ -316,11 +361,21 @@ def build_app(
                 with contextlib.suppress(Exception):
                     await manager.sweep_approvals()
 
-        task = asyncio.create_task(timers())
+        async def leases() -> None:  # Step 38: keep this replica's runs, take over orphans
+            while True:
+                await asyncio.sleep(manager.LEASE_SECONDS / 3)
+                with contextlib.suppress(Exception):
+                    await manager.keep_leases()
+                    await manager.adopt_orphans()
+
+        tasks = [asyncio.create_task(timers())]
+        if manager.node is not None:
+            tasks.append(asyncio.create_task(leases()))
         try:
             yield
         finally:
-            task.cancel()
+            for task in tasks:
+                task.cancel()
 
     return Starlette(
         lifespan=lifespan,
@@ -329,16 +384,16 @@ def build_app(
             Route("/healthz", health),
             Route("/v1/agents", guarded(agents)),
             Route("/v1/agents/{agent}/runs", guarded(create), methods=["POST"]),
-            Route("/v1/runs/{run_id}", guarded(state)),
+            Route("/v1/runs/{run_id}", guarded(owned(state))),
             Route("/v1/runs/{run_id}/events", guarded(events)),
-            Route("/v1/runs/{run_id}/approvals", guarded(approvals), methods=["POST"]),
+            Route("/v1/runs/{run_id}/approvals", guarded(owned(approvals)), methods=["POST"]),
             Route("/v1/approvals", guarded(inbox)),
             Route("/v1/reviews", guarded(reviews)),
             Route("/v1/reviews/{run_id}", guarded(review), methods=["POST"]),
-            Route("/v1/runs/{run_id}/takeover", guarded(takeover), methods=["POST"]),
-            Route("/v1/runs/{run_id}/resume", guarded(resume), methods=["POST"]),
-            Route("/v1/runs/{run_id}/retry", guarded(retry), methods=["POST"]),
-            Route("/v1/runs/{run_id}/cancel", guarded(cancel), methods=["POST"]),
+            Route("/v1/runs/{run_id}/takeover", guarded(owned(takeover)), methods=["POST"]),
+            Route("/v1/runs/{run_id}/resume", guarded(owned(resume)), methods=["POST"]),
+            Route("/v1/runs/{run_id}/retry", guarded(owned(retry)), methods=["POST"]),
+            Route("/v1/runs/{run_id}/cancel", guarded(owned(cancel)), methods=["POST"]),
             Route("/v1/threads", guarded(threads)),
             Route("/v1/threads/{thread_id}/checkpoints", guarded(checkpoints)),
             Route("/v1/threads/{thread_id}/fork", guarded(fork), methods=["POST"]),

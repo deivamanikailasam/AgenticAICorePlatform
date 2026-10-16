@@ -113,6 +113,7 @@ class World:
         model: Any = None,
         payments: list[dict[str, Any]] | None = None,
         sums: list[dict[str, Any]] | None = None,
+        node: str | None = None,
     ) -> None:
         self.payments = payments if payments is not None else []
         self.sums = sums if sums is not None else []
@@ -138,7 +139,7 @@ class World:
             checkpointer=checkpointer,
         )
         spec = load_spec_text(SPEC)
-        self.manager = RunManager({spec.name: spec}, assembly, store)
+        self.manager = RunManager({spec.name: spec}, assembly, store, node=node)
         self.app = build_app(self.manager, Verifier())
 
 
@@ -460,3 +461,112 @@ async def test_fork_from_an_earlier_checkpoint_continues_without_repeating_it() 
     assert steps == ["explain"], "the forked run picks up after the chosen checkpoint"
     assert events[-1][1]["outcome"]["type"] == "interrupt"
     assert len(w.sums) == 1
+
+
+# ---------------------------------------------------------------- replicas (Step 38)
+
+
+def replicas(lease: float = 30.0, model: Any = None) -> tuple[World, World]:
+    """Two API replicas, a:8091 and b:8091, sharing one store and checkpointer; each reaches
+    the other in-process instead of over the network."""
+    a = durable_world(model=model)
+    a = World(
+        store=a.manager.store,
+        checkpointer=a.manager.assembly.checkpointer,
+        model=model,
+        node="a:8091",
+    )
+    b = World(
+        store=a.manager.store,
+        checkpointer=a.manager.assembly.checkpointer,
+        model=model,
+        payments=a.payments,
+        sums=a.sums,
+        node="b:8091",
+    )
+    apps = {"a:8091": a.app, "b:8091": b.app}
+    for w in (a, b):
+        w.manager.LEASE_SECONDS = lease
+        w.manager.peer_client = lambda peer: httpx.AsyncClient(  # type: ignore[method-assign]
+            transport=httpx.ASGITransport(app=apps[peer]), base_url=f"http://{peer}"
+        )
+    return a, b
+
+
+async def test_any_replica_answers_for_a_run_another_replica_drives() -> None:
+    a, b = replicas()
+    async with client_for(a) as ca, client_for(b) as cb:
+        run = await start(ca)
+        on_a = await stream(ca, run["run_id"])
+        on_b = await stream(cb, run["run_id"])  # read from the shared store
+        assert on_b == on_a
+        state = (await cb.get(f"/v1/runs/{run['run_id']}", headers=auth("t-alice"))).json()
+        assert state["status"] == "interrupted"
+        assert state["events"] == len(on_a)
+        inbox = (await cb.get("/v1/approvals", headers=auth("t-jsmith"))).json()["approvals"]
+        assert [i["run_id"] for i in inbox] == [run["run_id"]]
+        threads = (await cb.get("/v1/threads", headers=auth("t-alice"))).json()["threads"]
+        assert [r["run_id"] for t in threads for r in t["runs"]] == [run["run_id"]]
+        resp = await cb.post(
+            f"/v1/runs/{run['run_id']}/approvals", json={"approved": True}, headers=auth("t-jsmith")
+        )
+        assert resp.status_code == 202, resp.text  # decided on a, which drives the run
+        assert run["run_id"] in a.manager.held
+        assert run["run_id"] not in b.manager.held
+        rest = await stream(cb, run["run_id"], after=on_a[-1][0])
+        assert rest[-1][1]["outcome"]["type"] == "success"
+        other = await cb.get(f"/v1/runs/{run['run_id']}", headers=auth("t-mallory"))
+        assert other.status_code == 404, "another tenant still sees nothing, on any replica"
+    assert a.payments == [{"amount_aud": 42.0}]
+
+
+async def test_an_idempotent_retry_on_another_replica_returns_the_same_run() -> None:
+    a, b = replicas()
+    async with client_for(a) as ca, client_for(b) as cb:
+        first = await start(ca, key="k-1")
+        again = await start(cb, key="k-1")
+    assert again["run_id"] == first["run_id"]
+    assert len(await a.manager.store.records()) == 1
+
+
+async def test_when_a_replica_stops_another_takes_over_its_paused_run() -> None:
+    a, b = replicas(lease=0.2)
+    async with client_for(a) as ca:
+        run = await start(ca)
+        first = await stream(ca, run["run_id"])
+    await asyncio.sleep(0.3)  # a stops renewing (it died): its lease lapses
+    async with client_for(b) as cb:
+        resp = await cb.post(
+            f"/v1/runs/{run['run_id']}/approvals", json={"approved": True}, headers=auth("t-jsmith")
+        )
+        assert resp.status_code == 202, resp.text
+        assert run["run_id"] in b.manager.held, "b took the run over"
+        rest = await stream(cb, run["run_id"], after=first[-1][0])
+    assert rest[-1][1]["outcome"]["type"] == "success"
+    assert a.payments == [{"amount_aud": 42.0}], "paid once"
+    assert len(a.sums) == 1, "the step before the takeover was not repeated"
+    # a comes back and renews: the run is b's now, so a lets go of its stale paused copy
+    assert await a.manager.keep_leases() == [run["run_id"]]
+    assert run["run_id"] not in a.manager.runs
+
+
+async def test_a_running_run_of_a_stopped_replica_is_taken_over_without_a_request() -> None:
+    a, b = replicas(lease=0.2, model=lambda spec: Stuck())
+    async with client_for(a) as ca:
+        run = await start(ca)
+    running = a.manager.runs[run["run_id"]]
+    for _ in range(100):
+        if any(e["type"] == "STEP_STARTED" and e["stepName"] == "explain" for e in running.events):
+            break
+        await asyncio.sleep(0.02)
+    await asyncio.sleep(0.3)  # a hangs and stops renewing
+    assert await b.manager.adopt_orphans() == [run["run_id"]]
+    assert await a.manager.keep_leases() == [run["run_id"]], "a lets go when it wakes up"
+    assert running.detached
+    assert running.task is not None
+    with contextlib.suppress(asyncio.CancelledError):
+        await running.task
+    record = await a.manager.store.record(run["run_id"])
+    assert record is not None
+    assert record["status"] == "running", "a wrote nothing on letting go"
+    assert len(a.sums) == 1, "b continued from the checkpoint after the calculator step"

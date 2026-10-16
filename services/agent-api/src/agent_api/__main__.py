@@ -78,7 +78,13 @@ def main() -> None:
         if settings.pdp.startswith("opa")
         else RulesApprovalRouter()
     )
-    manager = RunManager(agents, assembly, store, desk=ApprovalDesk(approval_gate, router, audit))
+    manager = RunManager(
+        agents,
+        assembly,
+        store,
+        desk=ApprovalDesk(approval_gate, router, audit),
+        node=settings.node,  # Step 38: replicas share runs through leases
+    )
     verifier = KeycloakTokenVerifier(
         settings.issuer, audience=settings.audience, jwks_url=settings.jwks_url
     )

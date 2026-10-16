@@ -14,6 +14,11 @@
   checkpointer every node is checkpointed, so after a restart running runs continue from their
   checkpoints and paused runs wait for their approval again (``recover``). Threads can be
   inspected and forked from an earlier checkpoint.
+* **Several replicas (Step 38).** Given its address (``node``), a manager shares the store with
+  other replicas: it drives only the unfinished runs whose lease it holds and renews them; a
+  request for a run held elsewhere is answered by that replica (``locate``), and a run whose
+  holder stopped renewing is taken over and continued from its checkpoints. Lists (threads,
+  approvals inbox) come from the store, so every replica gives the same answer.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ import asyncio
 import contextlib
 import hashlib
 import json
+import re
 import time
 from collections.abc import AsyncIterator, Coroutine, Mapping
 from dataclasses import dataclass, field
@@ -29,6 +35,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import httpx
 from agent_audit.redact import digest
 from agent_compiler.compiler import compile_spec, runtime_for
 from agent_contracts.dummies.safety import InMemoryApprovalGate
@@ -61,7 +68,7 @@ from agent_tools.identity import subject_token
 from agent_api.agui import Translator
 from agent_api.assembly import Assembly
 from agent_api.desk import ApprovalDesk, ApprovalExpiredError
-from agent_api.store import MemoryRunStore, RunStore
+from agent_api.store import IdempotencyRaceError, MemoryRunStore, RunStore
 
 # runs that have ended: the only ones retention may prune
 TERMINAL = ("succeeded", "failed", "stopped", "cancelled")
@@ -125,6 +132,8 @@ class Run:
     task: asyncio.Task[None] | None = None
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds"))
     translator: Translator | None = None
+    # this replica lost the run's lease (Step 38): it stops driving it and writes nothing more
+    detached: bool = False
 
     def summary(self) -> dict[str, Any]:
         return {
@@ -170,6 +179,14 @@ class ConflictError(ValueError):
     pass
 
 
+class RunElsewhereError(Exception):
+    """The run is driven by another replica; the request belongs there."""
+
+    def __init__(self, peer: str) -> None:
+        super().__init__(peer)
+        self.peer = peer
+
+
 class RunManager:
     def __init__(
         self,
@@ -177,8 +194,12 @@ class RunManager:
         assembly: Assembly,
         store: RunStore | None = None,
         desk: ApprovalDesk | None = None,
+        node: str | None = None,
     ) -> None:
         self.agents = dict(agents)
+        # Step 38: this replica's address when several share the store (None: the only one)
+        self.node = node
+        self.held: set[str] = set()
         self.assembly = assembly
         self.store = store or MemoryRunStore()
         self.runs: dict[str, Run] = {}
@@ -215,13 +236,120 @@ class RunManager:
     # ------------------------------------------------------------ access
 
     def _visible(self, run: Run, who: Principal) -> bool:
-        if (who.tenant, who.user) == (run.owner.tenant, run.owner.user):
+        return self._may_see(run.record(), who)
+
+    def _may_see(self, rec: Mapping[str, Any], who: Principal) -> bool:
+        if (who.tenant, who.user) == (rec["tenant"], rec["user"]):
             return True
-        if who.tenant == run.owner.tenant and self.TAKEOVER_ROLE in who.roles:
+        if who.tenant == rec["tenant"] and self.TAKEOVER_ROLE in who.roles:
             return True  # operators may see and take over runs of their tenant (Step 28)
-        return who.tenant == run.owner.tenant and any(
-            in_group(who.groups, i.get("approvers")) for i in run.interrupts if i.get("approvers")
+        return who.tenant == rec["tenant"] and any(
+            in_group(who.groups, i.get("approvers"))
+            for i in rec.get("interrupts") or []
+            if i.get("approvers")
         )
+
+    # ------------------------------------------------------------ replicas (Step 38)
+
+    LEASE_SECONDS = 30.0
+
+    async def _hold(self, run_id: str) -> bool:
+        """Take (or keep) the run's lease; always true for a single replica."""
+        if self.node is None:
+            return True
+        if await self.store.claim(run_id, self.node, self.LEASE_SECONDS) == self.node:
+            self.held.add(run_id)
+            return True
+        return False
+
+    async def locate(self, run_id: str) -> str | None:
+        """Where a request for this run must be answered: None for here, else the address of
+        the replica driving it. A finished run is read here; an unfinished one whose holder
+        stopped renewing is taken over and continued here."""
+        if self.node is None or run_id in self.held:
+            return None
+        local = self.runs.get(run_id)
+        if local is not None and local.status in TERMINAL:
+            return None
+        rec = await self.store.record(run_id)
+        if rec is None:
+            return None
+        if str(rec["status"]) in TERMINAL:
+            self.runs.pop(run_id, None)
+            await self._restore(rec)
+            return None
+        holder = await self.store.holder(run_id)
+        if holder and holder != self.node:
+            return holder
+        if await self._hold(run_id):
+            self.runs.pop(run_id, None)
+            await self._restore(rec)
+            return None
+        return await self.store.holder(run_id)
+
+    async def keep_leases(self) -> list[str]:
+        """Renew this replica's leases; runs it no longer holds are let go without another write
+        (their new holder continues them). Returns the runs let go."""
+        if self.node is None:
+            return []
+        live = {r for r in self.held if r in self.runs and self.runs[r].status not in TERMINAL}
+        kept = await self.store.renew(self.node, live, self.LEASE_SECONDS)
+        lost = sorted(live - kept)
+        self.held = kept
+        for run_id in lost:
+            run = self.runs.pop(run_id)
+            run.detached = True
+            if run.task is not None and not run.task.done():
+                run.task.cancel()
+        return lost
+
+    async def adopt_orphans(self) -> list[str]:
+        """Take over unfinished runs nobody holds (their replica stopped), so they continue
+        without waiting for a request. Returns the runs taken over."""
+        if self.node is None:
+            return []
+        taken = []
+        for run_id in await self.store.orphans(("pending", "running", "interrupted")):
+            if await self.locate(run_id) is None and run_id in self.held:
+                taken.append(run_id)
+        return taken
+
+    PEER = re.compile(r"^[A-Za-z0-9.:\[\]-]+:[0-9]{1,5}$")
+
+    def peer_client(self, peer: str) -> httpx.AsyncClient:
+        """An HTTP client to another replica (``host:port`` from the lease table)."""
+        if not self.PEER.match(peer):
+            raise ConflictError("the run's replica address is malformed")
+        return httpx.AsyncClient(base_url=f"http://{peer}", timeout=60.0)
+
+    async def visible_record(self, run_id: str, who: Principal) -> dict[str, Any]:
+        rec = await self.store.record(run_id)
+        if rec is None or not self._may_see(rec, who):
+            raise KeyError(run_id)
+        return rec
+
+    async def tail(
+        self, run_id: str, who: Principal, after: int = -1, poll: float = 0.5
+    ) -> AsyncIterator[tuple[int, dict[str, Any]]]:
+        """A run's events read from the shared store, for a run another replica drives: ends
+        like ``events`` once the run is paused or finished and everything is delivered."""
+        await self.visible_record(run_id, who)
+        cursor = after + 1
+        while True:
+            rec = await self.store.record(run_id)
+            settled = rec is None or rec["status"] not in ("pending", "running")
+            for event in (await self.store.events(run_id))[cursor:]:
+                yield cursor, event
+                cursor += 1
+            if settled:
+                return
+            await asyncio.sleep(poll)
+
+    async def _records(self) -> list[dict[str, Any]]:
+        """Every run this API knows: its own, or with replicas the shared store's."""
+        if self.node is None:
+            return [r.record() for r in self.runs.values()]
+        return await self.store.records()
 
     def get(self, run_id: str, who: Principal) -> Run:
         run = self.runs.get(run_id)
@@ -229,15 +357,26 @@ class RunManager:
             raise KeyError(run_id)
         return run
 
-    def threads(self, who: Principal) -> list[dict[str, Any]]:
+    async def threads(self, who: Principal) -> list[dict[str, Any]]:
         mine = [
-            r
-            for r in self.runs.values()
-            if (r.owner.tenant, r.owner.user) == (who.tenant, who.user)
+            r for r in await self._records() if (r["tenant"], r["user"]) == (who.tenant, who.user)
         ]
         threads: dict[str, list[dict[str, Any]]] = {}
-        for r in sorted(mine, key=lambda r: r.created_at):
-            threads.setdefault(r.thread_id, []).append(r.summary())
+        for r in sorted(mine, key=lambda r: str(r["created_at"])):
+            local = self.runs.get(r["run_id"])
+            threads.setdefault(r["thread_id"], []).append(
+                local.summary()
+                if local is not None
+                else {
+                    "run_id": r["run_id"],
+                    "thread_id": r["thread_id"],
+                    "agent": r["agent"],
+                    "status": r["status"],
+                    "created_at": r["created_at"],
+                    "interrupts": r.get("interrupts") or [],
+                    "events": None,
+                }
+            )
         return [{"thread_id": t, "runs": runs} for t, runs in threads.items()]
 
     # ------------------------------------------------------------ lifecycle
@@ -261,6 +400,10 @@ class RunManager:
                 if known[1] != body:
                     raise ConflictError("this Idempotency-Key was used with a different request")
                 return self.runs[known[0]], False
+            if self.node is not None:  # another replica may have created it (Step 38)
+                found = await self._idempotent_elsewhere(who, idempotency_key, body)
+                if found is not None:
+                    return found, False
         spec = self.agents[agent]
         ctx = RunContext(
             tenant_id=who.tenant,
@@ -291,11 +434,31 @@ class RunManager:
         )
         run.translator = Translator(run.thread_id)
         self.runs[run.run_id] = run
+        try:
+            await self.store.save(run.record())
+        except IdempotencyRaceError:  # another replica stored the same key a moment earlier
+            del self.runs[run.run_id]
+            assert idempotency_key is not None
+            found = await self._idempotent_elsewhere(who, idempotency_key, body)
+            if found is None:
+                raise
+            return found, False
         if idempotency_key:
             self.idempotency[(who.tenant, who.user, idempotency_key)] = (run.run_id, body)
-        await self.store.save(run.record())
+        await self._hold(run.run_id)
         self._start(run, adapter.invoke(handle, inputs, ctx), first=True)
         return run, True
+
+    async def _idempotent_elsewhere(self, who: Principal, key: str, body: str) -> Run | None:
+        rec = await self.store.find_idempotent(who.tenant, who.user, key)
+        if rec is None:
+            return None
+        if rec.get("body_hash") != body:
+            raise ConflictError("this Idempotency-Key was used with a different request")
+        peer = await self.locate(rec["run_id"])
+        if peer is not None:
+            raise RunElsewhereError(peer)
+        return self.runs[rec["run_id"]]
 
     async def _prepare(
         self, spec: AgentSpec, plan: ExecutablePlan, journal: RunJournal | None
@@ -315,74 +478,85 @@ class RunManager:
 
     async def recover(self) -> list[str]:
         """After a restart: reload every stored run, continue the ones that were running from
-        their checkpoints and bring the ones waiting for an approval back to that point."""
+        their checkpoints and bring the ones waiting for an approval back to that point. With
+        replicas (Step 38), only unfinished runs whose lease this replica can take; finished
+        runs are read on demand."""
         actions = []
         for rec in await self.store.records():
-            who = Principal(
-                user=rec["user"],
-                tenant=rec["tenant"],
-                groups=tuple(rec.get("groups", ())),
-                roles=tuple(rec.get("roles", ())),
-                token="",  # tokens are never stored; on-behalf-of tools need a new one
-                client_id=rec.get("client_id", ""),
-            )
-            spec = self.agents.get(rec["agent"])
-            status = str(rec["status"])
-            active = status in ("pending", "running", "interrupted")
-            plan = compile_spec(spec) if spec else None
-            ctx = RunContext(
-                tenant_id=who.tenant,
-                user_id=who.user,
-                agent_id=rec["agent"],
-                run_id=rec["run_id"],
-                thread_id=rec["thread_id"],
-                **({"risk_tier": spec.risk_tier} if spec else {}),
-            )
-            journal = None
-            checkpointer = self.assembly.checkpointer
-            if active and checkpointer is not None:
-                journal = await load_journal(checkpointer, ctx)
-            adapter, handle = (None, "")
-            if active and spec and plan and checkpointer is not None:
-                adapter, handle = await self._prepare(spec, plan, journal)
-            run = Run(
-                run_id=rec["run_id"],
-                thread_id=rec["thread_id"],
-                agent=rec["agent"],
-                owner=who,
-                ctx=ctx,
-                plan=plan
-                or ExecutablePlan.model_construct(name=rec["agent"], nodes=(), entry="", exits=()),
-                adapter=adapter,
-                handle=handle,
-                inputs=dict(rec.get("inputs") or {}),
-                status=status,
-                interrupts=list(rec.get("interrupts") or []),
-                events=await self.store.events(rec["run_id"]),
-                created_at=str(rec.get("created_at")),
-                idempotency_key=rec.get("idempotency_key"),
-                body_hash=rec.get("body_hash"),
-            )
-            run.translator = Translator(run.thread_id)
-            run.translator.started = True
-            self.runs[run.run_id] = run
-            if run.idempotency_key and run.body_hash:
-                self.idempotency[(who.tenant, who.user, run.idempotency_key)] = (
-                    run.run_id,
-                    run.body_hash,
-                )
-            if not active:
+            if self.node is not None and (
+                str(rec["status"]) in TERMINAL or not await self._hold(rec["run_id"])
+            ):
                 continue
-            if adapter is None:
-                await self._fail(run, "the service restarted and this run has no checkpoints")
-                actions.append(f"{run.run_id}: failed (no checkpoints)")
-            elif status == "interrupted":
-                await self._restore_interrupt(run)
-                actions.append(f"{run.run_id}: waiting for approval again")
-            else:
-                self._start(run, adapter.invoke(handle, run.inputs, ctx))
-                actions.append(f"{run.run_id}: resumed from checkpoints")
+            action = await self._restore(rec)
+            if action:
+                actions.append(action)
         return actions
+
+    async def _restore(self, rec: dict[str, Any]) -> str | None:
+        """Load one stored run; continue it if it was unfinished. Returns what was done."""
+        who = Principal(
+            user=rec["user"],
+            tenant=rec["tenant"],
+            groups=tuple(rec.get("groups", ())),
+            roles=tuple(rec.get("roles", ())),
+            token="",  # tokens are never stored; on-behalf-of tools need a new one
+            client_id=rec.get("client_id", ""),
+        )
+        spec = self.agents.get(rec["agent"])
+        status = str(rec["status"])
+        active = status in ("pending", "running", "interrupted")
+        plan = compile_spec(spec) if spec else None
+        ctx = RunContext(
+            tenant_id=who.tenant,
+            user_id=who.user,
+            agent_id=rec["agent"],
+            run_id=rec["run_id"],
+            thread_id=rec["thread_id"],
+            **({"risk_tier": spec.risk_tier} if spec else {}),
+        )
+        journal = None
+        checkpointer = self.assembly.checkpointer
+        if active and checkpointer is not None:
+            journal = await load_journal(checkpointer, ctx)
+        adapter, handle = (None, "")
+        if active and spec and plan and checkpointer is not None:
+            adapter, handle = await self._prepare(spec, plan, journal)
+        run = Run(
+            run_id=rec["run_id"],
+            thread_id=rec["thread_id"],
+            agent=rec["agent"],
+            owner=who,
+            ctx=ctx,
+            plan=plan
+            or ExecutablePlan.model_construct(name=rec["agent"], nodes=(), entry="", exits=()),
+            adapter=adapter,
+            handle=handle,
+            inputs=dict(rec.get("inputs") or {}),
+            status=status,
+            interrupts=list(rec.get("interrupts") or []),
+            events=await self.store.events(rec["run_id"]),
+            created_at=str(rec.get("created_at")),
+            idempotency_key=rec.get("idempotency_key"),
+            body_hash=rec.get("body_hash"),
+        )
+        run.translator = Translator(run.thread_id)
+        run.translator.started = True
+        self.runs[run.run_id] = run
+        if run.idempotency_key and run.body_hash:
+            self.idempotency[(who.tenant, who.user, run.idempotency_key)] = (
+                run.run_id,
+                run.body_hash,
+            )
+        if not active:
+            return None
+        if adapter is None:
+            await self._fail(run, "the service restarted and this run has no checkpoints")
+            return f"{run.run_id}: failed (no checkpoints)"
+        if status == "interrupted":
+            await self._restore_interrupt(run)
+            return f"{run.run_id}: waiting for approval again"
+        self._start(run, adapter.invoke(handle, run.inputs, ctx))
+        return f"{run.run_id}: resumed from checkpoints"
 
     async def _restore_interrupt(self, run: Run) -> None:
         """Replay a paused run to its approval point without emitting anything."""
@@ -460,6 +634,7 @@ class RunManager:
         run.translator = Translator(new_thread)
         self.runs[new_run] = run
         await self.store.save(run.record())
+        await self._hold(new_run)
         self._start(run, adapter.invoke(handle, run.inputs, ctx), first=True)
         return run
 
@@ -503,23 +678,23 @@ class RunManager:
         self._start(run, run.live().resume(run.handle, run.run_id, verdict.resume, run.ctx))
         return "resumed"
 
-    def inbox(self, who: Principal) -> list[dict[str, Any]]:
+    async def inbox(self, who: Principal) -> list[dict[str, Any]]:
         """Approvals this person may decide: same tenant, in the approver group, not their own."""
         out = []
-        for run in self.runs.values():
+        for rec in await self._records():
             if (
-                run.status != "interrupted"
-                or run.owner.tenant != who.tenant
-                or run.owner.user == who.user
+                rec["status"] != "interrupted"
+                or rec["tenant"] != who.tenant
+                or rec["user"] == who.user
             ):
                 continue
-            for item in run.interrupts:
+            for item in rec.get("interrupts") or []:
                 if item.get("reason") == "approval" and in_group(who.groups, item.get("approvers")):
                     out.append(
                         {
-                            "run_id": run.run_id,
-                            "agent": run.agent,
-                            "requested_by": run.owner.user,
+                            "run_id": rec["run_id"],
+                            "agent": rec["agent"],
+                            "requested_by": rec["user"],
                             "proposed": item.get("action"),
                             "reason": item.get("message"),
                             "risk": item.get("risk"),
@@ -530,7 +705,7 @@ class RunManager:
                             "expires_at": item.get("expires_at"),
                             "escalated": item.get("escalated"),
                             "routing": item.get("routing"),
-                            "input": run.inputs,
+                            "input": rec.get("inputs"),
                         }
                     )
         return sorted(out, key=lambda x: str(x["expires_at"]))
@@ -898,6 +1073,8 @@ class RunManager:
 
     async def _record(self, run: Run, event: RunEvent) -> None:
         assert run.translator is not None
+        if run.detached:  # another replica drives this run now (Step 38)
+            return
         async with run.changed:
             for e in run.translator.translate(event):
                 dumped = e.model_dump(mode="json", by_alias=True, exclude_none=True)
@@ -1027,12 +1204,17 @@ class RunManager:
             current_caller.reset(caller_token)
             subject_token.reset(user_token)
             current_sink.reset(sink_token)
-            await self.store.save(run.record())
+            if not run.detached:
+                await self.store.save(run.record())
+            if run.status in TERMINAL:
+                self.held.discard(run.run_id)
             async with run.changed:
                 run.active = False
                 run.changed.notify_all()
 
     async def _finish_cancelled(self, run: Run, reason: str | None = None) -> None:
+        if run.detached:  # let go after losing the lease: not a cancellation (Step 38)
+            return
         run.status, run.interrupts = "cancelled", []
         await self._audit_event(
             "run.ended", run.ctx, {"status": "cancelled", "stop_reason": reason}

@@ -60,6 +60,14 @@ class Settings:
         default_factory=lambda: _env("AGENT_API_AUDIT_FILE", "/tmp/agent-api-audit.jsonl")  # noqa: S108
     )
 
+    # Step 38: this replica's address when several share the run store (Kubernetes sets the pod
+    # IP); unset for a single process
+    pod_ip: str = field(default_factory=lambda: _env("AGENT_API_POD_IP", ""))
+
+    @property
+    def node(self) -> str | None:
+        return f"{self.pod_ip}:{self.port}" if self.pod_ip and self.store == "postgres" else None
+
     @property
     def token_url(self) -> str:
         return f"{self.internal_issuer}/protocol/openid-connect/token"
