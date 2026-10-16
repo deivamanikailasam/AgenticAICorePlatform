@@ -8,6 +8,7 @@ on the same adapter as child runs.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import Path
@@ -378,6 +379,7 @@ def supervisor_executor(
             workers=workers,
             authorise=authorise,
             meter=meter,
+            flush=False,  # the team's run owns the trace
             admit=admit,
             budgets=budgets,
         )
@@ -498,6 +500,7 @@ async def run(
     meter: Meter | None = None,
     admit: Admit | None = None,
     budgets: RunBudgets | None = None,
+    flush: bool = True,
 ) -> tuple[RunResult, str]:
     """Execute ``spec`` and return the result and the trace id (hex).
 
@@ -565,7 +568,10 @@ async def run(
     )
     if budgets is not None:
         result = await budgets.finish(spec, ctx, result, model)
-    tracing.flush(provider)
+    if flush and tracing.owns(provider):
+        # only ``just run``'s own exporter is flushed, off the event loop and time-boxed: a slow
+        # or absent collector must never hold up a run (services export in the background)
+        await asyncio.to_thread(tracing.flush, provider)
     return result, trace_id
 
 

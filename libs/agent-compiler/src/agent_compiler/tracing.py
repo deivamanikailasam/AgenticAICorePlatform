@@ -45,5 +45,10 @@ def tracer(provider: TracerProvider | None = None) -> trace.Tracer:
     return (provider or configure()).get_tracer("agent_platform.runtime")
 
 
-def flush(provider: TracerProvider | None = None) -> None:
-    (provider or configure()).force_flush()
+def owns(provider: TracerProvider | None) -> bool:
+    """Is this the fallback provider ``just run`` created for itself (not a service's)?"""
+    return _provider is not None and (provider is None or provider is _provider)
+
+
+def flush(provider: TracerProvider | None = None, timeout_millis: int = 5000) -> None:
+    (provider or configure()).force_flush(timeout_millis)
