@@ -165,3 +165,9 @@ Every term used in this repository, in plain English. Grows with each step.
 | Finding | A test of a defence that failed: a weakness to fix |
 | Fingerprint (finding) | A short fixed code for a finding, so the same weakness is tracked as one issue across runs |
 | Release gate | An automatic check that must pass before a version is released |
+| Eval gate | An automatic check that blocks a change unless its eval results meet set thresholds |
+| Regression (eval) | A task that passed before a change and fails after it |
+| Mechanics run | An eval run on the stand-in: shows regressions and usage changes, not real quality |
+| Quality run | An eval run with the real model: the one that measures how good the agent actually is |
+| Explicit approval (cost) | A named approver's review on the exact commit, saying they accept the extra cost |
+| Affected app | An app whose behaviour a change can alter, worked out from the files it touches |

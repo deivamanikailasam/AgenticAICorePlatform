@@ -31,3 +31,5 @@ evals/results/**/*-stand-in.json
 evals/results/**/*-scripted.json
 # red-team reports are CI artefacts (Step 35)
 evals/results/redteam/
+# eval-gate results are CI artefacts (Step 36)
+evals/results/gates/
