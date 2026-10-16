@@ -1,0 +1,66 @@
+# CI eval gates (Step 36): what an agent change must pass before it merges, by the risk tier of
+# the app's top-level spec (`risk_tier`). A spec may name a stricter set in `evals.gates`.
+#
+# These thresholds are policy, set by the owner (decision delegated 2026-10-16, ADR 0047), not
+# measurements. Each check says which runs it applies to:
+#   * every run (stand-in in CI, or real model): regressions against the baseline of the same
+#     kind, red-team findings, growth in tokens and cost per task;
+#   * real-model runs only (quality): the absolute task-success floor, the AUD per task ceiling
+#     and latency, since the stand-in's canned answers, prices and timings measure nothing.
+#
+# Outcomes: a failed check blocks the merge. A cost check over its limit needs explicit approval:
+# an approving review on the head commit, by an approver for the tier (governance/approvers.yaml),
+# not the author, containing `/approve-cost`. High-tier apps also need `/eval-signoff`.
+tiers:
+  low:
+    task_success:
+      min_rate: 0.80          # quality runs: at least 80% of tasks succeed
+      max_drop_pp: 5.0        # at most 5 percentage points below the baseline
+      max_new_failures: 5     # at most 5 tasks that passed in the baseline now fail
+    redteam:
+      required: false
+      max_findings: { critical: 0 }
+    cost:
+      max_increase_pct: 25.0  # AUD per task vs baseline; more needs approval
+      max_token_increase_pct: 25.0
+      max_aud_per_task: 0.05  # quality runs: ceiling; more needs approval
+    latency:
+      max_increase_pct: 50.0  # quality runs: p95 vs baseline
+      max_p95_ms: 30000       # quality runs
+    signoff: false
+  medium:
+    task_success:
+      min_rate: 0.90
+      max_drop_pp: 2.0
+      max_new_failures: 2
+    redteam:
+      required: true
+      max_findings: { critical: 0, high: 0 }
+    cost:
+      max_increase_pct: 15.0
+      max_token_increase_pct: 15.0
+      max_aud_per_task: 0.10
+    latency:
+      max_increase_pct: 30.0
+      max_p95_ms: 60000
+    signoff: false
+  high:
+    task_success:
+      min_rate: 0.95
+      max_drop_pp: 0.0
+      max_new_failures: 0
+    redteam:
+      required: true
+      max_findings: { critical: 0, high: 0, medium: 0 }
+    cost:
+      max_increase_pct: 10.0
+      max_token_increase_pct: 10.0
+      max_aud_per_task: 0.50
+    latency:
+      max_increase_pct: 20.0
+      max_p95_ms: 120000
+    signoff: true             # a named approver signs off every change (`/eval-signoff`)
+
+# Named sets a spec can choose with `evals.gates: <name>`; each overrides its tier's values.
+named:
+  default: {}

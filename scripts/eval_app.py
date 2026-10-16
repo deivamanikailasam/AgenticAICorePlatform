@@ -72,7 +72,16 @@ def mechanics(report: Report) -> dict[str, Any]:
         "versions": report.versions,
         "provider": report.provider,
         "succeeded": sum(t.success for t in report.results),
-        "tasks": {t.task: {"success": t.success, "status": t.status} for t in report.results},
+        # Step 36: usage is deterministic on the stand-in (canned answers, fixed prices), so
+        # growth in tokens or AUD per task is a real signal for the cost gate
+        "usage": {
+            "tokens": sum(t.tokens for t in report.results),
+            "cost_aud": round(sum(t.cost_aud for t in report.results), 8),
+        },
+        "tasks": {
+            t.task: {"success": t.success, "status": t.status, "tokens": t.tokens}
+            for t in report.results
+        },
     }
 
 

@@ -22,404 +22,508 @@
  "tasks": {
   "debate-000": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-001": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-002": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-003": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-004": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-005": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-006": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-007": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-008": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-009": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-010": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-011": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-012": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-013": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-014": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-015": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-016": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-017": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-018": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-019": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-020": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-021": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-022": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-023": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-024": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-025": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-026": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-027": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-028": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-029": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-030": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-031": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-032": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-033": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-034": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-035": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-036": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-037": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-038": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-039": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-040": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-041": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-042": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-043": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-044": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-045": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-046": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-047": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-048": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-049": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-050": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-051": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-052": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-053": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-054": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-055": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-056": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-057": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-058": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-059": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-060": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-061": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-062": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-063": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-064": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-065": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-066": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-067": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-068": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-069": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-070": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-071": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-072": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-073": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-074": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-075": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-076": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-077": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-078": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-079": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-080": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-081": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-082": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-083": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-084": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-085": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-086": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-087": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-088": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-089": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-090": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-091": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-092": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1430
   },
   "debate-093": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-094": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1418
   },
   "debate-095": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-096": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-097": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-098": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   },
   "debate-099": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1454
   }
+ },
+ "usage": {
+  "cost_aud": 0.2136635,
+  "tokens": 144428
  },
  "versions": {
   "models": {

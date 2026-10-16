@@ -22,404 +22,508 @@
  "tasks": {
   "handoff-billing-000": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-001": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-002": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 260
   },
   "handoff-billing-003": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-004": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 266
   },
   "handoff-billing-005": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-006": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 260
   },
   "handoff-billing-007": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-008": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-009": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-010": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-011": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 266
   },
   "handoff-billing-012": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 260
   },
   "handoff-billing-013": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-014": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-015": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-016": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-017": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 260
   },
   "handoff-billing-018": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-019": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-020": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 266
   },
   "handoff-billing-021": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-022": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-023": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-024": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-025": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-026": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-027": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 266
   },
   "handoff-billing-028": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 266
   },
   "handoff-billing-029": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-030": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-031": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-032": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-033": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-034": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-035": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-036": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 266
   },
   "handoff-billing-037": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-billing-038": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-billing-039": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 258
   },
   "handoff-general-080": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 250
   },
   "handoff-general-081": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 248
   },
   "handoff-general-082": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-general-083": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-general-084": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-general-085": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 248
   },
   "handoff-general-086": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 248
   },
   "handoff-general-087": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 248
   },
   "handoff-general-088": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 248
   },
   "handoff-general-089": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 248
   },
   "handoff-general-090": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-general-091": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-general-092": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 250
   },
   "handoff-general-093": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 250
   },
   "handoff-general-094": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 248
   },
   "handoff-general-095": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 250
   },
   "handoff-general-096": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-general-097": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 250
   },
   "handoff-general-098": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 248
   },
   "handoff-general-099": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-tech-040": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   },
   "handoff-tech-041": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-042": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-043": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-044": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-045": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   },
   "handoff-tech-046": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-047": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 264
   },
   "handoff-tech-048": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 262
   },
   "handoff-tech-049": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-tech-050": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 262
   },
   "handoff-tech-051": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-tech-052": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-053": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 262
   },
   "handoff-tech-054": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 262
   },
   "handoff-tech-055": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 264
   },
   "handoff-tech-056": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   },
   "handoff-tech-057": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-058": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   },
   "handoff-tech-059": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   },
   "handoff-tech-060": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-tech-061": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-062": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   },
   "handoff-tech-063": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 262
   },
   "handoff-tech-064": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-065": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-066": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-067": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 264
   },
   "handoff-tech-068": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-tech-069": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 264
   },
   "handoff-tech-070": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-071": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   },
   "handoff-tech-072": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 262
   },
   "handoff-tech-073": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-074": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 262
   },
   "handoff-tech-075": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-076": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 256
   },
   "handoff-tech-077": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   },
   "handoff-tech-078": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 252
   },
   "handoff-tech-079": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 254
   }
+ },
+ "usage": {
+  "cost_aud": 0.0378516,
+  "tokens": 25624
  },
  "versions": {
   "models": {

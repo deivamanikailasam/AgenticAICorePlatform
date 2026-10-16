@@ -27,12 +27,19 @@ from agent_compiler.compiler import compile_spec
 from agent_contracts.dummies.observability import MemoryAuditSink
 from agent_contracts.dummies.safety import RulesPolicyDecisionPoint
 from agent_contracts.interfaces import ModelClient, PolicyDecisionPoint
-from agent_contracts.models import Usage
+from agent_contracts.models import (
+    ChatChunk,
+    ChatRequest,
+    ChatResponse,
+    ModelCapabilities,
+    Usage,
+)
 from agent_evals.checks import Observation, ToolCallRecord, score, success
 from agent_evals.results import Report, TaskResult, git_commit, now
 from agent_evals.tasks import Task, dataset_digest, load_tasks
 from agent_evals.user_sim import ScriptedUser, UserProfile, converse, render_turn
 from agent_runtime.models import GatewayModelClient
+from agent_runtime.models.ledger import UsageLedger
 from agent_spec import AgentSpec
 from agent_spec.platform import PlatformConfig, load_platform
 from agent_tools.registry import InMemoryToolRegistry
@@ -150,6 +157,30 @@ async def _observe(
     )
 
 
+class _Metered(ModelClient):
+    """A scripted or stand-in model whose reported usage is recorded like a gateway call."""
+
+    def __init__(self, inner: ModelClient, ledger: UsageLedger) -> None:
+        self.inner, self.ledger = inner, ledger
+
+    def capabilities(self, model: str) -> ModelCapabilities:
+        return self.inner.capabilities(model)
+
+    async def chat(self, request: ChatRequest) -> ChatResponse:
+        response = await self.inner.chat(request)
+        self.ledger.record(
+            request.metadata.get("run_id", "-"), request.model, response.model, response.usage
+        )
+        return response
+
+    async def stream(self, request: ChatRequest) -> AsyncIterator[ChatChunk]:
+        usage = Usage()
+        async for chunk in self.inner.stream(request):
+            usage = chunk.usage or usage
+            yield chunk
+        self.ledger.record(request.metadata.get("run_id", "-"), request.model, request.model, usage)
+
+
 @dataclass
 class Session:
     """An in-process run API over the platform's assembly, for one harness and provider."""
@@ -198,11 +229,13 @@ async def session(
 
     def model_for(agent: AgentSpec) -> ModelClient:
         # usage must land in the assembly's ledger, which the observation reads (model calls,
-        # tokens, AUD); a gateway client built by the provider would otherwise keep its own
+        # tokens, AUD); a gateway client built by the provider would otherwise keep its own,
+        # and a scripted one records none
         model = provider.factory(agent)
         if isinstance(model, GatewayModelClient):
             model.ledger = assembly.ledger
-        return model
+            return model
+        return _Metered(model, assembly.ledger)
 
     assembly.model_factory = model_for
     manager = RunManager({spec.name: spec}, assembly)

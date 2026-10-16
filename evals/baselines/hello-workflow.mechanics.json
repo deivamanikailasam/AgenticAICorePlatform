@@ -22,404 +22,508 @@
  "tasks": {
   "hello-000": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-001": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-002": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-003": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-004": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-005": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-006": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-007": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-008": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-009": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-010": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-011": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-012": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-013": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-014": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-015": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-016": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-017": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-018": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-019": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-020": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-021": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-022": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-023": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-024": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-025": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-026": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-027": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-028": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-029": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-030": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-031": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-032": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-033": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-034": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-035": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-036": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-037": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-038": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-039": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-040": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-041": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-042": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-043": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-044": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-045": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-046": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-047": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-048": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-049": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-050": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-051": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-052": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-053": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-054": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-055": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-056": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-057": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-058": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-059": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-060": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-061": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-062": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-063": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-064": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-065": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-066": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-067": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-068": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-069": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-070": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-071": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-072": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-073": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-074": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-075": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-076": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-077": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-078": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-079": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-080": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-081": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-082": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-083": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-084": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-085": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-086": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-087": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-088": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-089": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-090": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-091": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-092": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-093": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-094": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-095": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-096": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-097": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-098": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   },
   "hello-099": {
    "status": "succeeded",
-   "success": true
+   "success": true,
+   "tokens": 0
   }
+ },
+ "usage": {
+  "cost_aud": 0.0,
+  "tokens": 0
  },
  "versions": {
   "models": {

@@ -22,404 +22,508 @@
  "tasks": {
   "review-000": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-001": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-002": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-003": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-004": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-005": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-006": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-007": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-008": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-009": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-010": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-011": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-012": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-013": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-014": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-015": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-016": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-017": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-018": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-019": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-020": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-021": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-022": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-023": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-024": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-025": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-026": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-027": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-028": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-029": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-030": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-031": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-032": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-033": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-034": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-035": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-036": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-037": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-038": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-039": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-040": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-041": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-042": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-043": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-044": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-045": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-046": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-047": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-048": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-049": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-050": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-051": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-052": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-053": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-054": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-055": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-056": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-057": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-058": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-059": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-060": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-061": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-062": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-063": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-064": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-065": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-066": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-067": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-068": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-069": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-070": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-071": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-072": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-073": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-074": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-075": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-076": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-077": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-078": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-079": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-080": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-081": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-082": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-083": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-084": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-085": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-086": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-087": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-088": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-089": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-090": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-091": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-092": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 996
   },
   "review-093": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   },
   "review-094": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-095": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-096": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1004
   },
   "review-097": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-098": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 988
   },
   "review-099": {
    "status": "stopped",
-   "success": false
+   "success": false,
+   "tokens": 1012
   }
+ },
+ "usage": {
+  "cost_aud": 0.14820816,
+  "tokens": 100280
  },
  "versions": {
   "models": {

@@ -59,6 +59,10 @@ eval-baseline *apps:
 eval-baseline-check *apps:
     uv run python -m scripts.eval_app baseline-check {{apps}}
 
+# Step 36: CI eval gates (evals/gates.yaml). e.g. just eval-gate --base origin/main --redteam evals/results/redteam/integration.json
+eval-gate *args:
+    uv run python -m scripts.eval_gate {{args}}
+
 # Step 35: red-team suite (OWASP ASI01-ASI10). Scenario attacks need OPA with the policies loaded
 # (`just provision-policies`). Fails on any high/critical finding. e.g. just redteam --tier sandbox
 redteam *args:
