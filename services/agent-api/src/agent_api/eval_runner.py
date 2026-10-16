@@ -27,10 +27,12 @@ from agent_compiler.compiler import compile_spec
 from agent_contracts.dummies.observability import MemoryAuditSink
 from agent_contracts.dummies.safety import RulesPolicyDecisionPoint
 from agent_contracts.interfaces import ModelClient, PolicyDecisionPoint
+from agent_contracts.models import Usage
 from agent_evals.checks import Observation, ToolCallRecord, score, success
 from agent_evals.results import Report, TaskResult, git_commit, now
 from agent_evals.tasks import Task, dataset_digest, load_tasks
 from agent_evals.user_sim import ScriptedUser, UserProfile, converse, render_turn
+from agent_runtime.models import GatewayModelClient
 from agent_spec import AgentSpec
 from agent_spec.platform import PlatformConfig, load_platform
 from agent_tools.registry import InMemoryToolRegistry
@@ -122,7 +124,8 @@ async def _observe(
         if e.type == "agent.delegate" and e.payload.get("effect") == "allow"
     ]
     ledger = manager.assembly.ledger
-    usage = ledger.total(run.run_id)
+    rows = ledger.tree(run.run_id)  # the run and its team workers
+    usage = sum((r.usage for r in rows), Usage())
     steps = sum(1 for e in run.events if e.get("type") == "STEP_FINISHED")
     output = next(
         (
@@ -140,7 +143,7 @@ async def _observe(
         delegations=delegations,
         guardrail_blocks=blocks,
         steps=steps,
-        model_calls=ledger.calls(run.run_id),
+        model_calls=len(rows),
         tokens=usage.input_tokens + usage.output_tokens,
         cost_aud=usage.cost_aud,
         latency_ms=int((time.perf_counter() - started) * 1000),
@@ -192,6 +195,16 @@ async def session(
         registry_factory=harness.registry,
         memory_factory=_no_memory,
     )
+
+    def model_for(agent: AgentSpec) -> ModelClient:
+        # usage must land in the assembly's ledger, which the observation reads (model calls,
+        # tokens, AUD); a gateway client built by the provider would otherwise keep its own
+        model = provider.factory(agent)
+        if isinstance(model, GatewayModelClient):
+            model.ledger = assembly.ledger
+        return model
+
+    assembly.model_factory = model_for
     manager = RunManager({spec.name: spec}, assembly)
     app = build_app(manager, _Verifier())
     schemas: dict[str, dict[str, Any]] = {}

@@ -66,6 +66,16 @@ class UsageLedger:
     def calls(self, run_id: str) -> int:
         return len(self._rows.get(run_id, []))
 
+    def tree(self, run_id: str) -> list[LedgerRow]:
+        """Rows of a run and of every run under it: team workers record under
+        ``<run>/<worker>-<n>`` (Step 22), so a team's usage is the sum of the tree."""
+        return [
+            row
+            for key, rows in self._rows.items()
+            if key == run_id or key.startswith(f"{run_id}/")
+            for row in rows
+        ]
+
 
 class PostgresUsageLedger(UsageLedger):
     def __init__(self, dsn: str) -> None:

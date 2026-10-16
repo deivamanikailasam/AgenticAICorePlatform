@@ -360,6 +360,10 @@ class GatewayModelClient(ModelClient):
                 doc = json.loads(data)
                 call_id = call_id or doc.get("id")
                 if doc.get("usage"):
+                    # a streamed response's cost is only known at the end: LiteLLM sends it in
+                    # the final usage chunk, not in the response headers
+                    if not cost and doc["usage"].get("cost") is not None:
+                        cost = str(doc["usage"]["cost"])
                     usage = self._usage(doc["usage"], cost)
                 for choice in doc.get("choices", []):
                     delta = choice.get("delta", {})

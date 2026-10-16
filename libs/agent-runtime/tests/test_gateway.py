@@ -230,6 +230,24 @@ async def test_stream_assembles_text_tool_calls_and_usage() -> None:
 
 
 @respx.mock
+async def test_a_streamed_call_is_costed_from_its_final_usage_chunk() -> None:
+    """LiteLLM can't put a stream's cost in the headers (it's known only at the end); it sends
+    it in the usage chunk. Without this, every streamed call was recorded at AUD 0."""
+    sse = (
+        'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n'
+        'data: {"choices":[],"usage":{"prompt_tokens":8,"completion_tokens":3,"cost":0.002}}\n\n'
+        "data: [DONE]\n\n"
+    )
+    respx.post(URL).respond(200, text=sse, headers={"content-type": "text/event-stream"})
+    c = client()
+    chunks = [x async for x in c.stream(req(metadata={"run_id": "r1", "tenant_id": "t1"}))]
+    assert chunks[-1].usage is not None
+    assert chunks[-1].usage.cost_aud == pytest.approx(0.003)
+    [row] = c.ledger.rows("r1")
+    assert (row.cost_usd, row.usage.cost_aud) == (pytest.approx(0.002), pytest.approx(0.003))
+
+
+@respx.mock
 async def test_a_stream_is_retried_until_it_opens_but_not_after_a_bad_request() -> None:
     """Step 33: a refused connection or timeout before the first byte is retried, like chat."""
     route = respx.post(URL).mock(
