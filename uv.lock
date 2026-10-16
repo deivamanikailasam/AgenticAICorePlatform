@@ -104,6 +104,7 @@ dependencies = [
     { name = "agent-audit" },
     { name = "agent-compiler" },
     { name = "agent-contracts" },
+    { name = "agent-evals" },
     { name = "agent-guardrails" },
     { name = "agent-memory" },
     { name = "agent-registry" },
@@ -122,6 +123,7 @@ requires-dist = [
     { name = "agent-audit", editable = "libs/agent-audit" },
     { name = "agent-compiler", editable = "libs/agent-compiler" },
     { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-evals", editable = "libs/agent-evals" },
     { name = "agent-guardrails", editable = "libs/agent-guardrails" },
     { name = "agent-memory", editable = "libs/agent-memory" },
     { name = "agent-registry", editable = "libs/agent-registry" },
@@ -1104,11 +1106,21 @@ name = "invoice-triage"
 version = "0.3.0"
 source = { editable = "apps/invoice-triage" }
 dependencies = [
+    { name = "agent-contracts" },
+    { name = "agent-evals" },
+    { name = "agent-spec" },
+    { name = "agent-tools" },
     { name = "mcp" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "mcp", specifier = ">=2.3.0,<2.4" }]
+requires-dist = [
+    { name = "agent-contracts", editable = "libs/agent-contracts" },
+    { name = "agent-evals", editable = "libs/agent-evals" },
+    { name = "agent-spec", editable = "libs/agent-spec" },
+    { name = "agent-tools", editable = "libs/agent-tools" },
+    { name = "mcp", specifier = ">=2.3.0,<2.4" },
+]
 
 [[package]]
 name = "jiter"

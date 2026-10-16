@@ -5,6 +5,10 @@ description = "Hybrid reference app (Step 15): invoice validation functions and 
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "mcp>=2.3.0,<2.4",
+    "agent-contracts",
+    "agent-evals",
+    "agent-spec",
+    "agent-tools",
 ]
 
 [project.entry-points."agent_platform.functions"]
@@ -13,6 +17,15 @@ dependencies = [
 
 [project.scripts]
 invoice-triage-erp = "invoice_triage.erp_server:main"
+
+[tool.uv.sources]
+agent-contracts = { workspace = true }
+agent-evals = { workspace = true }
+agent-spec = { workspace = true }
+agent-tools = { workspace = true }
+
+[project.entry-points."agent_platform.eval_apps"]
+"invoice-triage" = "invoice_triage.eval:InvoiceTriageHarness"
 
 [build-system]
 requires = ["hatchling==1.32.4"]

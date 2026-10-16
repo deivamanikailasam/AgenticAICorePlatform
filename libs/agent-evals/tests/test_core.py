@@ -249,3 +249,22 @@ def test_results_are_saved_with_versions_and_compared(tmp_path: Path) -> None:
     assert diff["regressions"] == ["a"]
     assert diff["fixed"] == ["b"]
     assert diff["versions"] == {"spec": {"from": "0.3.0", "to": "0.4.0"}}
+
+
+def test_approval_requests_show_the_right_arguments() -> None:
+    obs = Observation("interrupted", None, approvals_requested=["post_payment"])
+    obs.approval_arguments["post_payment"] = {"invoice_id": "INV-9", "amount_aud": 99.0}
+    t = task(
+        status=["interrupted", "succeeded"],
+        policy={
+            "approval_required": ["post_payment"],
+            "approval_arguments": {"post_payment": {"amount_aud": 528.0}},
+        },
+        limits={"max_model_calls": 0},
+    )
+    failed = {s.metric: s.detail for s in score(t, obs) if not s.passed}
+    assert failed == {
+        "policy_compliance": "approval asks post_payment.amount_aud = 99.0, expected 528.0"
+    }
+    held = score(task(policy={"not_requested": ["post_payment"]}), obs)[0]
+    assert held.detail == "post_payment reached an approval request although it must not"

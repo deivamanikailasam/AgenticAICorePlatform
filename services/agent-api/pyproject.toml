@@ -5,6 +5,7 @@ description = "Run API (Step 17): create, stream (AG-UI over SSE or WebSocket), 
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "agent-audit",
+    "agent-evals",
     "agent-telemetry",
     "agent-contracts",
     "agent-spec",
@@ -25,6 +26,7 @@ agent-api = "agent_api.__main__:main"
 
 [tool.uv.sources]
 agent-audit = { workspace = true }
+agent-evals = { workspace = true }
 agent-telemetry = { workspace = true }
 agent-contracts = { workspace = true }
 agent-spec = { workspace = true }

@@ -25,3 +25,7 @@ keys.txt
 node_modules/
 !tests/stack/standin.env
 .agents.db
+
+# Step 34: eval reports from mock providers check the harness, not model quality: never committed
+evals/results/**/*-stand-in.json
+evals/results/**/*-scripted.json

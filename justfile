@@ -44,6 +44,20 @@ record-cassettes:
 test-chaos *args:
     uv run pytest services/agent-api/tests/test_chaos.py libs/agent-compiler/tests/test_durable_runs.py services/agent-api/tests/test_api.py -k "chaos or timeout or outage or retry or slow or killed or restart" {{args}}
 
+# Agent evaluation (Step 34): a reference app's golden tasks through the run API, versioned report
+#   just eval-app invoice-triage                         stand-in models: harness mechanics only
+#   just eval-app invoice-triage --provider gateway --publish   real models (Mac): a baseline
+eval-app app *args:
+    uv run python -m scripts.eval_app run {{app}} {{args}}
+
+# Compare two eval reports: version changes, metric changes, regressions (exit 1 if any)
+eval-compare a b:
+    uv run python -m scripts.eval_app compare {{a}} {{b}}
+
+# Regenerate the golden task sets from their seeded generators
+eval-tasks:
+    uv run python -m invoice_triage.eval_tasks
+
 # Tests that need Project 0 (or the stand-in stack) running
 test-integration *args:
     uv run pytest -m integration {{args}}

@@ -14,9 +14,12 @@ never marked wrong on something nobody specified.
 * ``tools`` — the trajectory: ``expected`` (the tool calls in order), ``required``, ``forbidden``,
   ``max_extra`` (unnecessary calls allowed beyond ``expected``), ``arguments`` (per tool, values
   the call's arguments must have).
-* ``policy`` — ``approval_required`` (tools that must stop for a person), ``denied`` (tools
-  policy must refuse), ``no_guardrail_block`` (true: no guardrail may block).
-* ``limits`` — ``max_steps``, ``max_tokens``, ``max_cost_aud``, ``max_latency_ms``.
+* ``policy`` — ``approval_required`` (tools that must stop for a person),
+  ``approval_arguments`` (what the approval request must show), ``not_requested`` (tools that
+  must never get as far as an approval request), ``denied`` (tools policy must refuse),
+  ``no_guardrail_block`` (true: no guardrail may block).
+* ``limits`` — ``max_steps``, ``max_model_calls``, ``max_tokens``, ``max_cost_aud``,
+  ``max_latency_ms``.
 * ``rubric`` — a judge rubric (``evals/rubrics/<name>.md``) for what deterministic checks can't
   decide; used only when the judge is enabled.
 """
@@ -55,19 +58,24 @@ class ToolsCheck(_Model):
 
 class PolicyCheck(_Model):
     approval_required: tuple[str, ...] = ()
+    #: the arguments the approval request must show (what the person is asked to approve)
+    approval_arguments: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    #: tools that must never reach an approval request (e.g. paying an invoice that is wrong)
+    not_requested: tuple[str, ...] = ()
     denied: tuple[str, ...] = ()
     no_guardrail_block: bool = False
 
 
 class Limits(_Model):
     max_steps: int | None = None
+    max_model_calls: int | None = None
     max_tokens: int | None = None
     max_cost_aud: float | None = None
     max_latency_ms: int | None = None
 
 
 class Expected(_Model):
-    status: str | None = None
+    status: str | tuple[str, ...] | None = None  # one end state, or any of several
     answer: AnswerCheck | None = None
     tools: ToolsCheck | None = None
     policy: PolicyCheck | None = None
