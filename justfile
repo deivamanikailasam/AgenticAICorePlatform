@@ -35,6 +35,10 @@ typecheck:
 test *args:
     uv run pytest {{args}}
 
+# Re-record the committed cassettes (Step 33): only when a run's behaviour is meant to change
+record-cassettes:
+    AGENT_RECORD_CASSETTES=1 uv run pytest -k rerecord
+
 # Tests that need Project 0 (or the stand-in stack) running
 test-integration *args:
     uv run pytest -m integration {{args}}

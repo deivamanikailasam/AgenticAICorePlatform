@@ -17,6 +17,7 @@ members = [
     "agent-runtime",
     "agent-spec",
     "agent-telemetry",
+    "agent-testing",
     "agent-tools",
     "agent-worker",
     "invoice-triage",
@@ -420,6 +421,17 @@ requires-dist = [
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45.1,<2" },
     { name = "opentelemetry-sdk", specifier = ">=1.45.1,<2" },
 ]
+
+[[package]]
+name = "agent-testing"
+version = "0.1.0"
+source = { editable = "libs/agent-testing" }
+dependencies = [
+    { name = "agent-contracts" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "agent-contracts", editable = "libs/agent-contracts" }]
 
 [[package]]
 name = "agent-tools"
