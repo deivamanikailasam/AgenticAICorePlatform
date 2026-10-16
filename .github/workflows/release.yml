@@ -2,13 +2,14 @@ name: release
 
 # Step 35: the release gate. A release (a v* tag, or a manual run) goes ahead only when the whole
 # red-team suite (unit, integration and sandbox tiers) and the attack libraries have run on this
-# commit with no high or critical finding, every OWASP agentic category has an executed test,
+# commit with no high or critical finding, every app passes its eval gate (Step 36), every OWASP agentic category has an executed test,
 # and no high or critical red-team issue is open. Publishing jobs (later steps) must
 # `needs: redteam-gate`.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+  workflow_call: # nightly.yml runs the same full suites every night
 
 permissions:
   contents: read
@@ -48,6 +49,8 @@ jobs:
           just redteam --tier unit --tier integration --tier sandbox --report evals/results/redteam/suite.json || true
           just redteam-promptfoo || true
           just redteam-garak || true
+          # Step 36: every app's eval gate on this commit (writes evals/results/gates/)
+          just eval-gate --redteam evals/results/redteam/suite.json > evals/results/redteam/eval-gate.log 2>&1 && touch evals/results/gates/PASSED || true
       - name: findings to issues
         if: always()
         env:
@@ -56,4 +59,9 @@ jobs:
       - name: release gate
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: just release-gate evals/results/redteam/suite.json evals/results/redteam/promptfoo.json evals/results/redteam/garak.json --github
+        run: |
+          cat evals/results/gates/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+          status=0
+          just release-gate evals/results/redteam/suite.json evals/results/redteam/promptfoo.json evals/results/redteam/garak.json --github || status=1
+          if [ ! -f evals/results/gates/PASSED ]; then echo "release-gate: BLOCKED: eval gates did not pass (evals/results/gates/summary.md)"; status=1; fi
+          exit $status

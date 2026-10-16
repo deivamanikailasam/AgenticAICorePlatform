@@ -1,0 +1,19 @@
+name: nightly
+
+# Step 36: the full suites every night on the default branch: every app's golden tasks and eval
+# gate, the whole red-team suite (unit, integration, gVisor) and both attack libraries, issues for
+# findings, and the release gate's verdict (the same job a release runs).
+on:
+  schedule:
+    - cron: "41 15 * * *" # 15:41 UTC (01:41 or 02:41 in Melbourne)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full:
+    permissions:
+      contents: read
+      issues: write
+    uses: ./.github/workflows/release.yml
