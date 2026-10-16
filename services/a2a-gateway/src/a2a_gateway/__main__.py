@@ -13,7 +13,7 @@ from agent_spec.platform import load_platform
 from agent_tools import pdp_factory
 from agent_tools.a2a import card_signer
 from agent_tools.auth import KeycloakTokenVerifier
-from agent_tools.secrets import default_resolver, maybe_secret
+from agent_tools.secrets import default_resolver, maybe_secret, resolve_env_references
 
 from a2a_gateway.app import A2aGateway
 from a2a_gateway.inbound import Inbound
@@ -73,6 +73,8 @@ async def serve(settings: Settings) -> None:
 
 
 def main() -> None:
+    # Step 38: database connection strings may be OpenBao references (Kubernetes)
+    resolve_env_references()
     asyncio.run(serve(Settings()))
 
 

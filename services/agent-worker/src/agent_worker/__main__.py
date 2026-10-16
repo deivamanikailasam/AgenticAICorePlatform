@@ -23,7 +23,7 @@ from agent_runtime.temporal.runtime import TemporalRuntime
 from agent_spec.platform import load_platform
 from agent_tools.artefacts import S3ArtefactStore
 from agent_tools.pdp_factory import build_pdp
-from agent_tools.secrets import default_resolver
+from agent_tools.secrets import default_resolver, resolve_env_references
 
 from agent_worker.worker import serve
 
@@ -76,6 +76,8 @@ async def run() -> None:
 
 
 def main() -> None:
+    # Step 38: database connection strings may be OpenBao references (Kubernetes)
+    resolve_env_references()
     asyncio.run(run())
 
 

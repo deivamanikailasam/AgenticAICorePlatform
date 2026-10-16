@@ -7,6 +7,7 @@ OpenBao. In staging and prod there is no fallback: a process without OpenBao ref
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 from abc import ABC, abstractmethod
@@ -114,3 +115,30 @@ def default_resolver(env: Mapping[str, str] | None = None) -> SecretResolver:
     if env is None:
         _default = resolver
     return resolver
+
+
+# connection strings that carry a password: in Kubernetes they are set as ``${secret:...}``
+# references and resolved here at start-up, so no password is in a manifest or a Secret object
+SECRET_ENV_VARS = ("AGENT_DB_DSN", "AGENT_AUDIT_DSN")
+
+
+def resolve_env_references(
+    names: tuple[str, ...] = SECRET_ENV_VARS,
+    resolver: SecretResolver | None = None,
+    env: dict[str, str] | None = None,
+) -> list[str]:
+    """Replace each named environment variable whose value is a ``${secret:path#key}`` reference
+    with the secret, before anything reads it (Step 38). Call once at process start, outside an
+    event loop. Returns the names it resolved; a missing secret stops the process."""
+    target: dict[str, str] | os._Environ[str] = os.environ if env is None else env
+    refs = {n: target[n] for n in names if SECRET_REF.match(target.get(n, ""))}
+    if not refs:
+        return []
+    chosen = resolver or default_resolver()
+
+    async def all_of() -> dict[str, str]:
+        return {n: await chosen.resolve(ref) for n, ref in refs.items()}
+
+    for name, value in asyncio.run(all_of()).items():
+        target[name] = value
+    return sorted(refs)

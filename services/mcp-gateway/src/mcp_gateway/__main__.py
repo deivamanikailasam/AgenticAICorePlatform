@@ -9,6 +9,7 @@ from agent_audit.factory import audit_sink_from_env
 from agent_contracts.interfaces import PolicyDecisionPoint
 from agent_spec.platform import load_platform
 from agent_tools import pdp_factory
+from agent_tools.secrets import resolve_env_references
 
 from mcp_gateway.app import Gateway
 from mcp_gateway.settings import Settings
@@ -31,6 +32,8 @@ def build_pdp(settings: Settings) -> PolicyDecisionPoint:
 
 
 def main() -> None:
+    # Step 38: database connection strings may be OpenBao references (Kubernetes)
+    resolve_env_references()
     settings = Settings()
     # Step 31: the shared hash-chained Postgres trail (AGENT_AUDIT_DSN), else a local file (dev)
     local = os.environ.get("MCP_GATEWAY_AUDIT_FILE", "/tmp/mcp-gateway-audit.jsonl")  # noqa: S108

@@ -307,3 +307,23 @@ async def test_runtime_identity_may_read_kv_but_not_issue_tool_credentials() -> 
         await admin.request("DELETE", "agent-platform/metadata/test/probe")
         await runtime.aclose()
         await admin.aclose()
+
+
+def test_connection_strings_can_be_openbao_references() -> None:
+    from agent_tools.secrets import SecretResolver, resolve_env_references
+
+    class Fixed(SecretResolver):
+        async def resolve(self, reference: str) -> str:
+            assert reference == "${secret:agent-platform/db#dsn}"
+            return "postgresql://agent:pw@db/agent"
+
+    env = {
+        "AGENT_DB_DSN": "${secret:agent-platform/db#dsn}",
+        "AGENT_AUDIT_DSN": "postgresql://audit@db/audit",  # not a reference: left alone
+    }
+    assert resolve_env_references(resolver=Fixed(), env=env) == ["AGENT_DB_DSN"]
+    assert env == {
+        "AGENT_DB_DSN": "postgresql://agent:pw@db/agent",
+        "AGENT_AUDIT_DSN": "postgresql://audit@db/audit",
+    }
+    assert resolve_env_references(resolver=Fixed(), env={}) == []
