@@ -145,3 +145,11 @@ Every term used in this repository, in plain English. Grows with each step.
 | Chaos test | A test that breaks a dependency on purpose (timeouts, outages, kills) to check the system recovers correctly |
 | Circuit breaker | After repeated failures a dependency is skipped for a while, then tried again carefully |
 | Fallback | Using a second option (here another model) when the first one fails |
+| Golden task | A test case whose correct outcome is known in advance |
+| Deterministic check | A pass/fail rule code can decide (the right tool was called, the amount matches) |
+| Trajectory | The path an agent took: which tools and colleagues, in which order |
+| LLM-as-judge | A model grading another model's output against written rules |
+| Rubric | The written rules a grader applies, with examples of pass and fail |
+| Calibration (judge) | Measuring how often the judge agrees with people on the same items |
+| Cohen's kappa | Agreement beyond what chance alone would give: 1 is perfect, 0 is chance |
+| Baseline | A committed result that later runs are compared against |
