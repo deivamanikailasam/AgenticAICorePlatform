@@ -1,0 +1,509 @@
+# Threat model (Step 37): STRIDE per component, mapped to the OWASP agentic risks (ASI01-ASI10)
+# and to the controls in governance/controls.yaml. Every threat has an owner, at least one
+# control and at least one automated test (a pytest node id, or `redteam:<id>` from
+# evals/redteam/catalogue.yaml). For every component each STRIDE category either has a threat or
+# a written reason it does not apply. `just threat-check` verifies all of it; `just threat-model`
+# writes docs/security/threat-model.md.
+#
+# STRIDE: S spoofing, T tampering, R repudiation, I information disclosure, D denial of service,
+# E elevation of privilege.
+
+# Owner roles, each held by a named person or team (governance/approvers.yaml). Single
+# maintainer today (owner decision 2026-10-15); split these as people join.
+owners:
+  platform: "@deivamanikailasam"
+  security: "@deivamanikailasam"
+  privacy: "@deivamanikailasam"
+  finance-platform: "@deivamanikailasam"
+
+components:
+  agent-api:
+    name: Run API (agent-api)
+    boundary: users and apps -> platform (HTTP/SSE/WebSocket behind Keycloak)
+    data: run inputs and outputs, event logs, approvals
+    threats:
+      - id: T01
+        stride: S
+        title: A caller impersonates a user or approver to start runs or approve payments
+        owner: security
+        controls: [C05, C03]
+        asi: [ASI03, ASI09]
+        tests:
+          - services/agent-api/tests/test_api.py::test_every_call_needs_a_valid_token
+          - services/agent-api/tests/test_api.py::test_approval_comes_from_the_approvers_verified_token
+      - id: T02
+        stride: T
+        title: A run is resumed or forked to replay an approval or change what was approved
+        owner: platform
+        controls: [C03, C21]
+        asi: [ASI09]
+        tests:
+          - services/agent-api/tests/test_api.py::test_generic_resume_cannot_answer_an_approval_and_cancel_works
+          - redteam:asi09-approval-bound-to-exact-call
+      - id: T03
+        stride: R
+        title: A requester denies starting a run or an approver denies approving
+        owner: security
+        controls: [C09]
+        asi: [ASI09]
+        tests:
+          - services/agent-api/tests/test_audit_trail.py::test_an_approved_payment_leaves_a_complete_versioned_trail
+      - id: T04
+        stride: I
+        title: One tenant or user reads another's runs, transcripts or memories
+        owner: privacy
+        controls: [C06, C19]
+        asi: [ASI03]
+        tests:
+          - services/agent-api/tests/test_api.py::test_other_tenants_cannot_see_runs
+          - services/agent-api/tests/test_data_lifecycle.py::test_a_person_exports_their_own_data_and_nobody_elses
+      - id: T05
+        stride: D
+        title: Floods of runs or runaway agents exhaust workers, budget or the model gateway
+        owner: platform
+        controls: [C12]
+        asi: [ASI08]
+        tests:
+          - redteam:asi08-repeating-agent-stopped
+          - redteam:asi08-handoff-ping-pong-is-cut
+      - id: T06
+        stride: E
+        title: A requester approves their own irreversible action
+        owner: finance-platform
+        controls: [C03]
+        asi: [ASI03]
+        tests:
+          - redteam:asi03-self-approval-does-not-count
+          - apps/invoice-triage/tests/test_end_to_end.py::test_requester_cannot_approve_their_own_payment
+
+  runtime:
+    name: Agent runtime and patterns (in-process agents, teams, models)
+    boundary: platform -> model gateway; untrusted content enters model context here
+    data: prompts, tool results, retrieved documents, worker outputs
+    threats:
+      - id: T07
+        stride: T
+        title: Instructions in a tool result, document or peer agent's output hijack the agent's goal
+        owner: security
+        controls: [C04, C01, C03]
+        asi: [ASI01, ASI07]
+        tests:
+          - redteam:asi01-invoice-notes-call-payment-tool
+          - redteam:asi01-injected-document-never-reaches-model
+          - redteam:asi07-worker-output-is-data
+      - id: T08
+        stride: I
+        title: The model is talked into revealing data or exfiltrating it through markdown links
+        owner: privacy
+        controls: [C04, C18]
+        asi: [ASI01]
+        tests:
+          - redteam:asi01-hidden-characters-and-markdown-exfiltration
+      - id: T09
+        stride: D
+        title: Loops, ping-pong handoffs or failing models cascade through a team
+        owner: platform
+        controls: [C12]
+        asi: [ASI08]
+        tests:
+          - redteam:asi08-failing-worker-circuit-and-team-budget
+          - redteam:asi08-child-spend-rolls-up
+      - id: T10
+        stride: E
+        title: A hijacked agent calls tools beyond its grants or beyond value limits
+        owner: security
+        controls: [C01, C02]
+        asi: [ASI02]
+        tests:
+          - redteam:asi02-payment-over-limit-even-when-approved
+          - redteam:asi01-tool-outside-allowlist-refused
+      - id: T11
+        stride: R
+        title: Nobody can show what the agent saw and decided when a run is questioned
+        owner: platform
+        controls: [C09, C21]
+        tests:
+          - libs/agent-audit/tests/test_audit.py::test_every_event_carries_versions_and_the_trace_id
+    not_applicable:
+      S: the runtime has no endpoint of its own; callers are authenticated by the run API and the worker (T01)
+
+  tools:
+    name: Tool layer (authorising executor, MCP client, A2A client)
+    boundary: platform -> MCP servers, A2A agents, business systems
+    data: tool arguments and results, credentials per call
+    threats:
+      - id: T12
+        stride: S
+        title: A rogue MCP server or A2A agent poses as a trusted one
+        owner: security
+        controls: [C13]
+        asi: [ASI04, ASI07]
+        tests:
+          - redteam:asi04-unlisted-mcp-server-refused
+          - redteam:asi04-rogue-key-agent-card-refused
+      - id: T13
+        stride: T
+        title: A poisoned MCP tool description steers the model
+        owner: security
+        controls: [C04, C13]
+        asi: [ASI04]
+        tests:
+          - redteam:asi04-poisoned-mcp-tool-description
+      - id: T14
+        stride: I
+        title: Credentials leak to the model, logs or tool results
+        owner: security
+        controls: [C07, C20]
+        asi: [ASI03]
+        tests:
+          - redteam:asi03-per-call-credentials-revoked
+          - services/agent-api/tests/test_telemetry.py::test_content_redactor_removes_secrets_and_withholds_without_pii_check
+      - id: T15
+        stride: E
+        title: A tool acts with the platform's identity instead of the user's down-scoped one
+        owner: security
+        controls: [C07]
+        asi: [ASI03]
+        tests:
+          - redteam:asi03-exchanged-token-never-the-users
+      - id: T16
+        stride: D
+        title: A slow or failing tool stalls runs
+        owner: platform
+        controls: [C12, C21]
+        asi: [ASI08]
+        tests:
+          - services/agent-api/tests/test_chaos.py::test_repeated_tool_timeouts_open_the_tool_circuit
+      - id: T17
+        stride: R
+        title: A tool call cannot be traced to the user, agent and credential lease
+        owner: security
+        controls: [C09, C07]
+        tests:
+          - libs/agent-audit/tests/test_audit.py::test_arguments_are_hashed_and_recorded_redacted
+
+  policy:
+    name: Policy decision point (OPA, Cerbos, OpenFGA)
+    boundary: platform -> policy engine (decisions for every tool call and delegation)
+    data: policy inputs (who, which agent, which tool, arguments), decisions
+    threats:
+      - id: T18
+        stride: D
+        title: An unreachable or misconfigured policy engine lets calls through
+        owner: security
+        controls: [C01]
+        tests:
+          - redteam:asi02-opa-unreachable-denies
+          - services/mcp-gateway/tests/test_gateway.py::test_unknown_policy_engine_refuses_to_start
+      - id: T19
+        stride: T
+        title: A policy change silently loosens what agents may do
+        owner: security
+        controls: [C01, C15]
+        tests:
+          - libs/agent-tools/tests/test_authorising.py::test_spec_cannot_loosen_a_deny
+      - id: T20
+        stride: E
+        title: A cross-tenant or ungranted request is allowed
+        owner: security
+        controls: [C01, C06]
+        asi: [ASI03]
+        tests:
+          - redteam:asi03-cross-tenant-invoice-lookup
+          - redteam:asi03-cross-tenant-denied-and-audited
+    not_applicable:
+      S: the policy engine is reached only from inside the platform network on 127.0.0.1 or the cluster network; callers present no identity to it
+      R: every decision is recorded in the audit trail by the caller (T17)
+      I: policy inputs are the call's own metadata; the engine holds no user content
+
+  gateways:
+    name: Platform MCP gateway and A2A gateway
+    boundary: other teams and agents -> platform tools and published agents
+    data: tool calls and A2A tasks from outside the platform
+    threats:
+      - id: T21
+        stride: S
+        title: An unauthenticated caller uses the platform's tools or agents
+        owner: security
+        controls: [C05, C01]
+        asi: [ASI07]
+        tests:
+          - redteam:asi07-a2a-inbound-needs-token-and-policy
+          - services/mcp-gateway/tests/test_gateway.py::test_refused_calls_never_reach_the_tool
+      - id: T22
+        stride: I
+        title: A caller sees another tenant's data through the gateway
+        owner: privacy
+        controls: [C06]
+        asi: [ASI03]
+        tests:
+          - redteam:asi03-cross-tenant-gateway-live
+      - id: T23
+        stride: T
+        title: Push notifications are sent to an attacker's host
+        owner: security
+        controls: [C13]
+        asi: [ASI07]
+        tests:
+          - redteam:asi07-push-only-to-allowlisted-hosts
+      - id: T24
+        stride: E
+        title: A published agent's path is used to reach an unpublished one
+        owner: security
+        controls: [C05, C14]
+        tests:
+          - services/a2a-gateway/tests/test_a2a.py::test_each_agent_answers_only_on_its_own_path
+      - id: T25
+        stride: R
+        title: Gateway calls cannot be attributed
+        owner: security
+        controls: [C09]
+        tests:
+          - redteam:asi02-gateway-calls-policy-checked-live
+      - id: T26
+        stride: D
+        title: Callers flood the gateways
+        owner: platform
+        controls: [C01, C12]
+        tests:
+          - redteam:asi02-rate-limit-per-tool-and-agent
+
+  sandbox:
+    name: Code sandbox (sandbox-runner, gVisor / Firecracker / Kata)
+    boundary: agent-generated code -> isolated runtime
+    data: code, inputs and artefacts of one run
+    threats:
+      - id: T27
+        stride: E
+        title: Generated code escapes to the host or reaches the network
+        owner: security
+        controls: [C11]
+        asi: [ASI05]
+        tests:
+          - redteam:asi05-gvisor-no-network
+          - redteam:asi05-gvisor-no-host-files
+          - redteam:asi05-microvm-config-no-network-read-only
+      - id: T28
+        stride: D
+        title: Fork bombs, memory hogs or endless loops starve the host
+        owner: platform
+        controls: [C11]
+        asi: [ASI05]
+        tests:
+          - redteam:asi05-gvisor-fork-bomb
+          - redteam:asi05-gvisor-memory-cap
+      - id: T29
+        stride: S
+        title: Someone other than the platform submits code to the runner
+        owner: security
+        controls: [C11, C05]
+        tests:
+          - redteam:asi05-sandbox-runner-needs-token
+    not_applicable:
+      T: each run gets a fresh sandbox; nothing persists between runs that could be tampered with
+      R: sandbox runs are tool calls, recorded in the audit trail by the tool layer (T17)
+      I: inputs and artefacts belong to the one run; the sandbox has no network to send them anywhere (T27)
+
+  memory:
+    name: Long-term memory (pgvector, Qdrant, Mem0)
+    boundary: runs -> persistent memory shared across runs
+    data: facts, preferences, episodes about users and tenants
+    threats:
+      - id: T30
+        stride: T
+        title: A poisoned document writes a persistent instruction into memory
+        owner: security
+        controls: [C10, C04]
+        asi: [ASI06]
+        tests:
+          - redteam:asi06-poisoned-document-no-persistent-instruction
+      - id: T31
+        stride: I
+        title: One user's memories surface in another user's run
+        owner: privacy
+        controls: [C10, C06]
+        asi: [ASI06]
+        tests:
+          - redteam:asi06-no-cross-user-leaks
+      - id: T32
+        stride: R
+        title: Nobody can tell where a remembered fact came from
+        owner: privacy
+        controls: [C10, C09]
+        asi: [ASI06]
+        tests:
+          - redteam:asi06-provenance-stamped-and-audited
+      - id: T33
+        stride: E
+        title: Personal data is kept past its purpose or after an erasure request
+        owner: privacy
+        controls: [C19, C10]
+        tests:
+          - redteam:asi06-ttl-capped
+          - services/agent-api/tests/test_erasure.py::test_one_request_erases_a_user_everywhere_and_nobody_else
+    not_applicable:
+      S: memory is reached only through the platform's memory service with the run's own scope
+      D: memory writes go through the policy and per-run budgets; a failing store degrades to no recall, not a stalled run
+
+  state:
+    name: Run store and checkpoints (Postgres, encrypted)
+    boundary: platform -> database
+    data: run records, transcripts, checkpoints
+    threats:
+      - id: T34
+        stride: I
+        title: A database dump exposes transcripts and run state
+        owner: privacy
+        controls: [C08]
+        tests:
+          - libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row
+      - id: T35
+        stride: T
+        title: A stored checkpoint is altered or moved to another tenant's thread
+        owner: security
+        controls: [C08, C09]
+        tests:
+          - libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row
+          - services/agent-api/tests/test_audit_trail.py::test_an_approved_payment_leaves_a_complete_versioned_trail
+      - id: T36
+        stride: D
+        title: A restart loses runs in flight or repeats side effects
+        owner: platform
+        controls: [C21]
+        tests:
+          - services/agent-api/tests/test_api.py::test_a_running_run_resumes_from_its_last_checkpoint_after_a_restart
+          - services/agent-api/tests/test_api.py::test_a_paused_run_survives_a_restart_and_can_be_approved
+      - id: T37
+        stride: E
+        title: Transcripts are kept longer than the retention policy allows
+        owner: privacy
+        controls: [C19]
+        tests:
+          - services/agent-api/tests/test_data_lifecycle.py::test_retention_prunes_finished_runs_but_never_a_run_waiting_for_a_person
+    not_applicable:
+      S: only platform services with their own database roles connect; there is no user-facing endpoint
+      R: changes to run state come from runs, which are audited (T03, T11)
+
+  audit:
+    name: Audit trail
+    boundary: every service -> one hash-chained trail
+    data: decisions, digests and redacted arguments (no run content)
+    threats:
+      - id: T38
+        stride: T
+        title: An administrator edits or deletes audit events to hide an action
+        owner: security
+        controls: [C09]
+        tests:
+          - libs/agent-audit/tests/test_audit.py::test_tampering_with_one_event_is_detected
+          - libs/agent-audit/tests/test_audit.py::test_the_trail_is_append_only
+      - id: T39
+        stride: R
+        title: Concurrent writers break the chain so no event can be trusted
+        owner: security
+        controls: [C09]
+        tests:
+          - libs/agent-audit/tests/test_audit.py::test_concurrent_writers_keep_one_unbroken_chain
+      - id: T40
+        stride: I
+        title: The audit trail itself leaks personal data or secrets
+        owner: privacy
+        controls: [C09, C18, C20]
+        tests:
+          - libs/agent-audit/tests/test_audit.py::test_arguments_are_hashed_and_recorded_redacted
+    not_applicable:
+      S: services write with their own database role; events carry the verified caller from the request (T01)
+      D: the trail is written per event and does not sit on the request path beyond one insert; Postgres availability is Project 0's (Step 38 HA)
+      E: the trail grants nothing; it only records
+
+  governance:
+    name: Agent registry, specs and CI supply chain
+    boundary: developers -> repository -> deployed agents
+    data: specs, prompts, images, dependencies, eval results
+    threats:
+      - id: T41
+        stride: T
+        title: An unreviewed or edited spec runs in staging or production
+        owner: platform
+        controls: [C14, C15]
+        asi: [ASI10]
+        tests:
+          - redteam:asi10-draft-agent-refused-in-prod
+          - libs/agent-registry/tests/test_sync_and_gate.py::test_the_gate_allows_everything_in_dev_and_only_approved_in_staging
+      - id: T42
+        stride: E
+        title: A compromised or rogue agent keeps acting after it should be stopped
+        owner: security
+        controls: [C14]
+        asi: [ASI10]
+        tests:
+          - redteam:asi10-agent-kill-switch-stops-every-tool
+          - redteam:asi10-tenant-kill-switch-stops-every-tool
+          - redteam:asi10-deprecated-and-retired-refused
+      - id: T43
+        stride: S
+        title: A tampered image or package is deployed
+        owner: security
+        controls: [C13]
+        asi: [ASI04]
+        tests:
+          - redteam:asi04-images-pinned-by-digest
+      - id: T44
+        stride: R
+        title: Nobody can show which spec, prompts and models produced a decision
+        owner: platform
+        controls: [C15, C09]
+        tests:
+          - libs/agent-governance/tests/test_governance.py::test_lineage_hashes_match_the_audit_trail_versions
+      - id: T45
+        stride: D
+        title: A change that degrades quality, safety or cost merges unnoticed
+        owner: platform
+        controls: [C16]
+        tests:
+          - libs/agent-evals/tests/test_gates.py::test_a_change_that_lowers_task_success_beyond_the_threshold_is_blocked
+          - libs/agent-evals/tests/test_gates.py::test_a_cost_increase_above_the_limit_needs_explicit_approval
+      - id: T49
+        stride: R
+        title: People affected by an agent's decision cannot find out that an AI system was involved or how it is governed
+        owner: privacy
+        controls: [C22, C15]
+        tests:
+          - libs/agent-governance/tests/test_governance.py::test_every_spec_gets_an_agent_card_with_the_required_fields
+          - services/agent-api/tests/test_hitl.py::test_an_irreversible_tool_waits_and_reviewers_see_what_they_approve
+    not_applicable:
+      I: the repository holds no personal data; secrets are scanned out of every commit (C20)
+
+  telemetry:
+    name: Telemetry (OTel traces, metrics, Langfuse)
+    boundary: platform -> Project 0's observability stack
+    data: spans, metrics, redacted content (Langfuse only)
+    threats:
+      - id: T46
+        stride: I
+        title: Prompts, outputs or personal data leak into traces and dashboards
+        owner: privacy
+        controls: [C17, C18]
+        tests:
+          - libs/agent-telemetry/tests/test_spans.py::test_content_is_redacted_and_only_for_the_langfuse_exporter
+          - libs/agent-telemetry/tests/test_spans.py::test_content_is_withheld_when_redaction_is_unavailable
+      - id: T47
+        stride: D
+        title: A slow or absent collector holds up runs
+        owner: platform
+        controls: [C17]
+        tests:
+          - services/agent-api/tests/test_telemetry.py::test_a_team_run_is_one_trace_with_genai_spans
+      - id: T48
+        stride: R
+        title: Rogue behaviour goes unnoticed because nothing alerts on it
+        owner: platform
+        controls: [C17, C14]
+        asi: [ASI10]
+        tests:
+          - redteam:asi10-behaviour-metrics-emitted
+          - redteam:asi10-budget-spike-alert-live
+    not_applicable:
+      S: exporters push to configured collectors only; telemetry is not an input to any decision
+      T: telemetry is not an input to any decision; decisions are audited separately (C09)
+      E: telemetry grants nothing

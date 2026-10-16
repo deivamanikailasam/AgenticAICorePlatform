@@ -19,7 +19,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check
+check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check
 
 lint:
     uv run ruff check .
@@ -62,6 +62,13 @@ eval-baseline-check *apps:
 # Step 36: CI eval gates (evals/gates.yaml). e.g. just eval-gate --base origin/main --redteam evals/results/redteam/integration.json
 eval-gate *args:
     uv run python -m scripts.eval_gate {{args}}
+
+# Step 37: threat model and control matrix (governance/threat-model.yaml, controls.yaml)
+threat-model:
+    uv run python -m scripts.threat_model write
+
+threat-check:
+    uv run python -m scripts.threat_model check
 
 # Step 35: red-team suite (OWASP ASI01-ASI10). Scenario attacks need OPA with the policies loaded
 # (`just provision-policies`). Fails on any high/critical finding. e.g. just redteam --tier sandbox

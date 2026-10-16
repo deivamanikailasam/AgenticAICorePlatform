@@ -1,0 +1,189 @@
+# Control matrix (Step 37): the platform's controls, the evidence for each in this repository,
+# and how each maps to the frameworks the spec names. `just threat-check` verifies that every
+# evidence path exists and every listed test is collected; `just threat-model` writes
+# docs/security/control-matrix.md from this file.
+#
+# Framework references (checked 2026-10-16; see docs/security/compliance-sources.md):
+#   nist_ai_rmf  NIST AI RMF 1.0 functions: GOVERN, MAP, MEASURE, MANAGE (function level)
+#   iso42001     ISO/IEC 42001:2023 Annex A control objectives A.2-A.10 (objective level)
+#   eu_ai_act    Regulation (EU) 2024/1689 articles for high-risk systems (Art. 9-15, 72)
+#   app          Australian Privacy Principles (Privacy Act 1988), incl. APP 1.7-1.9 from 10 Dec 2026
+#   au_gfaa      Australian Government Guidance for AI Adoption (2025), its six practices
+# This mapping supports, and does not replace, legal and compliance review.
+controls:
+  C01:
+    title: Per-agent tool allowlists and OPA on every tool call (fail closed)
+    evidence:
+      - policies/agent/tools/decision.rego
+      - libs/agent-tools/src/agent_tools/authorising.py
+      - docs/adr/0020-tool-authorisation.md
+      - test: libs/agent-tools/tests/test_policy.py::test_unreachable_opa_denies
+      - test: libs/agent-tools/tests/test_authorising.py::test_unknown_tool_is_refused_before_policy
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 15], app: [APP 11], au_gfaa: [Measure and manage risks] }
+  C02:
+    title: Typed tool schemas and argument value limits, checked before a tool runs
+    evidence:
+      - libs/agent-tools/src/agent_tools/executor.py
+      - policies/agent/config/data.json
+      - test: services/agent-api/tests/test_guardrails_in_runs.py::test_tool_argument_limits_refuse_the_call_before_it_runs
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 15], au_gfaa: [Measure and manage risks] }
+  C03:
+    title: Human approval for irreversible actions, bound to the exact call, showing the raw arguments
+    evidence:
+      - services/agent-api/src/agent_api/desk.py
+      - docs/adr/0039-human-in-the-loop.md
+      - test: services/agent-api/tests/test_hitl.py::test_an_irreversible_tool_waits_and_reviewers_see_what_they_approve
+      - test: libs/agent-tools/tests/test_authorising.py::test_approval_replayed_for_other_arguments_or_another_tool_does_not_count
+    frameworks: { nist_ai_rmf: [MANAGE, GOVERN], iso42001: [A.9 Use of AI systems], eu_ai_act: [Art. 14], au_gfaa: [Maintain human control] }
+  C04:
+    title: Untrusted content is data, delimited, screened for injection and quarantined
+    evidence:
+      - libs/agent-guardrails/src/agent_guardrails
+      - libs/agent-runtime/src/agent_runtime/context.py
+      - docs/adr/0038-guardrails.md
+      - test: services/agent-api/tests/test_guardrails_in_runs.py::test_an_injected_document_never_reaches_the_model
+    frameworks: { nist_ai_rmf: [MEASURE, MANAGE], iso42001: [A.6 AI system life cycle, A.7 Data for AI systems], eu_ai_act: [Art. 15], au_gfaa: [Measure and manage risks] }
+  C05:
+    title: Authentication on every API (Keycloak tokens verified for issuer, signature, expiry, audience)
+    evidence:
+      - libs/agent-tools/src/agent_tools/auth.py
+      - test: services/agent-api/tests/test_api.py::test_every_call_needs_a_valid_token
+      - test: services/a2a-gateway/tests/test_a2a.py::test_calls_need_a_token_and_policy_and_a_published_agent
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 15], app: [APP 11] }
+  C06:
+    title: Tenant isolation in runs, data and tool calls
+    evidence:
+      - services/agent-api/src/agent_api/runs.py
+      - test: services/agent-api/tests/test_api.py::test_other_tenants_cannot_see_runs
+      - test: libs/agent-tools/tests/test_authorising.py::test_other_tenants_data_is_denied_audited_and_never_runs
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.7 Data for AI systems], eu_ai_act: [Art. 10, Art. 15], app: [APP 6, APP 11] }
+  C07:
+    title: Per-agent identity, down-scoped delegated tokens, short-lived per-call credentials from OpenBao
+    evidence:
+      - libs/agent-tools/src/agent_tools/identity.py
+      - docs/adr/0040-agent-identity-and-secrets.md
+      - test: libs/agent-tools/tests/test_call_credentials.py::test_tool_gets_a_fresh_credential_per_call_and_it_is_revoked_after
+      - test: libs/agent-tools/tests/test_ragcore.py::test_calls_rag_core_with_an_exchanged_token_never_the_users
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.4 Resources for AI systems], eu_ai_act: [Art. 15], app: [APP 11] }
+  C08:
+    title: Encryption at rest for runs, events, checkpoints and memory, bound to tenant and row
+    evidence:
+      - libs/agent-runtime/src/agent_runtime/checkpoints.py
+      - services/agent-api/src/agent_api/store.py
+      - test: libs/agent-runtime/tests/test_checkpoints.py::test_sensitive_fields_are_sealed_and_bound_to_their_row
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.7 Data for AI systems], eu_ai_act: [Art. 15], app: [APP 11] }
+  C09:
+    title: Hash-chained, append-only audit trail of every decision, with versions and trace id
+    evidence:
+      - libs/agent-audit/src/agent_audit
+      - libs/agent-audit/migrations/0008_audit.sql
+      - docs/adr/0042-agent-audit-trail.md
+      - test: libs/agent-audit/tests/test_audit.py::test_tampering_with_one_event_is_detected
+      - test: libs/agent-audit/tests/test_audit.py::test_the_trail_is_append_only
+    frameworks: { nist_ai_rmf: [GOVERN, MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 12, Art. 19], au_gfaa: [Test and monitor] }
+  C10:
+    title: Memory write policy (provenance, trust, injection, PII, lifetimes) with inspect, flush and erasure
+    evidence:
+      - libs/agent-memory/src/agent_memory/policy.py
+      - docs/adr/0031-long-term-memory.md
+      - test: libs/agent-memory/tests/test_memory_in_runs.py::test_a_poisoned_document_cannot_write_a_persistent_instruction
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.7 Data for AI systems], eu_ai_act: [Art. 10, Art. 15], app: [APP 10, APP 11, APP 13] }
+  C11:
+    title: Sandboxed code execution (gVisor; no network, resource caps, no host mounts)
+    evidence:
+      - services/sandbox-runner
+      - docs/adr/0019-code-sandbox-engines.md
+      - redteam: asi05-gvisor-no-network
+      - test: services/sandbox-runner/tests/test_firecracker.py::test_vm_has_no_network_and_a_read_only_root
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 15], au_gfaa: [Measure and manage risks] }
+  C12:
+    title: Budgets that roll up, loop detection, circuit breakers, delegation depth limits
+    evidence:
+      - libs/agent-runtime/src/agent_runtime/budget.py
+      - libs/agent-runtime/src/agent_runtime/circuit.py
+      - docs/adr/0037-budgets-loops-and-circuits.md
+      - test: services/agent-api/tests/test_budgets.py::test_a_repeating_agent_is_stopped_by_loop_detection
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 15], au_gfaa: [Measure and manage risks] }
+  C13:
+    title: Supply chain allowlists (MCP servers and tools, A2A agents with pinned, signed Agent Cards) and digest-pinned images
+    evidence:
+      - platform.yaml
+      - libs/agent-tools/src/agent_tools/mcp
+      - libs/agent-tools/src/agent_tools/a2a.py
+      - scripts/check_compose.py
+      - test: libs/agent-tools/tests/test_mcp.py::test_unlisted_server_is_refused
+      - test: libs/agent-tools/tests/test_a2a_tool.py::test_an_unsigned_card_is_refused_before_any_message
+    frameworks: { nist_ai_rmf: [GOVERN, MAP], iso42001: [A.10 Third-party and customer relationships], eu_ai_act: [Art. 15], au_gfaa: [Decide who is accountable] }
+  C14:
+    title: Agent registry lifecycle (approved-only in staging and prod) and kill switches per agent and tenant
+    evidence:
+      - libs/agent-registry/src/agent_registry/gate.py
+      - docs/adr/0036-agent-registry.md
+      - redteam: asi10-agent-kill-switch-stops-every-tool
+      - test: libs/agent-registry/tests/test_sync_and_gate.py::test_deprecated_and_retired_agents_are_refused_in_staging_and_prod
+    frameworks: { nist_ai_rmf: [GOVERN, MANAGE], iso42001: [A.6 AI system life cycle, A.9 Use of AI systems], eu_ai_act: [Art. 14, Art. 72], au_gfaa: [Maintain human control] }
+  C15:
+    title: Governance artefacts (agent and system cards, lineage, AI-use register, CODEOWNERS by risk tier)
+    evidence:
+      - governance/approvers.yaml
+      - docs/governance/ai-use-register.md
+      - docs/cards
+      - docs/adr/0043-governance-artefacts.md
+      - test: libs/agent-governance/tests/test_governance.py::test_a_stale_or_orphaned_card_fails_the_check
+    frameworks: { nist_ai_rmf: [GOVERN, MAP], iso42001: [A.2 Policies related to AI, A.3 Internal organization, A.8 Information for interested parties], eu_ai_act: [Art. 11, Art. 13], app: [APP 1], au_gfaa: [Decide who is accountable, Share essential information] }
+  C16:
+    title: Evaluation harness, red-team suite and CI eval gates per risk tier
+    evidence:
+      - evals/gates.yaml
+      - evals/redteam/catalogue.yaml
+      - docs/adr/0045-agent-evaluation-harness.md
+      - docs/adr/0046-simulation-and-red-teaming.md
+      - docs/adr/0047-ci-eval-gates.md
+      - test: libs/agent-evals/tests/test_gates.py::test_a_change_that_lowers_task_success_beyond_the_threshold_is_blocked
+    frameworks: { nist_ai_rmf: [MEASURE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 9, Art. 15], au_gfaa: [Test and monitor, Understand impacts and plan accordingly] }
+  C17:
+    title: Telemetry, SLOs and alerts with runbooks; content only to Langfuse, redacted
+    evidence:
+      - libs/agent-telemetry/src/agent_telemetry
+      - infra/observability/prometheus-tests/agent-rules.test.yaml
+      - docs/runbooks/README.md
+      - test: libs/agent-telemetry/tests/test_spans.py::test_content_is_redacted_and_only_for_the_langfuse_exporter
+    frameworks: { nist_ai_rmf: [MEASURE, MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 72], app: [APP 11], au_gfaa: [Test and monitor] }
+  C18:
+    title: PII redaction (Presidio) in guardrails, memory and traces
+    evidence:
+      - libs/agent-guardrails/src/agent_guardrails
+      - test: libs/agent-memory/tests/test_policy.py::test_personal_data_is_redacted_and_the_reason_recorded
+      - test: libs/agent-telemetry/tests/test_spans.py::test_content_is_withheld_when_redaction_is_unavailable
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.7 Data for AI systems], eu_ai_act: [Art. 10], app: [APP 3, APP 6, APP 11] }
+  C19:
+    title: Data lifecycle (retention, export on request, erasure everywhere), audited
+    evidence:
+      - governance/data-lifecycle.yaml
+      - test: services/agent-api/tests/test_data_lifecycle.py::test_a_person_exports_their_own_data_and_nobody_elses
+      - test: services/agent-api/tests/test_data_lifecycle.py::test_retention_prunes_finished_runs_but_never_a_run_waiting_for_a_person
+      - test: services/agent-api/tests/test_erasure.py::test_one_request_erases_a_user_everywhere_and_nobody_else
+    frameworks: { nist_ai_rmf: [GOVERN, MANAGE], iso42001: [A.7 Data for AI systems], app: [APP 11, APP 12, APP 13] }
+  C20:
+    title: Secrets only from OpenBao outside dev; no secrets in prompts, traces or tool results
+    evidence:
+      - libs/agent-tools/src/agent_tools/secrets.py
+      - scripts/check_secrets.py
+      - test: libs/agent-tools/tests/test_agent_identity.py::test_default_resolver_uses_openbao_and_refuses_env_outside_dev
+      - test: services/agent-api/tests/test_telemetry.py::test_content_redactor_removes_secrets_and_withholds_without_pii_check
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.4 Resources for AI systems], eu_ai_act: [Art. 15], app: [APP 11] }
+  C21:
+    title: Durable runs (checkpoints, idempotent tool calls, resume after restart) for availability and integrity
+    evidence:
+      - libs/agent-runtime/src/agent_runtime/durable.py
+      - docs/adr/0029-checkpoints-and-durable-runs.md
+      - test: services/agent-api/tests/test_api.py::test_a_running_run_resumes_from_its_last_checkpoint_after_a_restart
+      - test: services/agent-api/tests/test_api.py::test_idempotent_creation
+    frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 15] }
+  C22:
+    title: Transparency to the people affected (agent cards, AI-use register, approval screens) incl. automated-decision disclosure
+    evidence:
+      - docs/governance/ai-use-register.md
+      - docs/cards
+      - test: services/agent-api/tests/test_api.py::test_the_page_uses_only_ag_ui_events
+    frameworks: { nist_ai_rmf: [GOVERN, MAP], iso42001: [A.8 Information for interested parties], eu_ai_act: [Art. 13, Art. 50], app: [APP 1], au_gfaa: [Share essential information] }
