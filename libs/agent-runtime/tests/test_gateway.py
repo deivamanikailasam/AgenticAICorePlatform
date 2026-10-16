@@ -227,3 +227,29 @@ async def test_stream_assembles_text_tool_calls_and_usage() -> None:
     assert last.tool_calls[0].arguments == {"a": 1}
     assert last.usage is not None
     assert last.usage.input_tokens == 4
+
+
+@respx.mock
+async def test_a_stream_is_retried_until_it_opens_but_not_after_a_bad_request() -> None:
+    """Step 33: a refused connection or timeout before the first byte is retried, like chat."""
+    route = respx.post(URL).mock(
+        side_effect=[
+            httpx.ConnectError("boom"),
+            httpx.ReadTimeout("slow"),
+            httpx.Response(200, text=SSE, headers={"content-type": "text/event-stream"}),
+        ]
+    )
+    chunks = [c async for c in client().stream(req())]
+    assert "".join(c.delta for c in chunks) == "hello"
+    assert route.call_count == 3
+    respx.post(URL).respond(400, text="bad model")
+    with pytest.raises(GatewayError, match="refused the stream"):
+        _ = [c async for c in client().stream(req())]
+
+
+@respx.mock
+async def test_a_stream_gives_up_after_its_retries() -> None:
+    route = respx.post(URL).mock(side_effect=httpx.ConnectError("down"))
+    with pytest.raises(GatewayError, match=r"unavailable after 3 attempts \(ConnectError"):
+        _ = [c async for c in client().stream(req())]
+    assert route.call_count == 3

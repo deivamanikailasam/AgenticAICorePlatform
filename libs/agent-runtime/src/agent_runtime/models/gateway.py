@@ -313,23 +313,42 @@ class GatewayModelClient(ModelClient):
             return exc.message
         return None
 
+    async def _open_stream(self, body: dict[str, Any], role: str) -> httpx.Response:
+        """Open a streamed completion with the same retries as ``_post`` (Step 33 chaos tests:
+        a timeout or refused connection before the first byte is retried with backoff). Once
+        chunks have been delivered a broken stream is not retried: the caller has used them."""
+        headers = {"Authorization": f"Bearer {self._key(role)}"}
+        attempts = self.platform.gateway.max_retries + 1
+        last = ""
+        for attempt in range(attempts):
+            req = self._client.build_request(
+                "POST", "/v1/chat/completions", json=body, headers=headers
+            )
+            try:
+                resp = await self._client.send(req, stream=True)
+            except httpx.TransportError as exc:
+                last = f"{type(exc).__name__}: {exc}"
+            else:
+                if resp.status_code < 400:
+                    return resp
+                text = (await resp.aread()).decode()[:200]
+                await resp.aclose()
+                last = f"HTTP {resp.status_code}: {text}"
+                if resp.status_code not in RETRYABLE:
+                    raise GatewayError(f"gateway refused the stream ({last})", resp.status_code)
+            if attempt < attempts - 1:
+                await asyncio.sleep(self._backoff * 2**attempt)
+        raise GatewayError(f"gateway unavailable after {attempts} attempts ({last})")
+
     async def stream(self, request: ChatRequest) -> AsyncIterator[ChatChunk]:
         role, alias = self.resolve(request.model)
         self._check(request, alias)
         body = self._body(request, alias, stream=True)
-        headers = {"Authorization": f"Bearer {self._key(role)}"}
         usage: Usage | None = None
         finish: FinishReason | None = None
         partial: dict[int, dict[str, Any]] = {}
-        async with self._client.stream(
-            "POST", "/v1/chat/completions", json=body, headers=headers
-        ) as resp:
-            if resp.status_code >= 400:
-                text = (await resp.aread()).decode()[:200]
-                raise GatewayError(
-                    f"gateway refused the stream (HTTP {resp.status_code}: {text})",
-                    resp.status_code,
-                )
+        resp = await self._open_stream(body, role)
+        try:
             cost = resp.headers.get("x-litellm-response-cost")
             call_id: str | None = None
             async for line in resp.aiter_lines():
@@ -357,6 +376,8 @@ class GatewayModelClient(ModelClient):
                         yield ChatChunk(delta=delta["content"])
                     if choice.get("finish_reason"):
                         finish = FINISH.get(choice["finish_reason"], "stop")
+        finally:
+            await resp.aclose()
         final_usage = usage or Usage()
         self.ledger.record(
             request.metadata.get("run_id", "-"),
