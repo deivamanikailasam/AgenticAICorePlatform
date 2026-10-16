@@ -138,3 +138,10 @@ Every term used in this repository, in plain English. Grows with each step.
 | AI-use register | The organisation's list of every AI system it runs, one line each: purpose, owner, risk, oversight |
 | CODEOWNERS | A GitHub file naming who must review changes to which files |
 | Required status check | A CI result GitHub insists is green before a pull request can merge (set in the repository's branch protection) |
+| Testing pyramid | Many fast, exact tests at the bottom; fewer, slower, more realistic ones at the top |
+| Fake (scripted model) | A stand-in that behaves exactly as the test scripts it to, so results are predictable |
+| Contract test | One shared set of checks every implementation of an interface must pass |
+| Cassette | A recording of the calls a run made and what came back, replayed in tests instead of the real services |
+| Chaos test | A test that breaks a dependency on purpose (timeouts, outages, kills) to check the system recovers correctly |
+| Circuit breaker | After repeated failures a dependency is skipped for a while, then tried again carefully |
+| Fallback | Using a second option (here another model) when the first one fails |
