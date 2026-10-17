@@ -1,0 +1,26 @@
+spec_version: 1
+name: research-report-researcher
+version: 0.1.0
+owner: agent-platform
+description: Finds sources for a question through Project 0 retrieval, with quotes.
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+models: { default: local-qwen-fast }
+runtime: { adapter: langgraph, durability: memory }
+budgets: { max_steps: 6, max_tokens: 20000, max_cost_aud: 0.15, max_wall_seconds: 120 }
+tools:
+  - ref: mcp://rag-core/search
+graph:
+  nodes:
+    - id: research
+      type: agent
+      pattern: react
+      tools: [search]
+      config:
+        template: "Find two or three sources for: $input.task. Return each with a short quote."
+        output_schema:
+          type: object
+          properties:
+            sources: { type: array, items: { type: object, properties: { title: { type: string }, quote: { type: string } }, required: [title, quote] } }
+          required: [sources]

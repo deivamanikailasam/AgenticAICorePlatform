@@ -1,0 +1,41 @@
+# The research team of the research-report app (Step 22; critic added in Step 40): a supervisor,
+# three workers that write a short cited report and a critic that reviews it. Each worker is its
+# own spec with its own tools and budget; workers see only the shared-state fields they read,
+# and may set only the fields they write. agent.yaml runs this team, then publishes only after a
+# person approves.
+spec_version: 1
+name: research-report-team
+version: 0.2.0
+owner: agent-platform
+description: Researches a question, works out the figures, writes a short cited report and has it reviewed.
+risk_tier: low
+autonomy: multi_agent
+pattern: supervisor
+models: { default: local-qwen-fast, planner: local-qwen-quality }
+runtime: { adapter: langgraph, durability: checkpoint }
+budgets: { max_steps: 12, max_tokens: 60000, max_cost_aud: 0.50, max_wall_seconds: 300 }
+agents:
+  - { name: researcher, spec: researcher.yaml, role: "Finds sources with quotes", reads: [task], writes: [sources] }
+  - { name: analyst, spec: analyst.yaml, role: "Computes the figures the report needs", reads: [task, sources], writes: [figures] }
+  - { name: writer, spec: writer.yaml, role: "Writes the cited report", reads: [task, sources, figures], writes: [report] }
+  - { name: critic, spec: critic.yaml, role: "Checks the report against the sources and figures", reads: [task, sources, figures, report], writes: [review] }
+supervisor:
+  dispatcher: llm            # rules: deterministic order by reads/writes, no model
+  model: planner
+  max_rounds: 8
+  max_depth: 3
+  max_failures: 2
+  output: report
+  state:
+    sources:
+      type: array
+      minItems: 1
+      items: { type: object, properties: { title: { type: string }, quote: { type: string } }, required: [title, quote] }
+    figures:
+      type: object
+      additionalProperties: { type: number }
+    report: { type: string, minLength: 20 }
+    review:
+      type: object
+      properties: { approved: { type: boolean }, issues: { type: array, items: { type: string } } }
+      required: [approved]

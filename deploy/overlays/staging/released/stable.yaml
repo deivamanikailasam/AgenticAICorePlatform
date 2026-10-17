@@ -26,13 +26,17 @@
         path: policy-debate/workers/judge.yaml
       - key: policy-debate--0.1.0--workers--pro.yaml
         path: policy-debate/workers/pro.yaml
-      - key: research-report--0.1.0--agent.yaml
+      - key: research-report--0.2.0--agent.yaml
         path: research-report/agent.yaml
-      - key: research-report--0.1.0--workers--analyst.yaml
+      - key: research-report--0.2.0--workers--analyst.yaml
         path: research-report/workers/analyst.yaml
-      - key: research-report--0.1.0--workers--researcher.yaml
+      - key: research-report--0.2.0--workers--critic.yaml
+        path: research-report/workers/critic.yaml
+      - key: research-report--0.2.0--workers--researcher.yaml
         path: research-report/workers/researcher.yaml
-      - key: research-report--0.1.0--workers--writer.yaml
+      - key: research-report--0.2.0--workers--team.yaml
+        path: research-report/workers/team.yaml
+      - key: research-report--0.2.0--workers--writer.yaml
         path: research-report/workers/writer.yaml
       - key: review-chat--0.1.0--agent.yaml
         path: review-chat/agent.yaml
