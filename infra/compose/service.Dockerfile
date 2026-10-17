@@ -8,6 +8,8 @@ RUN --mount=type=secret,id=extra_ca,required=false \
 WORKDIR /app
 COPY pyproject.toml uv.lock platform.yaml ./
 COPY policies/openfga/relations.yaml ./policies/openfga/relations.yaml
+# the policy data the in-process approval router reads; agent-tools' wheel also carries it (Step 39)
+COPY policies/agent/config/data.json ./policies/agent/config/data.json
 COPY libs ./libs
 COPY services ./services
 # the schema migrations, run by the deployment's pre-sync Job (Step 38)
