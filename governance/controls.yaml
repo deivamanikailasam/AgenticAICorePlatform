@@ -223,4 +223,14 @@ controls:
       - test: libs/agent-governance/tests/test_dr.py::test_the_newest_drill_met_the_stated_targets
       - test: services/agent-api/tests/test_api.py::test_a_running_run_of_a_stopped_replica_is_taken_over_without_a_request
     frameworks: { nist_ai_rmf: [MANAGE], iso42001: [A.6 AI system life cycle], eu_ai_act: [Art. 15], app: [APP 11] }
-
+  C27:
+    title: Reuse kit inside the platform's controls (team code only by exact ref and builders behind the same plan checks; evaluators fail closed; projects pinned to the signed platform and its tested versions; their own environment names)
+    evidence:
+      - libs/agent-sdk/src/agent_sdk/__init__.py
+      - services/agent-api/src/agent_api/assembly.py
+      - scripts/template_data.py
+      - templates/agent-project/README.md
+      - test: services/agent-api/tests/test_installed_tools.py::test_an_installed_tool_loads_by_its_exact_ref
+      - test: libs/agent-sdk/tests/test_template.py::test_a_project_pins_the_platform_its_environments_run
+      - test: libs/agent-evals/tests/test_core.py::test_custom_evaluators_score_and_fail_closed
+    frameworks: { nist_ai_rmf: [GOVERN, MANAGE], iso42001: [A.6 AI system life cycle, A.10 Third-party and customer relationships], eu_ai_act: [Art. 15], au_gfaa: [Test and monitor] }

@@ -33,11 +33,12 @@ compliance review.
 | **C24** Promotion only by reviewed pull request, dev -> staging -> 10% canary -> prod, with immutable released versions | [libs/agent-governance/src/agent_governance/promotion.py](../../libs/agent-governance/src/agent_governance/promotion.py)<br>[deploy/promotion.yaml](../../deploy/promotion.yaml)<br>[scripts/promote.py](../../scripts/promote.py)<br>[docs/adr/0049-environments-and-promotion.md](../../docs/adr/0049-environments-and-promotion.md)<br>test `test_a_new_version_walks_dev_staging_canary_prod`<br>test `test_shortcuts_and_edits_are_refused` | GOVERN, MANAGE | A.6 AI system life cycle | Art. 9 | - | Decide who is accountable, Test and monitor |
 | **C25** Online evaluation of candidate versions with automatic rollback; canary, shadow and feature flags | [services/agent-api/src/agent_api/releases.py](../../services/agent-api/src/agent_api/releases.py)<br>[docs/runbooks/release-rollback.md](../../docs/runbooks/release-rollback.md)<br>test `test_a_failing_canary_is_rolled_back_automatically_and_audited`<br>test `test_feature_flags_switch_an_agent_or_a_tool_off` | MEASURE, MANAGE | A.6 AI system life cycle | Art. 15, Art. 72 | - | Test and monitor |
 | **C26** Recoverable service and data (run leases across replicas, continuous WAL archiving, measured DR drill) | [governance/dr.yaml](../../governance/dr.yaml)<br>[scripts/dr_drill.py](../../scripts/dr_drill.py)<br>[docs/runbooks/dr-restore.md](../../docs/runbooks/dr-restore.md)<br>test `test_the_newest_drill_met_the_stated_targets`<br>test `test_a_running_run_of_a_stopped_replica_is_taken_over_without_a_request` | MANAGE | A.6 AI system life cycle | Art. 15 | APP 11 | - |
+| **C27** Reuse kit inside the platform's controls (team code only by exact ref and builders behind the same plan checks; evaluators fail closed; projects pinned to the signed platform and its tested versions; their own environment names) | [libs/agent-sdk/src/agent_sdk/__init__.py](../../libs/agent-sdk/src/agent_sdk/__init__.py)<br>[services/agent-api/src/agent_api/assembly.py](../../services/agent-api/src/agent_api/assembly.py)<br>[scripts/template_data.py](../../scripts/template_data.py)<br>[templates/agent-project/README.md](../../templates/agent-project/README.md)<br>test `test_an_installed_tool_loads_by_its_exact_ref`<br>test `test_a_project_pins_the_platform_its_environments_run`<br>test `test_custom_evaluators_score_and_fail_closed` | GOVERN, MANAGE | A.6 AI system life cycle, A.10 Third-party and customer relationships | Art. 15 | - | Test and monitor |
 
 ## Threats each control answers
 
 - **C01**: T07, T10, T18, T19, T20, T21, T26
-- **C02**: T10
+- **C02**: T10, T57
 - **C03**: T01, T02, T06, T07
 - **C04**: T07, T08, T13, T30
 - **C05**: T01, T21, T24, T29
@@ -48,7 +49,7 @@ compliance review.
 - **C10**: T30, T31, T32, T33
 - **C11**: T27, T28, T29
 - **C12**: T05, T09, T16, T26
-- **C13**: T12, T13, T23, T43, T50
+- **C13**: T12, T13, T23, T43, T50, T58
 - **C14**: T24, T41, T42, T48
 - **C15**: T19, T41, T44, T49, T51
 - **C16**: T45
@@ -58,7 +59,8 @@ compliance review.
 - **C20**: T14, T40, T53
 - **C21**: T02, T11, T16, T36, T55
 - **C22**: T49
-- **C23**: T50, T52, T53
+- **C23**: T50, T52, T53, T60
 - **C24**: T51, T56
 - **C25**: T54, T56
 - **C26**: T55
+- **C27**: T57, T58, T59, T60

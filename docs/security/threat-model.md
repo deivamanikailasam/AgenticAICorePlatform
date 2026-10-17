@@ -5,18 +5,18 @@ STRIDE per component, mapped to the OWASP Top 10 for Agentic Applications and to
 controls in the [control matrix](control-matrix.md). Every threat has an owner, a control
 and an automated test; `just threat-check` (part of `just check`) enforces it.
 
-**56 threats across 12 components.**
+**60 threats across 13 components.**
 
 ## Owners
 
 | Role | Held by | Accountable for | Threats |
 |---|---|---|---|
-| security-architect | @deivamanikailasam | identity, authentication and authorisation, tool and gateway security, encryption, sandbox isolation | T01, T02, T12, T14, T15, T18, T19, T20, T21, T23, T24, T27, T29, T35, T52, T53 |
-| ai-safety-lead | @deivamanikailasam | prompt injection and goal hijack, memory poisoning, rogue agents, red team and eval gates | T07, T08, T10, T13, T30, T42, T45, T54, T48 |
+| security-architect | @deivamanikailasam | identity, authentication and authorisation, tool and gateway security, encryption, sandbox isolation | T01, T02, T12, T14, T15, T18, T19, T20, T21, T23, T24, T27, T29, T35, T52, T53, T57, T60 |
+| ai-safety-lead | @deivamanikailasam | prompt injection and goal hijack, memory poisoning, rogue agents, red team and eval gates | T07, T08, T10, T13, T30, T42, T45, T54, T59, T48 |
 | privacy-officer | @deivamanikailasam | personal data, tenant isolation of data, retention, access, erasure and transparency to people | T04, T22, T31, T32, T33, T34, T37, T40, T49, T46 |
 | sre-lead | @deivamanikailasam | availability, capacity, cascading failures, durability and alerting | T05, T09, T16, T26, T28, T36, T55, T47 |
 | platform-lead | @deivamanikailasam | runtime correctness, run reconstruction and lineage of decisions | T11, T44 |
-| release-manager | @deivamanikailasam | supply chain, images and packages, spec review and promotion | T41, T43, T50, T51 |
+| release-manager | @deivamanikailasam | supply chain, images and packages, spec review and promotion | T41, T43, T50, T51, T58 |
 | audit-compliance-lead | @deivamanikailasam | the audit trail, attribution of actions and evidence for regulators | T03, T17, T25, T38, T39, T56 |
 | finance-controls-owner | @deivamanikailasam | approval rules for payments and other irreversible business actions | T06 |
 
@@ -189,6 +189,22 @@ Not applicable:
 | T54 | Denial of service | A new agent version that does worse keeps serving production traffic | ai-safety-lead | C25 | ASI08 | `services/agent-api/tests/test_releases.py::test_a_failing_canary_is_rolled_back_automatically_and_audited`<br>`services/agent-api/tests/test_releases.py::test_a_shadow_candidate_runs_the_same_input_without_writing` |
 | T55 | Denial of service | Losing an API replica or the database loses runs, checkpoints, memory or audit | sre-lead | C26, C21 | - | `services/agent-api/tests/test_api.py::test_when_a_replica_stops_another_takes_over_its_paused_run`<br>`libs/agent-governance/tests/test_dr.py::test_the_newest_drill_met_the_stated_targets` |
 | T56 | Repudiation | Nobody can show who promoted a version, or why a candidate was rolled back | audit-compliance-lead | C24, C25, C09 | - | `services/agent-api/tests/test_releases.py::test_a_failing_canary_is_rolled_back_automatically_and_audited`<br>`libs/agent-governance/tests/test_promotion.py::test_a_new_version_walks_dev_staging_canary_prod` |
+
+## Reuse kit (agent-sdk, agentctl, the agent-project template)
+
+*Trust boundary:* a team's repository and code -> the platform's runtime, policies and environments  
+*Data:* the team's tools, functions, patterns and evaluators; specs; pins to the platform
+
+| ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
+|---|---|---|---|---|---|---|
+| T57 | Elevation of privilege | A team's tool or pattern builder escapes the platform's controls (an irreversible call without approval, a tool the spec does not grant) | security-architect | C27, C02 | ASI02, ASI03 | `libs/agent-compiler/tests/test_compiler.py::test_custom_pattern_uses_the_named_builder_and_keeps_the_approval_gate`<br>`services/agent-api/tests/test_installed_tools.py::test_a_ref_no_installed_tool_declares_is_refused` |
+| T58 | Tampering | A new project runs other platform code or third-party versions than the platform tested and signed | release-manager | C27, C13 | ASI04 | `libs/agent-sdk/tests/test_template.py::test_a_project_pins_the_platform_its_environments_run`<br>`libs/agent-sdk/tests/test_template.py::test_the_template_data_is_current` |
+| T59 | Spoofing | A broken or missing team evaluator makes a failing agent look as if it passed its gates | ai-safety-lead | C27 | ASI09 | `libs/agent-evals/tests/test_core.py::test_custom_evaluators_score_and_fail_closed`<br>`libs/agent-evals/tests/test_core.py::test_a_task_naming_an_uninstalled_evaluator_fails` |
+| T60 | Information disclosure | A project deploys under the platform's or another team's environment names and reaches their secrets or data | security-architect | C27, C23 | ASI03 | `libs/agent-governance/tests/test_deploy_policy.py::test_an_agent_project_names_its_own_environments`<br>`libs/agent-sdk/tests/test_template.py::test_a_project_runs_under_its_own_names_with_the_platform_s_rules` |
+
+Not applicable:
+- **Repudiation**: a project's runs, tool calls and promotions go through the platform's run API, audit trail and promotion rules unchanged (T11, T56)
+- **Denial of service**: a project's agents run under the platform's budgets and rate limits; its own environments are separate (T60)
 
 ## Telemetry (OTel traces, metrics, Langfuse)
 
