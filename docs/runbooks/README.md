@@ -16,6 +16,10 @@ One page per alert in `infra/observability/prometheus/agent-rules.yaml`. Each al
 
 Drills: [dr-restore.md](dr-restore.md) restores the agent database (rehearsed by `just dr-drill`).
 
+Actions and apps (no alert of their own):
+- [kill-switch.md](kill-switch.md): stop an agent, a tool or a tenant, and turn it back on.
+- [reference-apps.md](reference-apps.md): operating the three reference applications (Step 40).
+
 Every page has the same four parts: what it means, what to check, how to fix it, and when to
 escalate. The dashboard is **Agent platform** in Grafana; traces are in Tempo (no prompt content)
 and Langfuse (redacted content, project members only).
