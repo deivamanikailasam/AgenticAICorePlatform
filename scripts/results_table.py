@@ -8,8 +8,11 @@ Sources, and nothing else:
 
 * ``evals/baselines/*.mechanics.json``: each app's mechanics baseline (stand-in gateway).
 * ``evals/results/dr/*.json``: the disaster-recovery drill.
-* ``evals/results/redteam/{unit,garak,promptfoo}.json``: recorded red-team runs.
-* ``docs/results/ci-evidence.yaml``: numbers from CI runs, each with its workflow run ID.
+* ``docs/results/ci-evidence.yaml``: numbers from CI runs, each with its workflow run ID
+  (including the red-team suite: its local reports under ``evals/results/redteam/`` are not
+  committed, so they aren't evidence).
+
+Only files committed to the repository are read, so the table is the same on every checkout.
 
 Quality (task success on real models, judge scores, AUD and latency on real models) has no row
 of numbers: no real-model run has been recorded. The page says so instead of estimating.
@@ -27,7 +30,6 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "results.md"
 EVIDENCE = ROOT / "docs" / "results" / "ci-evidence.yaml"
-REDTEAM = ("unit", "promptfoo", "garak")
 REPO = "https://github.com/deivamanikailasam/AgenticAICorePlatform"
 
 
@@ -54,25 +56,6 @@ def baselines() -> list[str]:
         rows.append(
             f"| {d['app']} | {d['versions']['spec']} | {tasks} | {d['succeeded']} of {tasks} "
             f"| {per_task} | `{_rel(path)}` |"
-        )
-    return rows
-
-
-def redteam() -> list[str]:
-    rows = [
-        "| Run | Commit | Executed | Held | Findings | Categories with no executed attack | Source |",
-        "|---|---|---|---|---|---|---|",
-    ]
-    for name in REDTEAM:
-        path = ROOT / "evals" / "results" / "redteam" / f"{name}.json"
-        if not path.exists():
-            continue
-        d = _json(path)
-        s = d["summary"]
-        untested = ", ".join(s["untested"]) or "none"
-        rows.append(
-            f"| {', '.join(d['tiers'])} | {d['commit']} | {s['executed']} | {s['held']} "
-            f"| {s['findings']} | {untested} | `{_rel(path)}` |"
         )
     return rows
 
@@ -143,13 +126,6 @@ def render() -> str:
         "## CI runs",
         "",
         *ci(),
-        "",
-        "## Red-team runs recorded in the repository",
-        "",
-        "The red-team suite also runs in CI on every push (above). These are runs recorded as "
-        "files; the attack libraries cover only the categories they have attacks for.",
-        "",
-        *redteam(),
         "",
         "## Disaster-recovery drill",
         "",

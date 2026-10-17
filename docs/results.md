@@ -34,16 +34,6 @@ The stand-in gateway answers with canned responses. These runs check that the ha
 | [deploy-e2e 38996375350](https://github.com/deivamanikailasam/AgenticAICorePlatform/actions/runs/38996375350) | e1ba0ad | 2026-10-17 | The platform on a kind cluster through Argo CD, against the stand-in | 7 of 7 checks passed |
 | [template-e2e 38998050472](https://github.com/deivamanikailasam/AgenticAICorePlatform/actions/runs/38998050472) | a818a63 | 2026-10-17 | A new project from the template, cold, to a passing first run, eval and deploy-check | 36.6 s (limit 1,800 s) (Machine time only. A person reading the README and answering copier's questions is not measured) |
 
-## Red-team runs recorded in the repository
-
-The red-team suite also runs in CI on every push (above). These are runs recorded as files; the attack libraries cover only the categories they have attacks for.
-
-| Run | Commit | Executed | Held | Findings | Categories with no executed attack | Source |
-|---|---|---|---|---|---|---|
-| unit | c8c8e39 | 44 | 44 | 0 | none | `evals/results/redteam/unit.json` |
-| promptfoo | 08ac601 | 10 | 10 | 0 | ASI02, ASI04, ASI08, ASI10 | `evals/results/redteam/promptfoo.json` |
-| garak | 08ac601 | 9 | 9 | 0 | ASI02, ASI03, ASI04, ASI06, ASI07, ASI08, ASI09, ASI10 | `evals/results/redteam/garak.json` |
-
 ## Disaster-recovery drill
 
 | Drill | At | Writes acknowledged | Writes lost | RPO measured (target) | RTO measured (target) | Recovered and verified | Passed | Source |
