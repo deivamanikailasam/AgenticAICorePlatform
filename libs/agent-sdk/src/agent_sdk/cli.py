@@ -167,7 +167,7 @@ def _deploy_check(project: Project) -> int:
             found.append(f"{env}: kustomize build failed: {proc.stderr.strip()}")
             continue
         objects = [o for o in yaml.safe_load_all(proc.stdout) if o]
-        problems = deploy_problems(env, objects)
+        problems = deploy_problems(env, objects, prefix=project.name)
         found += [f"{env}: {p}" for p in problems]
         print(f"agentctl: {env}: {len(objects)} objects, {len(problems)} problem(s)")
     for line in found:

@@ -96,7 +96,11 @@ def _secret_value(key: str, value: str) -> bool:
     return bool(SECRET_KEYS.search(key) and value and not SECRET_REF.match(value))
 
 
-def problems(env: str, objects: Iterable[Mapping[str, Any]]) -> list[str]:
+def problems(
+    env: str, objects: Iterable[Mapping[str, Any]], prefix: str = "agent-platform"
+) -> list[str]:
+    """``prefix`` names the environments: ``agent-platform-<env>`` for the platform, the
+    project's own name for an agent project (Step 39)."""
     objs = [o for o in objects if o]
     out: list[str] = []
     by_kind: dict[str, list[Mapping[str, Any]]] = {}
@@ -105,7 +109,7 @@ def problems(env: str, objects: Iterable[Mapping[str, Any]]) -> list[str]:
     if env not in ENVIRONMENTS:
         return [f"unknown environment {env!r}"]
     namespaces = by_kind.get("Namespace", [])
-    expected_ns = f"agent-platform-{env}"
+    expected_ns = f"{prefix}-{env}"
     if [n["metadata"]["name"] for n in namespaces] != [expected_ns]:
         out.append(f"the overlay must create exactly the namespace {expected_ns}")
     for ns in namespaces:

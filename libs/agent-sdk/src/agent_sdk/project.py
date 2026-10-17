@@ -11,6 +11,7 @@ Layout (``agentctl`` finds the root by walking up to the first directory with ``
 from __future__ import annotations
 
 import os
+import tomllib
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,6 +61,16 @@ class Project:
         config = self.root / "platform.yaml"
         if "AGENT_PLATFORM_CONFIG" not in os.environ and config.is_file():
             os.environ["AGENT_PLATFORM_CONFIG"] = str(config)
+
+    @property
+    def name(self) -> str:
+        """The project's name (pyproject.toml), which its environments are named after."""
+        pyproject = self.root / "pyproject.toml"
+        if pyproject.is_file():
+            name = tomllib.loads(pyproject.read_text()).get("project", {}).get("name")
+            if name:
+                return str(name)
+        return self.root.name
 
     def spec_path(self, agent: str) -> Path:
         path = self.root / "agents" / agent / "agent.yaml"

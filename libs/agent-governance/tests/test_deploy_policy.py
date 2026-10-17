@@ -4,6 +4,7 @@ is for (a bad manifest is refused with a reason)."""
 from __future__ import annotations
 
 import copy
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -191,3 +192,10 @@ def test_the_repository_overlays_meet_the_rules(env: str) -> None:
         text=True,
     ).stdout
     assert problems(env, list(yaml.safe_load_all(rendered))) == []
+
+
+def test_an_agent_project_names_its_own_environments() -> None:
+    """Step 39: a project from the template runs the platform under its own namespaces."""
+    objs = json.loads(json.dumps(good_prod()).replace("agent-platform-prod", "claims-desk-prod"))
+    assert problems("prod", objs, prefix="claims-desk") == []
+    assert any("not agent-platform-prod" in p for p in problems("prod", objs))
