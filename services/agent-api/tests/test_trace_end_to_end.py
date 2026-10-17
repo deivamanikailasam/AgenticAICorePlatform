@@ -43,9 +43,11 @@ SECRET_KEY = os.environ.get(
 LEAKED = "AKIA" + "Z7Q2" * 4  # an AWS-shaped access key id (not a real key)  # secret-scan: allow
 AGENTS = {
     "research-report",
+    "research-report-team",
     "research-report-researcher",
     "research-report-analyst",
     "research-report-writer",
+    "research-report-critic",
 }
 
 _spec = importlib.util.spec_from_file_location(
@@ -127,7 +129,8 @@ async def test_a_team_run_is_one_trace_in_tempo_and_langfuse(
         )
     run = manager.runs[resp.json()["run_id"]]
     await manager.wait_idle(run)
-    assert run.status == "succeeded", run.events[-1]
+    # the team wrote and reviewed the report; the run waits for approval to publish (Step 40)
+    assert run.status == "interrupted", run.events[-1]
     for s in exporters:
         s.force_flush()
     root = next(
