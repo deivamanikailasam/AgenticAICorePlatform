@@ -23,9 +23,11 @@ generatorOptions:
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
 configMapGenerator:
+  # a generated copy of governance/data-lifecycle.yaml (just deploy-config), so the base builds
+  # on its own, also as a remote base of an agent project (Step 39)
   - name: data-lifecycle
     files:
-      - data-lifecycle.yaml=../../governance/data-lifecycle.yaml
+      - data-lifecycle.yaml
 patches:
   - target: { kind: "ServiceAccount|NetworkPolicy" }
     patch: |-
