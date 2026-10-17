@@ -9,6 +9,9 @@ resources:
 components:
   - ../../components/temporal-dev
   - ../../components/head-specs
+generatorOptions:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 configMapGenerator:
   - name: agent-platform-env
     envs: [env.properties]

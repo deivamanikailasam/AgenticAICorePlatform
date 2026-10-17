@@ -11,6 +11,9 @@ components:
   - ../../components/cluster
   # the versions deploy/releases/prod.yaml names (generated: just deploy-config)
   - released
+generatorOptions:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 configMapGenerator:
   - name: agent-platform-env
     envs: [env.properties]

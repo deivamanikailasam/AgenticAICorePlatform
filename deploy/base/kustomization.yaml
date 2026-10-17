@@ -18,7 +18,17 @@ resources:
   - a2a-gateway.yaml
   - migrate-job.yaml
   - networkpolicies.yaml
+# Argo CD sync order: what the migration Job and the pods need exists first (wave -2)
+generatorOptions:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 configMapGenerator:
   - name: data-lifecycle
     files:
       - data-lifecycle.yaml=../../governance/data-lifecycle.yaml
+patches:
+  - target: { kind: "ServiceAccount|NetworkPolicy" }
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value: { argocd.argoproj.io/sync-wave: "-2" }

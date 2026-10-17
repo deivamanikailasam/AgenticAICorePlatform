@@ -1,4 +1,6 @@
-# Schema migrations before every sync (Argo CD PreSync hook, Step 38). Uses its own database
+# Schema migrations on every sync, before the services start (Argo CD Sync hook in wave -1: after
+# the namespace, service accounts, config and network policies of wave -2, before the
+# Deployments of wave 0; Step 38). Uses its own database
 # credential with DDL rights (`db-migrate`); the services' runtime credential has none. Applied
 # files are recorded with their SHA-256, so a re-run is a no-op and a changed migration fails.
 apiVersion: batch/v1
@@ -6,7 +8,8 @@ kind: Job
 metadata:
   name: agent-db-migrate
   annotations:
-    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "-1"
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   backoffLimit: 2
