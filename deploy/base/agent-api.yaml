@@ -48,6 +48,8 @@ spec:
             - { name: AGENT_API_AUDIT_FILE, value: /tmp/agent-api-audit.jsonl }
             - { name: AGENT_API_STORE, value: postgres }
             - { name: AGENT_REGISTRY_FILE, value: /tmp/agents.db }
+            # Step 38: retention (governance/data-lifecycle.yaml) daily, on one replica at a time
+            - { name: AGENT_RETENTION_EVERY_HOURS, value: "24" }
             # this replica's address, so others can reach the run it drives (Step 38)
             - name: AGENT_API_POD_IP
               valueFrom: { fieldRef: { fieldPath: status.podIP } }

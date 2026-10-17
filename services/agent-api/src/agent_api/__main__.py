@@ -100,7 +100,10 @@ def main() -> None:
         settings.issuer, audience=settings.audience, jwks_url=settings.jwks_url
     )
     uvicorn.run(
-        build_app(manager, verifier), host=settings.host, port=settings.port, log_level="info"
+        build_app(manager, verifier, retention_hours=settings.retention_hours or None),
+        host=settings.host,
+        port=settings.port,
+        log_level="info",
     )
 
 

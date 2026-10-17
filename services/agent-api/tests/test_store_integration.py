@@ -122,3 +122,17 @@ async def test_release_state_is_shared_through_postgres() -> None:
         with psycopg.connect(dsn) as conn:
             conn.execute("delete from agent_runtime.release_state where agent = %s", (agent,))
             conn.execute("delete from agent_runtime.release_outcomes where agent = %s", (agent,))
+
+
+async def test_one_replica_at_a_time_holds_a_named_lock() -> None:
+    """Step 38: scheduled retention takes a Postgres advisory lock; a second replica gets none."""
+    dsn = os.environ.get("AGENT_DB_DSN")
+    if not dsn:
+        pytest.skip("AGENT_DB_DSN not set")
+    a = PostgresRunStore(dsn, FieldCipher(os.urandom(32)))
+    b = PostgresRunStore(dsn, FieldCipher(os.urandom(32)))
+    name = f"test-{uuid.uuid4().hex}"
+    async with a.exclusive(name) as first, b.exclusive(name) as second:
+        assert (first, second) == (True, False)
+    async with b.exclusive(name) as again:
+        assert again, "released when the holder finished"

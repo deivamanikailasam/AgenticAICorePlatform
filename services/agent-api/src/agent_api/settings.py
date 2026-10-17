@@ -67,6 +67,11 @@ class Settings:
     # Step 38: this replica's address when several share the run store (Kubernetes sets the pod
     # IP); unset for a single process
     pod_ip: str = field(default_factory=lambda: _env("AGENT_API_POD_IP", ""))
+    # Step 38: apply governance/data-lifecycle.yaml every N hours (one replica at a time); unset:
+    # only on request (POST /v1/admin/retention)
+    retention_hours: float = field(
+        default_factory=lambda: float(_env("AGENT_RETENTION_EVERY_HOURS", "0"))
+    )
 
     @property
     def node(self) -> str | None:

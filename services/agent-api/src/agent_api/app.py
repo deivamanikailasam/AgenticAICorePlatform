@@ -86,7 +86,10 @@ PASSED_HEADERS = ("authorization", "content-type", "accept", "idempotency-key", 
 
 
 def build_app(
-    manager: RunManager, verifier: TokenVerifier, sweep_seconds: float = 30.0
+    manager: RunManager,
+    verifier: TokenVerifier,
+    sweep_seconds: float = 30.0,
+    retention_hours: float | None = None,
 ) -> Starlette:
     async def authenticate(raw: str | None) -> Principal | None:
         if not raw:
@@ -375,9 +378,20 @@ def build_app(
                     await manager.keep_leases()
                     await manager.adopt_orphans()
 
+        async def retention() -> None:  # Step 38: data lifecycle on a schedule
+            assert retention_hours is not None
+            while True:
+                await asyncio.sleep(retention_hours * 3600)
+                policy = await asyncio.to_thread(load_lifecycle)
+                if policy is not None:
+                    with contextlib.suppress(Exception):
+                        await manager.scheduled_retention(policy)
+
         tasks = [asyncio.create_task(timers())]
         if manager.node is not None:
             tasks.append(asyncio.create_task(leases()))
+        if retention_hours:
+            tasks.append(asyncio.create_task(retention()))
         try:
             yield
         finally:

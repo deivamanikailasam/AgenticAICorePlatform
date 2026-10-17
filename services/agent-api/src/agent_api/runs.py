@@ -1157,6 +1157,23 @@ class RunManager:
         )
         return counts
 
+    #: who scheduled retention runs as (Step 38): the platform itself, audited as such
+    RETENTION_SCHEDULE = Principal(
+        user="retention-schedule",
+        tenant="platform",
+        groups=(),
+        roles=("platform-operator",),
+        token="",
+    )
+
+    async def scheduled_retention(self, policy: Mapping[str, Any]) -> dict[str, int] | None:
+        """Apply retention once, on one replica at a time (the one that takes the lock); None
+        where another replica is already doing it."""
+        async with self.store.exclusive("retention") as mine:
+            if not mine:
+                return None
+            return await self.apply_retention(policy, self.RETENTION_SCHEDULE)
+
     # ------------------------------------------------------------ inspect and flush memory
 
     INCIDENT_ROLES = frozenset({"privacy-officer", "security-officer"})

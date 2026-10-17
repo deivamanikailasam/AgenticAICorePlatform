@@ -14,10 +14,13 @@ its checkpoints. Finished runs need no lease; any replica can read them.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import hashlib
 import json
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Collection
+from collections.abc import AsyncIterator, Collection
 from datetime import datetime
 from typing import Any
 
@@ -79,12 +82,17 @@ class RunStore(ABC):
     async def orphans(self, statuses: Collection[str]) -> list[str]:
         """Runs in one of ``statuses`` that no replica holds a live lease on."""
 
+    @abstractmethod
+    def exclusive(self, name: str) -> contextlib.AbstractAsyncContextManager[bool]:
+        """Hold a named lock across replicas for the body; yields False if another holds it."""
+
 
 class MemoryRunStore(RunStore):
     def __init__(self) -> None:
         self._runs: dict[str, dict[str, Any]] = {}
         self._events: dict[str, list[dict[str, Any]]] = {}
         self._leases: dict[str, tuple[str, float]] = {}  # run -> (node, expires, monotonic)
+        self._locks: dict[str, asyncio.Lock] = {}
 
     async def save(self, record: dict[str, Any]) -> None:
         self._runs[record["run_id"]] = json.loads(json.dumps(record, default=str))
@@ -150,6 +158,15 @@ class MemoryRunStore(RunStore):
         for r in kept:
             self._leases[r] = (node, time.monotonic() + seconds)
         return kept
+
+    @contextlib.asynccontextmanager
+    async def exclusive(self, name: str) -> AsyncIterator[bool]:
+        lock = self._locks.setdefault(name, asyncio.Lock())
+        if lock.locked():
+            yield False
+            return
+        async with lock:
+            yield True
 
     async def orphans(self, statuses: Collection[str]) -> list[str]:
         now = time.monotonic()
@@ -335,3 +352,18 @@ class PostgresRunStore(RunStore):
                 )
             ).fetchall()
         return [str(r[0]) for r in rows]
+
+    @contextlib.asynccontextmanager
+    async def exclusive(self, name: str) -> AsyncIterator[bool]:
+        """A session advisory lock, released when the body ends or the connection drops."""
+        key = int.from_bytes(
+            hashlib.sha256(f"agent-api|{name}".encode()).digest()[:8], "big", signed=True
+        )
+        async with await self._conn() as conn:
+            row = await (await conn.execute("select pg_try_advisory_lock(%s)", (key,))).fetchone()
+            held = bool(row and row[0])
+            try:
+                yield held
+            finally:
+                if held:
+                    await conn.execute("select pg_advisory_unlock(%s)", (key,))

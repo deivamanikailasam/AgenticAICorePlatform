@@ -176,3 +176,19 @@ def test_the_retention_policy_is_complete() -> None:
     assert {"runs", "checkpoints", "memory", "audit"} <= set(policy["retention"])
     assert "interrupted" not in policy["finished_statuses"]
     assert "running" not in policy["finished_statuses"]
+
+
+async def test_scheduled_retention_runs_on_one_replica_at_a_time_and_is_audited() -> None:
+    """Step 38: the daily schedule applies the same policy as the endpoint, as the platform,
+    and two replicas sharing the store never prune at once."""
+    manager, client, _, audit = await setup()
+    policy = yaml.safe_load(LIFECYCLE.read_text())
+    async with manager.store.exclusive("retention") as mine:  # another replica is at it
+        assert mine
+        assert await manager.scheduled_retention(policy) is None
+    counts = await manager.scheduled_retention(policy)
+    assert counts is not None
+    assert set(counts) == {"runs", "checkpoints", "memories"}
+    applied = [r.event for r in await audit.read() if r.event.type == "retention.applied"]
+    assert applied[-1].payload["requested_by"] == "retention-schedule"
+    await client.aclose()
