@@ -179,3 +179,18 @@ Every term used in this repository, in plain English. Grows with each step.
 | Data lifecycle | How data is created, kept, given back on request and deleted |
 | Retention | How long data is kept before it is deleted |
 | Right of access | A person's right to get a copy of the personal data an organisation holds about them (APP 12) |
+| Kustomize overlay | The small set of changes one environment makes on top of a shared description of the services |
+| GitOps | Running a system from Git: a change is a commit, and a tool (Argo CD) makes the cluster match it |
+| Argo CD | The tool that keeps each Kubernetes environment the same as what Git says, and puts it back if someone changes it by hand |
+| Pod Security Standards | Kubernetes' built-in rules for how locked-down a pod must be; "restricted" is the strictest |
+| NetworkPolicy | A Kubernetes rule saying which pods may talk to which; ours deny everything not listed |
+| KEDA | A tool that adds or removes worker copies based on how much work is waiting |
+| Lease (run) | A short, renewable claim one API copy holds on a run so only it drives the run; if it stops renewing, another takes over |
+| Shadow run | Running a new version on the same input in the background, with no side effects and nothing shown, to compare |
+| Online evaluation | Scoring real runs as they finish (success, cost, time) to judge a version in production |
+| Automatic rollback | Taking a candidate out of service by itself the moment its online evaluation is worse than allowed |
+| Feature flag | A switch in configuration that turns an agent or one of its tools off without a new version |
+| Snapshot (release) | A copy of one agent version's spec kept unchanged in `deploy/specs/`, which is what staging and prod run |
+| RPO | Recovery point objective: the most recent work you may lose in a disaster, as a time |
+| RTO | Recovery time objective: how long getting back to a working, verified state may take |
+| Point-in-time recovery | Rebuilding a database from a base backup plus every change logged since, up to a chosen moment |
