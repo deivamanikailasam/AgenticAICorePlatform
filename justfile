@@ -19,7 +19,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check deploy-config-check template-data-check
+check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check deploy-config-check template-data-check results-check
 
 lint:
     uv run ruff check .
@@ -373,3 +373,10 @@ template-data-check:
 # Step 39: a project from the template through its first 30 minutes, timed (CI: template-e2e)
 template-e2e *args:
     uv run python -m scripts.template_e2e {{args}}
+
+# Step 40: the results table, only measured numbers (docs/results.md)
+results:
+    uv run python -m scripts.results_table write
+
+results-check:
+    uv run python -m scripts.results_table check

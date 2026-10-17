@@ -1,0 +1,40 @@
+# Results measured in CI, recorded by hand from the run's log (Step 40). Each entry names the
+# workflow run so anyone can open it and check the number. `just results` turns this file and the
+# result files under evals/ into docs/results.md; nothing in that page comes from anywhere else.
+runs:
+  - id: 39001920862
+    workflow: ci
+    job: integration (Project 0 stand-in)
+    commit: cef10c8
+    date: 2026-10-17
+    measured:
+      - what: Integration tests against the Project 0 stand-in
+        value: 171 passed, 2 skipped
+      - what: Red-team suite (unit and integration tiers, live OPA)
+        value: 57 attacks executed, 57 held, 0 findings
+        detail: >-
+          Held per category: ASI01 7, ASI02 6, ASI03 7, ASI04 7, ASI05 3, ASI06 5, ASI07 5,
+          ASI08 6, ASI09 5, ASI10 6. The 4 ASI05 attacks that need gVisor run in the sandbox job
+          of the same workflow run, which passed
+      - what: Eval gates, 8 apps, mechanics runs against the stand-in
+        value: 8 of 8 pass
+        detail: >-
+          No task that passed in its baseline failed; success, tokens and AUD per task within the
+          gate's limits. Quality, AUD and latency ceilings are not applied to stand-in runs
+  - id: 38996375350
+    workflow: deploy-e2e
+    commit: e1ba0ad
+    date: 2026-10-17
+    measured:
+      - what: The platform on a kind cluster through Argo CD, against the stand-in
+        value: 7 of 7 checks passed
+  - id: 38998050472
+    workflow: template-e2e
+    commit: a818a63
+    date: 2026-10-17
+    measured:
+      - what: A new project from the template, cold, to a passing first run, eval and deploy-check
+        value: 36.6 s (limit 1,800 s)
+        detail: >-
+          Machine time only. A person reading the README and answering copier's questions is not
+          measured
