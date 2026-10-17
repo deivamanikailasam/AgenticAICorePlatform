@@ -2,7 +2,7 @@
 
 Resume point for any new session. Updated after every commit.
 
-**Current step:** all 40 steps done (40 of 40). Next: cross-cutting documents, then merge to `main`
+**Current step:** all 40 steps done (40 of 40); handbook written; branch merged to `main`
 
 ## Environment note (read first)
 
@@ -63,7 +63,11 @@ This build runs in a **cloud container**, not on the Mac where Project 0 lives (
 
 ## Next
 
-- Cross-cutting documents the owner asked for (architecture, design decisions, plain-English explanations, techniques, strategy, when to choose what, local-to-prod promotion, full lifecycle), then merge the branch into `main`.
+Owner actions, on the Mac (VERIFY-ON-MAC), in this order (`docs/handbook/strategy.md`):
+1. Real-model baselines for every app (`just eval-app <app> --provider gateway --publish`) and human labels for judge calibration.
+2. Run against the real Project 0: the VERIFY-ON-MAC column above, step by step.
+3. The team-versus-single-agent comparison (ADR 0051).
+4. A second approver for prod promotions and cost approvals; admission-time signature checks; mTLS.
 
 ## Open issues
 
