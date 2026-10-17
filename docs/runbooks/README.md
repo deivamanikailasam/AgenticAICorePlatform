@@ -14,6 +14,8 @@ One page per alert in `infra/observability/prometheus/agent-rules.yaml`. Each al
 | AgentTenantCostHigh | ticket | [cost.md](cost.md) |
 | AgentReleaseRolledBack | ticket | [release-rollback.md](release-rollback.md) |
 
+Drills: [dr-restore.md](dr-restore.md) restores the agent database (rehearsed by `just dr-drill`).
+
 Every page has the same four parts: what it means, what to check, how to fix it, and when to
 escalate. The dashboard is **Agent platform** in Grafana; traces are in Tempo (no prompt content)
 and Langfuse (redacted content, project members only).

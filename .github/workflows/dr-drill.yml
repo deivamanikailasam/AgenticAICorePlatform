@@ -1,0 +1,41 @@
+name: dr-drill
+
+# Step 38: the agent database's disaster-recovery drill (governance/dr.yaml): destroy the database
+# while the platform writes, restore it from the base backup and archived WAL, verify, and measure
+# the recovery point and time against the targets. Weekly here, so a change that breaks recovery
+# shows within days; the policy's quarterly drill on the real environment is the owner's.
+on:
+  schedule:
+    - cron: "17 16 * * 0" # Sundays 16:17 UTC
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/dr_drill.py"
+      - "governance/dr.yaml"
+      - "libs/*/migrations/**"
+      - ".github/workflows/dr-drill.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      UV_FROZEN: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.11.32"
+          python-version: "3.12"
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - run: uv sync --all-packages
+      - run: just dr-drill
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: dr-drill
+          path: evals/results/dr/
+          retention-days: 90

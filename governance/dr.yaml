@@ -1,0 +1,28 @@
+# Backups and disaster recovery for Project A's data (Step 38). Owner policy, 2026-10-17: the
+# objectives below are targets the drill must meet, not measurements. `just dr-drill` measures
+# them and records the result (evals/results/dr/). Legal and business review may tighten them.
+#
+# Everything the platform must not lose is in the agent database (Project 0 Postgres): runs and
+# their event logs, checkpoints, long-term memory (pgvector), the registry, approvals, the usage
+# ledger, release state, and the hash-chained audit trail.
+data:
+  agent-database:
+    holds: [runs, run events, checkpoints, memory, registry, approvals, usage, releases, audit]
+    rpo_seconds: 300 # at most 5 minutes of writes may be lost
+    rto_seconds: 1800 # restored and verified within 30 minutes
+backup:
+  method: base backup + continuous WAL archiving (point-in-time recovery)
+  archive_timeout_seconds: 60 # a WAL segment is archived at least once a minute while writing
+  base_backup: daily
+  keep_days: 14
+  where: >-
+    Off the database host: S3 (Project 0's SeaweedFS locally, the cloud object store in
+    production), encrypted, with object lock for the audit trail's retention. VERIFY-ON-MAC:
+    Project 0's Postgres backup setup (in Kubernetes, the operator's continuous archiving).
+drill:
+  cadence: quarterly, and after any change to Postgres, backups or the schemas
+  verifies:
+    - the audit chain verifies end to end (no row missing or altered)
+    - every checkpoint, run and event that was acknowledged before the recovery point decrypts
+    - long-term memory is searchable
+    - measured data loss is within rpo_seconds and time to verified recovery within rto_seconds

@@ -1,0 +1,25 @@
+{
+  "drill": "agent-database",
+  "at": "2026-10-17T00:24:03+00:00",
+  "image": "docker.io/pgvector/pgvector:0.8.7-pg17-trixie@sha256:7a7e9f22015b67edb4bef5c59daeebcd7e74bfa570df6ce60ae01237c8648a84",
+  "archive_timeout_seconds": 60,
+  "writes_acknowledged": 340,
+  "writes_lost": 116,
+  "measured": {
+    "rpo_seconds": 32.3,
+    "rto_seconds": 5.0
+  },
+  "targets": {
+    "rpo_seconds": 300,
+    "rto_seconds": 1800
+  },
+  "verification": {
+    "audit_chain_ok": true,
+    "audit_rows": 56,
+    "problems": [],
+    "runs_recovered": 56,
+    "checkpoints_recovered": 56,
+    "memories_recovered": 56
+  },
+  "passed": true
+}

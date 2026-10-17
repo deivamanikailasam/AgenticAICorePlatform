@@ -350,3 +350,7 @@ demo-invoice-triage invoice="INV-1002" approver="":
 # Firecracker and Kata engines (needs /dev/kvm; see scripts/install_firecracker.sh, install_kata.sh)
 test-microvm:
     uv run pytest -m microvm services/sandbox-runner -rs
+
+# Step 38: disaster-recovery drill for the agent database (governance/dr.yaml); needs Docker
+dr-drill *args:
+    uv run python -m scripts.dr_drill {{args}}
