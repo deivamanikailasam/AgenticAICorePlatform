@@ -5,16 +5,16 @@ platform_repo:
   when: false
 platform_ref:
   type: str
-  default: 9a999b8194459d89d17a1efb64c2bd445d879888
+  default: 1ba03915d1286e051ef72b082eefbe7a61542adf
   when: false
 platform_images:
   type: yaml
   default:
-    agent-api: ghcr.io/deivamanikailasam/agent-platform/agent-api@sha256:538130c43a9476b483a870ba2b24a4ffc3ed625b8f7aaa557e722b126faa0048
-    agent-worker: ghcr.io/deivamanikailasam/agent-platform/agent-worker@sha256:53e22b96585a285439ee0205e738589661df164b8dfeebbc5f3d52ae6cbb0da7
-    mcp-gateway: ghcr.io/deivamanikailasam/agent-platform/mcp-gateway@sha256:0157bbda682eabf8f3ae8f0c9763a8b726860731612cda781755816176f5404b
-    a2a-gateway: ghcr.io/deivamanikailasam/agent-platform/a2a-gateway@sha256:e2533c6803fc74f935339cc89f8d1de9152aab0f33bb74a20c0e838551767964
-    ops: ghcr.io/deivamanikailasam/agent-platform/ops@sha256:44288188576684369ea3a2c88a5daa9e96fd68d2050a3e333a6ba608ff16909d
+    agent-api: ghcr.io/deivamanikailasam/agent-platform/agent-api@sha256:5bef8d857589de130c4dfae13730cc4ea0990c35caf632757f34130118476dec
+    agent-worker: ghcr.io/deivamanikailasam/agent-platform/agent-worker@sha256:cb522dd6c5aa8baf5a425218d582072c402f0bfecf520e287929cc7bce483dcb
+    mcp-gateway: ghcr.io/deivamanikailasam/agent-platform/mcp-gateway@sha256:0469ee8efea7fc4f8f11303794f1f0b0496b754eb373c8fac0cfa5499128a41e
+    a2a-gateway: ghcr.io/deivamanikailasam/agent-platform/a2a-gateway@sha256:344c2c6adb7e068b4e218a562efb5334f99bcdac1f74a386f5e792d2232ee32a
+    ops: ghcr.io/deivamanikailasam/agent-platform/ops@sha256:c8e212a88f3adcd273a84cd028892bc28fe783bbe6d3c202944294294655703e
   when: false
 platform_constraints:
   type: yaml

@@ -32,10 +32,10 @@ patches:
       - op: replace
         path: /spec/egress/0/to/0/namespaceSelector/matchLabels/kubernetes.io~1metadata.name
         value: temporal-staging
-# images from commit 9a999b8194459d89d17a1efb64c2bd445d879888 (images workflow; signed, scanned)
+# images from commit 1ba03915d1286e051ef72b082eefbe7a61542adf (images workflow; signed, scanned)
 images:
-  - { name: agent-platform/agent-api, newName: ghcr.io/deivamanikailasam/agent-platform/agent-api, digest: "sha256:538130c43a9476b483a870ba2b24a4ffc3ed625b8f7aaa557e722b126faa0048" }
-  - { name: agent-platform/agent-worker, newName: ghcr.io/deivamanikailasam/agent-platform/agent-worker, digest: "sha256:53e22b96585a285439ee0205e738589661df164b8dfeebbc5f3d52ae6cbb0da7" }
-  - { name: agent-platform/mcp-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/mcp-gateway, digest: "sha256:0157bbda682eabf8f3ae8f0c9763a8b726860731612cda781755816176f5404b" }
-  - { name: agent-platform/a2a-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/a2a-gateway, digest: "sha256:e2533c6803fc74f935339cc89f8d1de9152aab0f33bb74a20c0e838551767964" }
-  - { name: agent-platform/ops, newName: ghcr.io/deivamanikailasam/agent-platform/ops, digest: "sha256:44288188576684369ea3a2c88a5daa9e96fd68d2050a3e333a6ba608ff16909d" }
+  - { name: agent-platform/agent-api, newName: ghcr.io/deivamanikailasam/agent-platform/agent-api, digest: "sha256:5bef8d857589de130c4dfae13730cc4ea0990c35caf632757f34130118476dec" }
+  - { name: agent-platform/agent-worker, newName: ghcr.io/deivamanikailasam/agent-platform/agent-worker, digest: "sha256:cb522dd6c5aa8baf5a425218d582072c402f0bfecf520e287929cc7bce483dcb" }
+  - { name: agent-platform/mcp-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/mcp-gateway, digest: "sha256:0469ee8efea7fc4f8f11303794f1f0b0496b754eb373c8fac0cfa5499128a41e" }
+  - { name: agent-platform/a2a-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/a2a-gateway, digest: "sha256:344c2c6adb7e068b4e218a562efb5334f99bcdac1f74a386f5e792d2232ee32a" }
+  - { name: agent-platform/ops, newName: ghcr.io/deivamanikailasam/agent-platform/ops, digest: "sha256:c8e212a88f3adcd273a84cd028892bc28fe783bbe6d3c202944294294655703e" }
