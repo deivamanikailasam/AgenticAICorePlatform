@@ -16,6 +16,8 @@ shared services. It never re-implements or forks them.
 |---|---|
 | The specification (source of truth for scope) | [`docs/spec/Agentic_AI_Core_Platform_Build_Guide.md`](docs/spec/Agentic_AI_Core_Platform_Build_Guide.md) |
 | Where the build is now | [`PROGRESS.md`](PROGRESS.md) |
+| The big picture: architecture, decisions, plain English, techniques, strategy, when to choose what, laptop to production, lifecycle | [`docs/handbook/`](docs/handbook/README.md) |
+| What has been measured | [`docs/results.md`](docs/results.md) |
 | Run it on your Mac | [`docs/setup/local.md`](docs/setup/local.md) |
 | Promote it to production | [`docs/setup/production.md`](docs/setup/production.md) |
 | Learn it step by step | [`docs/guide/`](docs/guide/) |
@@ -33,5 +35,6 @@ just up          # start Project A services on Project 0's Docker network
 
 ## Status
 
-Built in 40 steps across nine phases. See [`PROGRESS.md`](PROGRESS.md) for the current step and
-for which acceptance checks are verified and which still need a run against a live Project 0.
+All 40 steps across nine phases are built. [`PROGRESS.md`](PROGRESS.md) lists which acceptance
+checks are verified here (against the Project 0 stand-in) and which still need a run against the
+live Project 0 and real models (VERIFY-ON-MAC).
