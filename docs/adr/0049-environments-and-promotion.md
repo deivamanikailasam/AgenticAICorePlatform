@@ -120,6 +120,8 @@ Constraints found while building it:
   - The API survives losing a replica.
   - Recovery is measured. In this container's drill, 32.3 s of writes were lost and recovery
     took 5.0 s: one host and a small database (`evals/results/dr/`).
+  - The cluster check passes: `deploy-e2e` run 38996375350 (e1ba0ad) passed all 7 checks,
+    from admission to a run through agent-api and the ingress policy.
 - **Costs:** Argo CD, KEDA, a Temporal cluster, External Secrets and an object store for WAL
   must be run. The online gate sees success, cost and time only. Durable agents are released
   whole until Temporal worker versioning is wired.
