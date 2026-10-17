@@ -4,6 +4,7 @@ through the in-process run API, then promoted."""
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from collections.abc import Iterator, Mapping
 from pathlib import Path
@@ -126,3 +127,21 @@ def test_an_ungranted_or_unknown_agent_is_a_usage_error(
     assert "known: greeter" in capsys.readouterr().err
     assert main(["promote", "greeter", "--to", "prod"]) == 2
     assert "promote it there first" in capsys.readouterr().err
+
+
+@pytest.mark.skipif(shutil.which("kustomize") is None, reason="needs kustomize")
+def test_deploy_check_applies_the_platform_rules(
+    project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for env in ("dev", "staging", "prod"):
+        overlay = project / "deploy" / "overlays" / env
+        overlay.mkdir(parents=True)
+        (overlay / "kustomization.yaml").write_text("resources: [app.yaml]\n")
+        (overlay / "app.yaml").write_text(
+            "apiVersion: v1\nkind: Service\nmetadata: {name: open}\n"
+            "spec: {type: NodePort, ports: [{port: 80}]}\n"
+        )
+    assert main(["deploy-check"]) == 1
+    err = capsys.readouterr().err
+    assert "dev:" in err
+    assert "NodePort" in err

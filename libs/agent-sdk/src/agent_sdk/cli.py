@@ -5,7 +5,8 @@
     agentctl run AGENT --input JSON --api URL      one run on a deployed platform (AGENT_API_TOKEN)
     agentctl eval AGENT [--provider P]             the golden tasks in evals/AGENT/tasks.jsonl
     agentctl promote AGENT --to staging|prod ...   one promotion step, as a reviewable change
-    agentctl deploy-config [--check]               regenerate (or check) the deployment config
+    agentctl deploy-config [--check [--base REF]]  regenerate (or check) the deployment config
+    agentctl deploy-check                          render each overlay; the platform's deploy rules
 
 ``--provider``: ``none`` (no model calls; the default for agents without model nodes),
 ``stand-in`` (the stand-in gateway's canned answers: mechanics only) or ``gateway`` (real models
@@ -19,14 +20,19 @@ import argparse
 import asyncio
 import json
 import os
+import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
 import httpx
+import yaml
 from agent_api.eval_runner import APPROVER, evaluate, session, summary
 from agent_evals.results import save
+from agent_governance.deploy_policy import ENVIRONMENTS
+from agent_governance.deploy_policy import problems as deploy_problems
 from agent_governance.release_repo import PromotionError
 from agent_spec import SpecError
 from agent_spec.cli import validate as validate_specs
@@ -142,7 +148,34 @@ def _promote(project: Project, args: argparse.Namespace) -> int:
     return 0
 
 
-def _deploy_config(project: Project, check: bool) -> int:
+def _deploy_check(project: Project) -> int:
+    """``kustomize build`` each overlay (remote bases need network) and apply the platform's
+    deployment rules (digests, Pod Security, no secrets, network policy, replicas ...)."""
+    if shutil.which("kustomize") is None:
+        raise ProjectError("deploy-check needs kustomize on PATH")
+    found: list[str] = []
+    for env in ENVIRONMENTS:
+        overlay = project.root / "deploy" / "overlays" / env
+        proc = subprocess.run(  # noqa: S603
+            # as the platform's deploy-check and Argo CD build it (deploy/argocd/install)
+            ["kustomize", "build", "--load-restrictor", "LoadRestrictionsNone", str(overlay)],  # noqa: S607
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            found.append(f"{env}: kustomize build failed: {proc.stderr.strip()}")
+            continue
+        objects = [o for o in yaml.safe_load_all(proc.stdout) if o]
+        problems = deploy_problems(env, objects)
+        found += [f"{env}: {p}" for p in problems]
+        print(f"agentctl: {env}: {len(objects)} objects, {len(problems)} problem(s)")
+    for line in found:
+        print(f"agentctl: {line}", file=sys.stderr)
+    return 1 if found else 0
+
+
+def _deploy_config(project: Project, check: bool, base: str) -> int:
     repo = project.releases()
     if not check:
         for path in repo.write_config():
@@ -151,7 +184,7 @@ def _deploy_config(project: Project, check: bool) -> int:
     total, stale = repo.stale_config()
     for path in stale:
         print(f"agentctl: {path.relative_to(project.root)} is stale: run agentctl deploy-config")
-    problems = repo.check("HEAD", None)
+    problems = repo.check(base, None)
     for line in problems:
         print(f"agentctl: {line}", file=sys.stderr)
     print(f"agentctl: {total} generated files, {len(stale)} stale, {len(problems)} problem(s)")
@@ -187,6 +220,8 @@ def parser() -> argparse.ArgumentParser:
     pr.add_argument("--commit", action="store_true", help="commit on a promote/ branch")
     d = sub.add_parser("deploy-config", help="regenerate the deployment config")
     d.add_argument("--check", action="store_true", help="fail if stale or a rule is broken")
+    d.add_argument("--base", default="HEAD", help="--check: promotion rules from REF (CI: base)")
+    sub.add_parser("deploy-check", help="render each overlay and apply the deployment rules")
     return p
 
 
@@ -212,7 +247,9 @@ def main(argv: list[str] | None = None) -> int:
             if not (args.to or args.abort):
                 raise ProjectError("give --to staging|prod or --abort")
             return _promote(project, args)
-        return _deploy_config(project, args.check)
+        if args.cmd == "deploy-check":
+            return _deploy_check(project)
+        return _deploy_config(project, args.check, args.base)
     except (ProjectError, PromotionError, SpecError, json.JSONDecodeError) as exc:
         print(f"agentctl: {exc}", file=sys.stderr)
         return 2
