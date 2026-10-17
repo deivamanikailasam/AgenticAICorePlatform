@@ -2,10 +2,10 @@
 # workflow run so anyone can open it and check the number. `just results` turns this file and the
 # result files under evals/ into docs/results.md; nothing in that page comes from anywhere else.
 runs:
-  - id: 39001920862
+  - id: 39006801714
     workflow: ci
     job: integration (Project 0 stand-in)
-    commit: cef10c8
+    commit: 46b850a
     date: 2026-10-17
     measured:
       - what: Integration tests against the Project 0 stand-in
@@ -16,11 +16,25 @@ runs:
           Held per category: ASI01 7, ASI02 6, ASI03 7, ASI04 7, ASI05 3, ASI06 5, ASI07 5,
           ASI08 6, ASI09 5, ASI10 6. The 4 ASI05 attacks that need gVisor run in the sandbox job
           of the same workflow run, which passed
-      - what: Eval gates, 8 apps, mechanics runs against the stand-in
+      - what: Eval gates, 8 apps (the three reference apps among them), mechanics runs against the stand-in
         value: 8 of 8 pass
         detail: >-
           No task that passed in its baseline failed; success, tokens and AUD per task within the
           gate's limits. Quality, AUD and latency ceilings are not applied to stand-in runs
+  - id: 39006801738
+    workflow: deploy-e2e
+    commit: 46b850a
+    date: 2026-10-17
+    measured:
+      - what: The platform on a kind cluster through Argo CD, with the images of 1887123 (Step 40 code)
+        value: passed
+  - id: 39006801761
+    workflow: template-e2e
+    commit: 46b850a
+    date: 2026-10-17
+    measured:
+      - what: A new project from the template, pinned to 1887123, cold, to a passing first run
+        value: passed
   - id: 38996375350
     workflow: deploy-e2e
     commit: e1ba0ad

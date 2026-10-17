@@ -201,3 +201,9 @@ Every term used in this repository, in plain English. Grows with each step.
 | Constraint (dependency) | A version a project may not move away from, here the versions the platform tested |
 | Remote base | Kustomize manifests taken from another repository at a fixed commit, with local changes on top |
 | Fail closed | When a check can't run, treat it as failed, never as passed |
+| Reference application | A complete app built on the platform to prove a pattern works end to end |
+| Subgraph | A step in a plan that runs another spec as its own agent, under the parent's controls |
+| Critic | An agent that reviews another agent's work and sends it back with issues, without the power to act on it |
+| Mechanics baseline | The recorded results of a mechanics run, which CI compares later runs against |
+| Results table | The page of measured numbers (`docs/results.md`), generated from recorded runs only |
+| Retrospective | A look back at what worked and what didn't, written down so the next build learns from it |

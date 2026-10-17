@@ -61,6 +61,8 @@ four platform services act on every step; everything runs on Project 0's shared 
 
 ## Roadmap (redrawn from the spec's roadmap widget)
 
+Status: **40 of 40 steps done** (2026-10-17). Each phase's steps are recorded in `PROGRESS.md`.
+
 ```mermaid
 flowchart LR
   A["A · Foundation<br/>Steps 1–4"] --> B["B · Models, tools, MCP<br/>5–10"] --> C["C · Runtime and patterns<br/>11–17"]
