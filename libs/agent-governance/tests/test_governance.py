@@ -41,7 +41,7 @@ def high(inv: Inventory, name: str) -> Inventory:
 
 
 def test_every_spec_gets_an_agent_card_with_the_required_fields(inv: Inventory) -> None:
-    assert len(inv.entries) == 20
+    assert len(inv.entries) == 21  # 8 top-level specs and 13 workers
     for e in inv.entries:
         card = cards.agent_card(e, inv)
         for field in (

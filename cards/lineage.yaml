@@ -108,6 +108,32 @@ systems:
       ref: Project 0 rag-core
       in_repo: false
     workers: []
+- system: knowledge-assistant
+  agents:
+  - agent: knowledge-assistant
+    spec:
+      path: agents/knowledge-assistant/agent.yaml
+      version: 0.1.0
+      hash: 618573c4b42bcc7d0ff47ba18269f7a00de46e9085923ea2be75445d270faab6
+    prompts: []
+    models:
+      default: local-qwen-fast
+      executor: local-qwen-fast
+      judge: local-qwen-quality
+      planner: local-qwen-quality
+      router: local-qwen-fast
+      summariser: local-qwen-fast
+    tools:
+    - ref: mcp://rag-core/search
+      version: 1.0.0
+    datasets:
+    - kind: eval suite
+      ref: evals/apps/knowledge-assistant
+      in_repo: true
+    - kind: retrieval corpus
+      ref: Project 0 rag-core
+      in_repo: false
+    workers: []
 - system: policy-debate
   agents:
   - agent: policy-debate

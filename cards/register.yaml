@@ -101,6 +101,28 @@ entries:
     act on
   status: see `just agents` (agent registry lifecycle)
   card: docs/cards/agents/invoice-triage.md
+- id: AI-knowledge-assistant
+  agent: knowledge-assistant
+  version: 0.1.0
+  system: knowledge-assistant
+  purpose: Answers questions from company documents with citations, combining several
+    documents when needed.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: agent
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Tool data: confidential'
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/knowledge-assistant.md
 - id: AI-policy-debate
   agent: policy-debate
   version: 0.1.0

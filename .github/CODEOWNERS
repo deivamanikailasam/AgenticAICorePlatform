@@ -8,6 +8,7 @@
 /agents/batch-summary/workers/reducer.yaml @deivamanikailasam  # low
 /agents/hello-workflow/agent.yaml @deivamanikailasam  # low
 /agents/invoice-triage/agent.yaml @deivamanikailasam  # medium
+/agents/knowledge-assistant/agent.yaml @deivamanikailasam  # low
 /agents/policy-debate/agent.yaml @deivamanikailasam  # low
 /agents/policy-debate/workers/con.yaml @deivamanikailasam  # low
 /agents/policy-debate/workers/judge.yaml @deivamanikailasam  # low

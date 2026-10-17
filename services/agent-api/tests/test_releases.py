@@ -306,4 +306,6 @@ def test_the_repository_releases_load_as_the_api_would(env: str) -> None:
         root / "deploy" / "releases" / f"{env}.yaml", versions, MemoryReleaseState()
     )
     agents = {p.name for p in (root / "agents").iterdir() if (p / "agent.yaml").exists()}
-    assert set(releases.stable()) == agents
+    # every released agent exists in dev; a new agent is in dev before its promotion (Step 40)
+    assert releases.stable()
+    assert set(releases.stable()) <= agents

@@ -117,7 +117,8 @@ def test_the_repository_releases_are_consistent() -> None:
     from scripts.promotion_check import state_at
 
     head = state_at(None)
-    assert set(head.releases["prod"]) == set(head.dev), "every agent is released to prod"
+    # prod and staging release only agents dev has; a new agent is in dev before its promotion
+    assert set(head.releases["prod"]) <= set(head.releases["staging"]) <= set(head.dev)
     assert problems(head, head, POLICY) == []
     for agent, (version, digest) in head.dev.items():
         if head.stable("prod", agent) == version:

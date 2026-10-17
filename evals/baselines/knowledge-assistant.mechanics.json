@@ -1,0 +1,545 @@
+{
+ "app": "knowledge-assistant",
+ "dataset": {
+  "path": "evals/apps/knowledge-assistant/tasks.jsonl",
+  "sha256": "6dbb769277b5534395b77ff8a65a103ca15e631cfd3500c20756cc9fb2415f4e",
+  "tasks": 100
+ },
+ "kind": "mechanics",
+ "note": "stand-in gateway with canned mock responses: checks the harness and the platform's deterministic parts, not model quality (real-model baseline: VERIFY-ON-MAC)",
+ "provider": {
+  "kind": "stand-in",
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  }
+ },
+ "succeeded": 0,
+ "tasks": {
+  "knowledge-000": {
+   "status": "failed",
+   "success": false,
+   "tokens": 60
+  },
+  "knowledge-001": {
+   "status": "failed",
+   "success": false,
+   "tokens": 60
+  },
+  "knowledge-002": {
+   "status": "failed",
+   "success": false,
+   "tokens": 60
+  },
+  "knowledge-003": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-004": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-005": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-006": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-007": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-008": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-009": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-010": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-011": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-012": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-013": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-014": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-015": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-016": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-017": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-018": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-019": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-020": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-021": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-022": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-023": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-024": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-025": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-026": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-027": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-028": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-029": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-030": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-031": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-032": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-033": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-034": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-035": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-036": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-037": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-038": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-039": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-040": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-041": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-042": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-043": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-044": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-045": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-046": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-047": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-048": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-049": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-050": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-051": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-052": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-053": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-054": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-055": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-056": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-057": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-058": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-059": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-060": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-061": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-062": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-063": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-064": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-065": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-066": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-067": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-068": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-069": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-070": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-071": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-072": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-073": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-074": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-075": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-076": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-077": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-078": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-079": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-080": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-081": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-082": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-083": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-084": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-085": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-086": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-087": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-088": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-089": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-090": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-091": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-092": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-093": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-094": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-095": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-096": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-097": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-098": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  },
+  "knowledge-099": {
+   "status": "stopped",
+   "success": false,
+   "tokens": 0
+  }
+ },
+ "usage": {
+  "cost_aud": 0.00043302,
+  "tokens": 180
+ },
+ "versions": {
+  "models": {
+   "default": "local-qwen-fast",
+   "executor": "local-qwen-fast",
+   "judge": "local-qwen-quality",
+   "planner": "local-qwen-quality",
+   "router": "local-qwen-fast",
+   "summariser": "local-qwen-fast"
+  },
+  "plan_hash": "aebc20d14e3b394217e33eba4d187c59e6f3ebac0f7e5772e51eba338672d15a",
+  "prompts": {},
+  "spec": "0.1.0",
+  "spec_hash": "1cd604e09285b983012294011dd9a5ce7d524975a8772e1db01e91cbdc0de723",
+  "tools": {
+   "search": "per server"
+  }
+ }
+}

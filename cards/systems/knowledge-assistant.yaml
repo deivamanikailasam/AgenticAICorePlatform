@@ -1,0 +1,35 @@
+kind: system
+name: knowledge-assistant
+version: 0.1.0
+purpose: Answers questions from company documents with citations, combining several
+  documents when needed.
+owner: agent-platform
+risk_tier: low
+agents:
+- name: knowledge-assistant
+  risk_tier: low
+  autonomy: agent
+tools:
+- name: search
+  ref: mcp://rag-core/search
+  kind: mcp
+  version: 1.0.0
+  side_effect: read
+  data_classification: confidential
+  approval: none
+  used_by:
+  - knowledge-assistant
+services:
+- MCP servers
+- OPA (policy on every tool call)
+- agent-api (runs, approvals, streaming)
+human_oversight:
+- No tool needs approval
+limitations:
+- 'knowledge-assistant: Stops at 16 steps, 300 s, 100000 tokens, AUD 0.50; a stopped
+  run returns partial output and the reason'
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+eval_results:
+  knowledge-assistant: 'No recorded eval run (suite: evals/apps/knowledge-assistant)'

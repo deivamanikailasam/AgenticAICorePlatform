@@ -97,6 +97,31 @@ flowchart LR
 |---|---|---|---|---|---|
 | invoice-triage | `agents/invoice-triage/agent.yaml` 0.3.0 `95c7cd3587e4` | resolve_exceptions: inline template sha256:03cea07790d5 | local-qwen-fast, local-qwen-quality | `mcp://erp/get_invoice` per server<br/>`mcp://erp/post_payment` per server<br/>`mcp://rag-core/search` 1.0.0 | eval suite: evals/invoice-triage (not in the repository yet)<br/>long-term memory: pgvector (tenant) (runtime data)<br/>retrieval corpus: Project 0 rag-core (runtime data) |
 
+## knowledge-assistant
+
+```mermaid
+flowchart LR
+  nae4a9da635["knowledge-assistant 0.1.0<br/>618573c4b42b"]
+  nc4ad9966a2{{"local-qwen-fast"}}
+  n4c67570b38{{"local-qwen-quality"}}
+  n4a856b33d2[/"mcp://rag-core/search 1.0.0"/]
+  n4f53a96995[("eval suite: evals/apps/knowledge-assistant")]
+  na56a5e5222[("retrieval corpus: Project 0 rag-core")]
+  nae4a9da635 -- default --> nc4ad9966a2
+  nae4a9da635 -- executor --> nc4ad9966a2
+  nae4a9da635 -- judge --> n4c67570b38
+  nae4a9da635 -- planner --> n4c67570b38
+  nae4a9da635 -- router --> nc4ad9966a2
+  nae4a9da635 -- summariser --> nc4ad9966a2
+  nae4a9da635 --> n4a856b33d2
+  nae4a9da635 --> n4f53a96995
+  nae4a9da635 --> na56a5e5222
+```
+
+| Agent | Spec | Prompts | Models | Tools | Datasets |
+|---|---|---|---|---|---|
+| knowledge-assistant | `agents/knowledge-assistant/agent.yaml` 0.1.0 `618573c4b42b` | - | local-qwen-fast, local-qwen-quality | `mcp://rag-core/search` 1.0.0 | eval suite: evals/apps/knowledge-assistant<br/>retrieval corpus: Project 0 rag-core (runtime data) |
+
 ## policy-debate
 
 ```mermaid

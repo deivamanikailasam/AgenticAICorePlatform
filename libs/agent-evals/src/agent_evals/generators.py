@@ -1,5 +1,5 @@
-"""Golden task generators for the reference apps that are specs only (Step 34): hello-workflow and
-the five team specs. ``invoice_triage.eval_tasks`` generates the invoice-triage set.
+"""Golden task generators for the reference apps that are specs only (Step 34): hello-workflow,
+the five team specs and the knowledge assistant (Step 40). ``invoice_triage.eval_tasks`` generates the invoice-triage set.
 
 Each generator is seeded, so its file is reproducible (``just eval-tasks``), and each task is
 built as a known case: its expected outcome follows from how it was built (the name to greet, the
@@ -221,6 +221,71 @@ def research_report(rng: random.Random) -> list[Task]:
     return tasks
 
 
+# ---------------------------------------------------------------- knowledge-assistant (Step 40)
+
+DEPARTMENTS = ["engineering", "finance", "sales", "marketing", "legal", "operations", "support"]
+EXPENSES = [
+    ("domestic flight", 600),
+    ("hotel night", 300),
+    ("conference ticket", 900),
+    ("software licence", 1500),
+    ("client dinner", 250),
+    ("training course", 1200),
+]
+
+
+def knowledge_assistant(rng: random.Random) -> list[Task]:
+    """Multi-hop questions: a policy says who approves an expense over a limit (a role), an
+    organisation chart says who holds that role in the asker's department, and a third document
+    names another department's holder (a distractor). The answer must name the right person, and
+    retrieval must have gone through rag-core's search."""
+    tasks: list[Task] = []
+    for i in range(100):
+        dept, other = rng.sample(DEPARTMENTS, 2)
+        expense, limit = rng.choice(EXPENSES)
+        amount = limit + rng.randrange(50, 2000)
+        approver, decoy = rng.sample(NAMES, 2)
+        docs = [
+            {
+                "id": f"policy-{i}",
+                "title": f"{expense.capitalize()} approval policy",
+                "text": f"A {expense} costing more than AUD {limit} must be approved by the "
+                "director of the requester's department.",
+            },
+            {
+                "id": f"org-{i}-{dept}",
+                "title": f"{dept.capitalize()} department organisation chart",
+                "text": f"The director of the {dept} department is {approver}.",
+            },
+            {
+                "id": f"org-{i}-{other}",
+                "title": f"{other.capitalize()} department organisation chart",
+                "text": f"The director of the {other} department is {decoy}.",
+            },
+        ]
+        tasks.append(
+            _task(
+                "knowledge-assistant",
+                f"knowledge-{i:03d}",
+                {
+                    "question": f"Who must approve a {dept} employee's AUD {amount} {expense}?",
+                    "_corpus": docs,
+                },
+                {
+                    "status": list(DONE),
+                    "answer": {"contains": [approver], "not_contains": [decoy]},
+                    "tools": {"required": ["search"]},
+                    "limits": {"max_cost_aud": 0.50},
+                    "rubric": "research-grounding",
+                },
+                "multi-hop-approver",
+                f"the {expense} policy names the {dept} director (limit AUD {limit}, amount "
+                f"{amount}); the {dept} chart names {approver}, the {other} chart {decoy}",
+            )
+        )
+    return tasks
+
+
 # ---------------------------------------------------------------- review-chat
 
 PRODUCTS = [
@@ -436,6 +501,7 @@ GENERATORS: dict[str, Callable[[random.Random], list[Task]]] = {
     "review-chat": review_chat,
     "batch-summary": batch_summary,
     "policy-debate": policy_debate,
+    "knowledge-assistant": knowledge_assistant,
 }
 
 

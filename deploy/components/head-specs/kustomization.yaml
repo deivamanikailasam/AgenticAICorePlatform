@@ -9,6 +9,7 @@ configMapGenerator:
   - batch-summary--workers--reducer.yaml=../../../agents/batch-summary/workers/reducer.yaml
   - hello-workflow--agent.yaml=../../../agents/hello-workflow/agent.yaml
   - invoice-triage--agent.yaml=../../../agents/invoice-triage/agent.yaml
+  - knowledge-assistant--agent.yaml=../../../agents/knowledge-assistant/agent.yaml
   - policy-debate--agent.yaml=../../../agents/policy-debate/agent.yaml
   - policy-debate--workers--con.yaml=../../../agents/policy-debate/workers/con.yaml
   - policy-debate--workers--judge.yaml=../../../agents/policy-debate/workers/judge.yaml

@@ -1,5 +1,5 @@
 """Eval harnesses for the reference apps that need no app-specific services (Step 34):
-hello-workflow and the five team specs.
+hello-workflow, the five team specs and the knowledge assistant (Step 40).
 
 Tools are the platform's own: calculator, word count, clock, and the rag-core search tool. The
 search tool talks to rag-core's HTTP API as in production; here that API is answered from the
@@ -125,3 +125,7 @@ def batch_summary() -> SpecHarness:
 
 def policy_debate() -> SpecHarness:
     return SpecHarness("policy-debate")
+
+
+def knowledge_assistant() -> SpecHarness:
+    return SpecHarness("knowledge-assistant")

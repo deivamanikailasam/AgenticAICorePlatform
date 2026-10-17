@@ -1,0 +1,21 @@
+# Reference app 1 (Step 40): an agentic RAG knowledge assistant on Project 0's rag-core. The agent
+# plans retrieval hops, searches rag-core on behalf of the user (rag-core's own permissions apply),
+# answers with citations to what it retrieved, checks the answer against them and searches again
+# when it falls short (Step 16, pattern agentic_rag).
+spec_version: 1
+name: knowledge-assistant
+version: 0.1.0
+owner: agent-platform
+description: Answers questions from company documents with citations, combining several documents when needed.
+risk_tier: low
+autonomy: agent
+pattern: agentic_rag
+models:
+  default: local-qwen-fast
+runtime: { adapter: langgraph, durability: checkpoint }
+budgets: { max_steps: 16, max_wall_seconds: 300, max_tokens: 100000, max_cost_aud: 0.50 }
+tools:
+  - ref: mcp://rag-core/search          # read, on behalf of the user (token exchange)
+guardrails: [prompt_injection, pii_redaction, output_schema]
+evals: { suite: evals/apps/knowledge-assistant, gates: default }
+interop: { a2a_publish: true }

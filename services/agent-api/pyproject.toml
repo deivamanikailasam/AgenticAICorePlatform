@@ -32,6 +32,7 @@ agent-api = "agent_api.__main__:main"
 "review-chat" = "agent_api.eval_apps:review_chat"
 "batch-summary" = "agent_api.eval_apps:batch_summary"
 "policy-debate" = "agent_api.eval_apps:policy_debate"
+"knowledge-assistant" = "agent_api.eval_apps:knowledge_assistant"
 
 [tool.uv.sources]
 agent-audit = { workspace = true }
