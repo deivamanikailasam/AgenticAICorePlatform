@@ -19,7 +19,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check deploy-config-check template-data-check results-check
+check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check deploy-config-check template-data-check results-check handbook-check
 
 lint:
     uv run ruff check .
@@ -380,3 +380,10 @@ results:
 
 results-check:
     uv run python -m scripts.results_table check
+
+# Cross-cutting handbook: pages compiled from the step chapters and ADRs (docs/handbook/)
+handbook:
+    uv run python -m scripts.handbook write
+
+handbook-check:
+    uv run python -m scripts.handbook check
