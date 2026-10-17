@@ -14,6 +14,7 @@ the run's events (steps).
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import asynccontextmanager
@@ -41,7 +42,7 @@ from agent_evals.user_sim import ScriptedUser, UserProfile, converse, render_tur
 from agent_runtime.models import GatewayModelClient
 from agent_runtime.models.ledger import UsageLedger
 from agent_spec import AgentSpec
-from agent_spec.platform import PlatformConfig, load_platform
+from agent_spec.platform import Gateway, PlatformConfig, load_platform
 from agent_tools.registry import InMemoryToolRegistry
 from mcp.server.auth.provider import AccessToken
 
@@ -94,6 +95,25 @@ class Provider:
     kind: str
     factory: Callable[[AgentSpec], ModelClient]
     models: dict[str, str] = field(default_factory=dict)
+
+
+def gateway_provider(kind: str, spec: AgentSpec) -> Provider:
+    """Model calls through a LiteLLM gateway: ``stand-in`` (the stand-in's canned answers, key
+    ``LITELLM_MASTER_KEY``) or ``gateway`` (real models). The URL is ``P0_LITELLM_URL``, else the
+    platform config's."""
+    base = load_platform()
+    url = os.environ.get("P0_LITELLM_URL", base.gateway.url)
+    platform = base.model_copy(update={"gateway": Gateway(url=url)})
+    keys = None
+    if os.environ.get("LITELLM_MASTER_KEY") and kind == "stand-in":
+        keys = {"default": os.environ["LITELLM_MASTER_KEY"]}
+    models = {**base.models.roles, **spec.models}
+    models.pop("embedder", None)
+    return Provider(
+        kind,
+        lambda s: GatewayModelClient(platform, spec_models=s.models, keys=keys),
+        dict(sorted(models.items())),
+    )
 
 
 def _spec_name(spec: AgentSpec, ref: str | None, fallback: str) -> str:
@@ -360,8 +380,14 @@ async def _no_memory(spec: AgentSpec) -> None:
 
 
 async def evaluate(
-    harness: AppHarness, tasks_path: Path, provider: Provider, limit: int | None = None
+    harness: AppHarness,
+    tasks_path: Path,
+    provider: Provider,
+    limit: int | None = None,
+    root: Path = ROOT,
 ) -> Report:
+    """Run the task set and score it. ``root`` is the repository the report refers to (its
+    commit, and dataset paths relative to it): the platform, or an agent project (Step 39)."""
     tasks = load_tasks(tasks_path)[:limit] if limit else load_tasks(tasks_path)
     observed = await run_tasks(harness, tasks, provider)
     spec = harness.spec()
@@ -389,13 +415,13 @@ async def evaluate(
         versions=agent_versions(spec, plan, provider.models, tools),
         dataset={
             "path": str(
-                tasks_path.relative_to(ROOT) if tasks_path.is_relative_to(ROOT) else tasks_path
+                tasks_path.relative_to(root) if tasks_path.is_relative_to(root) else tasks_path
             ),
             "sha256": dataset_digest(tasks_path),
             "tasks": len(tasks),
         },
         provider={"kind": provider.kind, "models": provider.models},
-        commit=git_commit(ROOT),
+        commit=git_commit(root),
         date=now(),
         results=results,
     )
@@ -423,4 +449,13 @@ def summary(report: Report) -> str:
     return "\n".join(lines)
 
 
-__all__ = ["AppHarness", "Provider", "Session", "evaluate", "run_tasks", "session", "summary"]
+__all__ = [
+    "AppHarness",
+    "Provider",
+    "Session",
+    "evaluate",
+    "gateway_provider",
+    "run_tasks",
+    "session",
+    "summary",
+]

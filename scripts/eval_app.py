@@ -21,7 +21,7 @@ from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
-from agent_api.eval_runner import Provider, evaluate, summary
+from agent_api.eval_runner import Provider, evaluate, gateway_provider, summary
 from agent_evals.results import Report, compare, publish, save
 from agent_runtime.models import GatewayModelClient
 from agent_spec.platform import Gateway, load_platform
@@ -41,20 +41,7 @@ def harness(app: str) -> object:
 
 
 def provider(kind: str, app_harness: object) -> Provider:
-    base = load_platform()
-    url = os.environ.get("P0_LITELLM_URL", base.gateway.url)
-    platform = base.model_copy(update={"gateway": Gateway(url=url)})
-    keys = None
-    if os.environ.get("LITELLM_MASTER_KEY") and kind == "stand-in":
-        keys = {"default": os.environ["LITELLM_MASTER_KEY"]}
-    spec = app_harness.spec()  # type: ignore[attr-defined]
-    models = {**base.models.roles, **spec.models}
-    models.pop("embedder", None)
-    return Provider(
-        kind,
-        lambda s: GatewayModelClient(platform, spec_models=s.models, keys=keys),
-        dict(sorted(models.items())),
-    )
+    return gateway_provider(kind, app_harness.spec())  # type: ignore[attr-defined]
 
 
 def apps() -> list[str]:
