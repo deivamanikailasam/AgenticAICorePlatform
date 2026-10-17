@@ -186,6 +186,8 @@ def executors_for(
             child_functions = functions_for(child_plan)
             runner = NodeRunner(
                 child_functions,
+                # the child runs under the parent's controls: delegation policy, worker
+                # assembly, admission (registry gate), budgets, memory and tracing (Step 40)
                 executors_for(
                     child,
                     child_plan,
@@ -193,6 +195,13 @@ def executors_for(
                     model=model,
                     tools=tools,
                     spec_path=base / ref,
+                    memory=memory,
+                    artefacts=artefacts,
+                    workers=workers,
+                    authorise=authorise,
+                    provider=provider,
+                    admit=admit,
+                    budgets=budgets,
                 ),
             )
             adapter = runtime_for(child, runner=runner)

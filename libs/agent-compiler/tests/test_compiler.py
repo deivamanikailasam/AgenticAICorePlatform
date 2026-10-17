@@ -270,3 +270,60 @@ def test_custom_pattern_without_a_builder_is_refused() -> None:
         load_spec_text(CUSTOM.replace("components: { pattern_builder: debate }\n", ""))
     with pytest.raises(SpecError, match="no pattern_builder named 'nope'"):
         load_spec_text(CUSTOM.replace("pattern_builder: debate", "pattern_builder: nope"))
+
+
+def test_a_nested_spec_runs_under_the_parent_s_controls(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Step 40: a subgraph (e.g. a team nested in a workflow) gets the parent's delegation
+    policy, worker factory, admission gate and budgets, never a run without them."""
+    import asyncio
+
+    from agent_compiler import run as run_module
+    from agent_contracts.models import NodeKind
+
+    (tmp_path / "child.yaml").write_text(HELLO.read_text())
+    parent = load_spec_text(
+        """
+spec_version: 1
+name: parent
+version: 0.1.0
+owner: t
+risk_tier: low
+autonomy: workflow
+pattern: workflow
+budgets: { max_steps: 5, max_wall_seconds: 30 }
+graph:
+  nodes:
+    - { id: child, type: subgraph, spec: child.yaml }
+""",
+        str(tmp_path / "agent.yaml"),
+    )
+    marks = {"authorise": object(), "workers": object(), "admit": object(), "budgets": object()}
+    executors = run_module.executors_for(
+        parent,
+        compile_spec(parent),
+        {},
+        spec_path=tmp_path / "agent.yaml",
+        **marks,  # type: ignore[arg-type]
+    )
+    seen: dict[str, Any] = {}
+
+    class _StopError(Exception):
+        pass
+
+    def capture(*args: Any, **kwargs: Any) -> Any:
+        seen.update(kwargs)
+        raise _StopError
+
+    monkeypatch.setattr(run_module, "executors_for", capture)
+    subplan = executors[NodeKind.SUBPLAN]
+    with pytest.raises(_StopError):
+        asyncio.run(
+            subplan.run_subplan(
+                "child.yaml",
+                {},
+                RunContext(tenant_id="t", user_id="u", agent_id="child", agent_version="0.1.0"),
+            )
+        )
+    assert {k: seen[k] for k in marks} == marks
