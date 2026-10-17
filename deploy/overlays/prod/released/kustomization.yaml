@@ -18,6 +18,12 @@ configMapGenerator:
   - research-report--0.1.0--workers--analyst.yaml=../../../specs/research-report/0.1.0/workers/analyst.yaml
   - research-report--0.1.0--workers--researcher.yaml=../../../specs/research-report/0.1.0/workers/researcher.yaml
   - research-report--0.1.0--workers--writer.yaml=../../../specs/research-report/0.1.0/workers/writer.yaml
+  - research-report--0.2.0--agent.yaml=../../../specs/research-report/0.2.0/agent.yaml
+  - research-report--0.2.0--workers--analyst.yaml=../../../specs/research-report/0.2.0/workers/analyst.yaml
+  - research-report--0.2.0--workers--critic.yaml=../../../specs/research-report/0.2.0/workers/critic.yaml
+  - research-report--0.2.0--workers--researcher.yaml=../../../specs/research-report/0.2.0/workers/researcher.yaml
+  - research-report--0.2.0--workers--team.yaml=../../../specs/research-report/0.2.0/workers/team.yaml
+  - research-report--0.2.0--workers--writer.yaml=../../../specs/research-report/0.2.0/workers/writer.yaml
   - review-chat--0.1.0--agent.yaml=../../../specs/review-chat/0.1.0/agent.yaml
   - review-chat--0.1.0--workers--critic.yaml=../../../specs/review-chat/0.1.0/workers/critic.yaml
   - review-chat--0.1.0--workers--writer.yaml=../../../specs/review-chat/0.1.0/workers/writer.yaml
