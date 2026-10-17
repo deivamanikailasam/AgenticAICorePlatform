@@ -21,3 +21,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_spec"]
+
+# Step 39: agent projects install the platform from git; the wheel carries its default config
+[tool.hatch.build.targets.wheel.force-include]
+"../../platform.yaml" = "agent_spec/_platform/platform.yaml"

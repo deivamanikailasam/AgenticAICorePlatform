@@ -53,3 +53,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_tools"]
+
+# Step 39: agent projects install the platform from git; the wheel carries its policy data
+[tool.hatch.build.targets.wheel.force-include]
+"../../policies/agent/config/data.json" = "agent_tools/_platform/policy-data.json"

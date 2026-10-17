@@ -15,7 +15,14 @@ from typing import Any, Protocol
 import httpx
 from agent_contracts.models import ApprovalRoute, RiskTier, RunContext, SideEffect
 
-POLICY_DATA = Path(__file__).resolve().parents[4] / "policies" / "agent" / "config" / "data.json"
+# The platform's policy data: in the repository, or the copy built into the wheel for agent
+# projects that install the platform from git (Step 39, pyproject force-include).
+_REPO_DATA = Path(__file__).resolve().parents[4] / "policies" / "agent" / "config" / "data.json"
+POLICY_DATA = (
+    _REPO_DATA
+    if _REPO_DATA.is_file()
+    else Path(__file__).resolve().parent / "_platform" / "policy-data.json"
+)
 
 
 class ApprovalRouter(Protocol):

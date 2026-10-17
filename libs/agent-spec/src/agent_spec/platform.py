@@ -16,7 +16,15 @@ from agent_spec.errors import SpecError, SpecIssue
 from agent_spec.interpolate import interpolate
 from agent_spec.loader import _pydantic_issues
 
-DEFAULT_PATH = Path(__file__).resolve().parents[4] / "platform.yaml"
+# The platform config: in the repository, or the copy built into the wheel for agent projects
+# that install the platform from git (Step 39); a project's own platform.yaml comes first
+# (AGENT_PLATFORM_CONFIG, set by agentctl).
+_REPO_CONFIG = Path(__file__).resolve().parents[4] / "platform.yaml"
+DEFAULT_PATH = (
+    _REPO_CONFIG
+    if _REPO_CONFIG.is_file()
+    else Path(__file__).resolve().parent / "_platform" / "platform.yaml"
+)
 ROLES = ("default", "planner", "executor", "router", "judge", "summariser")
 
 
