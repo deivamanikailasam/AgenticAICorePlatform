@@ -495,6 +495,73 @@ components:
     not_applicable:
       I: the repository holds no personal data; secrets are scanned out of every commit (C20)
 
+
+  deployment:
+    name: Environments, releases and promotion (Kubernetes, Argo CD, releases files)
+    boundary: repository and CI -> cluster; production traffic -> candidate agent versions
+    data: manifests, image digests, releases files, released specs, backups
+    threats:
+      - id: T50
+        stride: S
+        title: A tampered, unsigned or unpinned image runs in the cluster
+        owner: release-manager
+        controls: [C13, C23]
+        asi: [ASI04]
+        tests:
+          - redteam:asi04-images-pinned-by-digest
+          - libs/agent-governance/tests/test_deploy_policy.py::test_every_rule_catches_its_violation
+      - id: T51
+        stride: T
+        title: An agent version reaches production without review, or skips staging or its canary
+        owner: release-manager
+        controls: [C24, C15]
+        asi: [ASI10]
+        tests:
+          - libs/agent-governance/tests/test_promotion.py::test_shortcuts_and_edits_are_refused
+          - libs/agent-governance/tests/test_promotion.py::test_snapshots_are_immutable_and_come_from_dev
+      - id: T52
+        stride: E
+        title: A compromised pod uses the Kubernetes API, its host or other namespaces
+        owner: security-architect
+        controls: [C23]
+        asi: [ASI03]
+        tests:
+          - libs/agent-governance/tests/test_deploy_policy.py::test_every_rule_catches_its_violation
+          - libs/agent-governance/tests/test_deploy_policy.py::test_a_root_container_without_seccomp_is_refused
+      - id: T53
+        stride: I
+        title: Secrets leak through manifests, config or Kubernetes Secret objects
+        owner: security-architect
+        controls: [C20, C23]
+        tests:
+          - libs/agent-tools/tests/test_openbao.py::test_staging_resolver_uses_kubernetes_auth_and_never_the_environment
+          - libs/agent-tools/tests/test_openbao.py::test_connection_strings_can_be_openbao_references
+      - id: T54
+        stride: D
+        title: A new agent version that does worse keeps serving production traffic
+        owner: ai-safety-lead
+        controls: [C25]
+        asi: [ASI08]
+        tests:
+          - services/agent-api/tests/test_releases.py::test_a_failing_canary_is_rolled_back_automatically_and_audited
+          - services/agent-api/tests/test_releases.py::test_a_shadow_candidate_runs_the_same_input_without_writing
+      - id: T55
+        stride: D
+        title: Losing an API replica or the database loses runs, checkpoints, memory or audit
+        owner: sre-lead
+        controls: [C26, C21]
+        tests:
+          - services/agent-api/tests/test_api.py::test_when_a_replica_stops_another_takes_over_its_paused_run
+          - libs/agent-governance/tests/test_dr.py::test_the_newest_drill_met_the_stated_targets
+      - id: T56
+        stride: R
+        title: Nobody can show who promoted a version, or why a candidate was rolled back
+        owner: audit-compliance-lead
+        controls: [C24, C25, C09]
+        tests:
+          - services/agent-api/tests/test_releases.py::test_a_failing_canary_is_rolled_back_automatically_and_audited
+          - libs/agent-governance/tests/test_promotion.py::test_a_new_version_walks_dev_staging_canary_prod
+
   telemetry:
     name: Telemetry (OTel traces, metrics, Langfuse)
     boundary: platform -> Project 0's observability stack

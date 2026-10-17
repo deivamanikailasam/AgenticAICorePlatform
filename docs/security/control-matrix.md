@@ -29,6 +29,10 @@ compliance review.
 | **C20** Secrets only from OpenBao outside dev; no secrets in prompts, traces or tool results | [libs/agent-tools/src/agent_tools/secrets.py](../../libs/agent-tools/src/agent_tools/secrets.py)<br>[scripts/check_secrets.py](../../scripts/check_secrets.py)<br>test `test_default_resolver_uses_openbao_and_refuses_env_outside_dev`<br>test `test_content_redactor_removes_secrets_and_withholds_without_pii_check` | MANAGE | A.4 Resources for AI systems | Art. 15 | APP 11 | - |
 | **C21** Durable runs (checkpoints, idempotent tool calls, resume after restart) for availability and integrity | [libs/agent-runtime/src/agent_runtime/durable.py](../../libs/agent-runtime/src/agent_runtime/durable.py)<br>[docs/adr/0029-checkpoints-and-durable-runs.md](../../docs/adr/0029-checkpoints-and-durable-runs.md)<br>test `test_a_running_run_resumes_from_its_last_checkpoint_after_a_restart`<br>test `test_idempotent_creation` | MANAGE | A.6 AI system life cycle | Art. 15 | - | - |
 | **C22** Transparency to the people affected (agent cards, AI-use register, approval screens) incl. automated-decision disclosure | [docs/governance/ai-use-register.md](../../docs/governance/ai-use-register.md)<br>[docs/cards](../../docs/cards)<br>test `test_the_page_uses_only_ag_ui_events` | GOVERN, MAP | A.8 Information for interested parties | Art. 13, Art. 50 | APP 1 | Share essential information |
+| **C23** Hardened deployment (Pod Security restricted, no API token, deny-by-default network, nothing exposed, images by digest and signed, secrets only as OpenBao references) | [libs/agent-governance/src/agent_governance/deploy_policy.py](../../libs/agent-governance/src/agent_governance/deploy_policy.py)<br>[deploy/base](../../deploy/base)<br>[.github/workflows/images.yml](../../.github/workflows/images.yml)<br>test `test_every_rule_catches_its_violation`<br>test `test_the_repository_overlays_meet_the_rules` | MANAGE | A.6 AI system life cycle | Art. 15 | APP 11 | - |
+| **C24** Promotion only by reviewed pull request, dev -> staging -> 10% canary -> prod, with immutable released versions | [libs/agent-governance/src/agent_governance/promotion.py](../../libs/agent-governance/src/agent_governance/promotion.py)<br>[deploy/promotion.yaml](../../deploy/promotion.yaml)<br>[scripts/promote.py](../../scripts/promote.py)<br>[docs/adr/0049-environments-and-promotion.md](../../docs/adr/0049-environments-and-promotion.md)<br>test `test_a_new_version_walks_dev_staging_canary_prod`<br>test `test_shortcuts_and_edits_are_refused` | GOVERN, MANAGE | A.6 AI system life cycle | Art. 9 | - | Decide who is accountable, Test and monitor |
+| **C25** Online evaluation of candidate versions with automatic rollback; canary, shadow and feature flags | [services/agent-api/src/agent_api/releases.py](../../services/agent-api/src/agent_api/releases.py)<br>[docs/runbooks/release-rollback.md](../../docs/runbooks/release-rollback.md)<br>test `test_a_failing_canary_is_rolled_back_automatically_and_audited`<br>test `test_feature_flags_switch_an_agent_or_a_tool_off` | MEASURE, MANAGE | A.6 AI system life cycle | Art. 15, Art. 72 | - | Test and monitor |
+| **C26** Recoverable service and data (run leases across replicas, continuous WAL archiving, measured DR drill) | [governance/dr.yaml](../../governance/dr.yaml)<br>[scripts/dr_drill.py](../../scripts/dr_drill.py)<br>[docs/runbooks/dr-restore.md](../../docs/runbooks/dr-restore.md)<br>test `test_the_newest_drill_met_the_stated_targets`<br>test `test_a_running_run_of_a_stopped_replica_is_taken_over_without_a_request` | MANAGE | A.6 AI system life cycle | Art. 15 | APP 11 | - |
 
 ## Threats each control answers
 
@@ -40,17 +44,21 @@ compliance review.
 - **C06**: T04, T20, T22, T31
 - **C07**: T14, T15, T17
 - **C08**: T34, T35
-- **C09**: T03, T11, T17, T25, T32, T35, T38, T39, T40, T44
+- **C09**: T03, T11, T17, T25, T32, T35, T38, T39, T40, T44, T56
 - **C10**: T30, T31, T32, T33
 - **C11**: T27, T28, T29
 - **C12**: T05, T09, T16, T26
-- **C13**: T12, T13, T23, T43
+- **C13**: T12, T13, T23, T43, T50
 - **C14**: T24, T41, T42, T48
-- **C15**: T19, T41, T44, T49
+- **C15**: T19, T41, T44, T49, T51
 - **C16**: T45
 - **C17**: T46, T47, T48
 - **C18**: T08, T40, T46
 - **C19**: T04, T33, T37
-- **C20**: T14, T40
-- **C21**: T02, T11, T16, T36
+- **C20**: T14, T40, T53
+- **C21**: T02, T11, T16, T36, T55
 - **C22**: T49
+- **C23**: T50, T52, T53
+- **C24**: T51, T56
+- **C25**: T54, T56
+- **C26**: T55

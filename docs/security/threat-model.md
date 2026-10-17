@@ -5,19 +5,19 @@ STRIDE per component, mapped to the OWASP Top 10 for Agentic Applications and to
 controls in the [control matrix](control-matrix.md). Every threat has an owner, a control
 and an automated test; `just threat-check` (part of `just check`) enforces it.
 
-**49 threats across 11 components.**
+**56 threats across 12 components.**
 
 ## Owners
 
 | Role | Held by | Accountable for | Threats |
 |---|---|---|---|
-| security-architect | @deivamanikailasam | identity, authentication and authorisation, tool and gateway security, encryption, sandbox isolation | T01, T02, T12, T14, T15, T18, T19, T20, T21, T23, T24, T27, T29, T35 |
-| ai-safety-lead | @deivamanikailasam | prompt injection and goal hijack, memory poisoning, rogue agents, red team and eval gates | T07, T08, T10, T13, T30, T42, T45, T48 |
+| security-architect | @deivamanikailasam | identity, authentication and authorisation, tool and gateway security, encryption, sandbox isolation | T01, T02, T12, T14, T15, T18, T19, T20, T21, T23, T24, T27, T29, T35, T52, T53 |
+| ai-safety-lead | @deivamanikailasam | prompt injection and goal hijack, memory poisoning, rogue agents, red team and eval gates | T07, T08, T10, T13, T30, T42, T45, T54, T48 |
 | privacy-officer | @deivamanikailasam | personal data, tenant isolation of data, retention, access, erasure and transparency to people | T04, T22, T31, T32, T33, T34, T37, T40, T49, T46 |
-| sre-lead | @deivamanikailasam | availability, capacity, cascading failures, durability and alerting | T05, T09, T16, T26, T28, T36, T47 |
+| sre-lead | @deivamanikailasam | availability, capacity, cascading failures, durability and alerting | T05, T09, T16, T26, T28, T36, T55, T47 |
 | platform-lead | @deivamanikailasam | runtime correctness, run reconstruction and lineage of decisions | T11, T44 |
-| release-manager | @deivamanikailasam | supply chain, images and packages, spec review and promotion | T41, T43 |
-| audit-compliance-lead | @deivamanikailasam | the audit trail, attribution of actions and evidence for regulators | T03, T17, T25, T38, T39 |
+| release-manager | @deivamanikailasam | supply chain, images and packages, spec review and promotion | T41, T43, T50, T51 |
+| audit-compliance-lead | @deivamanikailasam | the audit trail, attribution of actions and evidence for regulators | T03, T17, T25, T38, T39, T56 |
 | finance-controls-owner | @deivamanikailasam | approval rules for payments and other irreversible business actions | T06 |
 
 ## Run API (agent-api)
@@ -174,6 +174,21 @@ Not applicable:
 
 Not applicable:
 - **Information disclosure**: the repository holds no personal data; secrets are scanned out of every commit (C20)
+
+## Environments, releases and promotion (Kubernetes, Argo CD, releases files)
+
+*Trust boundary:* repository and CI -> cluster; production traffic -> candidate agent versions  
+*Data:* manifests, image digests, releases files, released specs, backups
+
+| ID | STRIDE | Threat | Owner | Controls | OWASP | Tests |
+|---|---|---|---|---|---|---|
+| T50 | Spoofing | A tampered, unsigned or unpinned image runs in the cluster | release-manager | C13, C23 | ASI04 | `redteam:asi04-images-pinned-by-digest`<br>`libs/agent-governance/tests/test_deploy_policy.py::test_every_rule_catches_its_violation` |
+| T51 | Tampering | An agent version reaches production without review, or skips staging or its canary | release-manager | C24, C15 | ASI10 | `libs/agent-governance/tests/test_promotion.py::test_shortcuts_and_edits_are_refused`<br>`libs/agent-governance/tests/test_promotion.py::test_snapshots_are_immutable_and_come_from_dev` |
+| T52 | Elevation of privilege | A compromised pod uses the Kubernetes API, its host or other namespaces | security-architect | C23 | ASI03 | `libs/agent-governance/tests/test_deploy_policy.py::test_every_rule_catches_its_violation`<br>`libs/agent-governance/tests/test_deploy_policy.py::test_a_root_container_without_seccomp_is_refused` |
+| T53 | Information disclosure | Secrets leak through manifests, config or Kubernetes Secret objects | security-architect | C20, C23 | - | `libs/agent-tools/tests/test_openbao.py::test_staging_resolver_uses_kubernetes_auth_and_never_the_environment`<br>`libs/agent-tools/tests/test_openbao.py::test_connection_strings_can_be_openbao_references` |
+| T54 | Denial of service | A new agent version that does worse keeps serving production traffic | ai-safety-lead | C25 | ASI08 | `services/agent-api/tests/test_releases.py::test_a_failing_canary_is_rolled_back_automatically_and_audited`<br>`services/agent-api/tests/test_releases.py::test_a_shadow_candidate_runs_the_same_input_without_writing` |
+| T55 | Denial of service | Losing an API replica or the database loses runs, checkpoints, memory or audit | sre-lead | C26, C21 | - | `services/agent-api/tests/test_api.py::test_when_a_replica_stops_another_takes_over_its_paused_run`<br>`libs/agent-governance/tests/test_dr.py::test_the_newest_drill_met_the_stated_targets` |
+| T56 | Repudiation | Nobody can show who promoted a version, or why a candidate was rolled back | audit-compliance-lead | C24, C25, C09 | - | `services/agent-api/tests/test_releases.py::test_a_failing_canary_is_rolled_back_automatically_and_audited`<br>`libs/agent-governance/tests/test_promotion.py::test_a_new_version_walks_dev_staging_canary_prod` |
 
 ## Telemetry (OTel traces, metrics, Langfuse)
 
