@@ -227,6 +227,28 @@ class ReleaseRepo:
         """What breaks the promotion rules from ``base`` to ``head`` (None: the working tree)."""
         return problems(self.state_at(base), self.state_at(head), self.policy())
 
+    def check_each(self, base: str, head: str = "HEAD") -> list[str]:
+        """The promotion rules for every commit from ``base`` to ``head``, each against its
+        parent. The rules are about single steps (a snapshot from dev, staging before a canary),
+        so a push or pull request of many commits is judged step by step, not as one jump."""
+        commits = self._git(
+            "rev-list",
+            "--reverse",
+            "--first-parent",
+            f"{base}..{head}",
+            "--",
+            "agents",
+            "deploy/specs",
+            "deploy/releases",
+            "deploy/promotion.yaml",
+        ).split()
+        policy = self.policy()
+        found: list[str] = []
+        for commit in commits:
+            before, after = self.state_at(f"{commit}^"), self.state_at(commit)
+            found += [f"{commit[:7]}: {p}" for p in problems(before, after, policy)]
+        return found
+
     def commit(self, agent: str, step: Step) -> str:
         """Put the step on a branch ``promote/<agent>-<version>-<env>`` for a pull request."""
         branch = f"promote/{agent}-{step.version}-{step.env}"

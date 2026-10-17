@@ -79,3 +79,35 @@ def test_a_project_cannot_skip_staging_or_edit_a_snapshot(repo: ReleaseRepo) -> 
     _commit(repo, "staging")
     (repo.root / "deploy/specs/greeter/0.1.0/agent.yaml").write_text("name: greeter\nversion: x\n")
     assert any("a released version is immutable" in p for p in repo.check("HEAD", None))
+
+
+def _rev(root: Path) -> str:
+    out = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+    )
+    return out.stdout.strip()
+
+
+def test_a_push_of_many_commits_is_judged_step_by_step(repo: ReleaseRepo) -> None:
+    """A push carrying a whole release (staging, prod, then the next version to staging) breaks
+    no rule step by step, though its two ends alone look like prod skipped staging's version.
+    A bad step inside it is still caught, and named by its commit."""
+    base = _rev(repo.root)
+    repo.promote("greeter", "staging")
+    _commit(repo, "staging")
+    repo.promote("greeter", "prod")
+    _commit(repo, "prod")
+    _agent(repo.root, "0.2.0")
+    _commit(repo, "dev 0.2.0")
+    repo.promote("greeter", "staging")
+    _commit(repo, "staging 0.2.0")
+    assert repo.check(base, "HEAD"), "as one jump, the first prod release isn't staging's"
+    assert repo.check_each(base) == []
+
+    prod = repo.root / "deploy/releases/prod.yaml"
+    prod.write_text(prod.read_text().replace("stable: 0.1.0", "stable: 0.2.0"))
+    _git(repo.root, "commit", "-qam", "prod 0.2.0 without a canary")
+    found = repo.check_each(base)
+    assert len(found) == 1
+    assert found[0].startswith(_rev(repo.root)[:7] + ": ")
+    assert "canary" in found[0]

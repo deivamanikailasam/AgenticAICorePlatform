@@ -1,6 +1,7 @@
 """Check a change against the promotion rules (Step 38), base commit against head.
 
-promotion_check --base REF     # REF..HEAD (CI: the pull request's base, or the push's previous commit)
+promotion_check --base REF     # every commit in REF..HEAD, each against its parent (CI: the
+                               # pull request's base, or the push's previous commit)
 promotion_check                # the last commit against the working tree
 """
 
@@ -26,8 +27,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--base", help="compare REF..HEAD (default: HEAD against the working tree)")
     args = p.parse_args(argv)
     repo = ReleaseRepo(ROOT)
-    base, head = (args.base, "HEAD") if args.base else ("HEAD", None)
-    found = repo.check(base, head)
+    head = "HEAD" if args.base else None
+    found = repo.check_each(args.base) if args.base else repo.check("HEAD", None)
     for line in found:
         print(f"promotion-check: {line}", file=sys.stderr)
     state = repo.state_at(head)
