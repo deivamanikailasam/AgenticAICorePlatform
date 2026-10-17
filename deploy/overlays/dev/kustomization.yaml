@@ -15,10 +15,10 @@ generatorOptions:
 configMapGenerator:
   - name: agent-platform-env
     envs: [env.properties]
-# images from commit 4ff80dc4ae9995f5f78286527b331793e6056e2b (images workflow; signed, scanned)
+# images from commit 91fd4b0779b8a8e20c8f63351260026aa6c967e5 (images workflow; signed, scanned)
 images:
-  - { name: agent-platform/agent-api, newName: ghcr.io/deivamanikailasam/agent-platform/agent-api, digest: "sha256:f7ce30cc87e6ca1cacc042d8014576f182ec923f8e9ffd2b9ec6f39ecd4f2b67" }
-  - { name: agent-platform/agent-worker, newName: ghcr.io/deivamanikailasam/agent-platform/agent-worker, digest: "sha256:5f5d87a31390d66189a7c38d2356ebdd235941b400d97ee0d8dd8a2671422d51" }
-  - { name: agent-platform/mcp-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/mcp-gateway, digest: "sha256:8431c16e5b143fd798fcc186010b9fa6c68a3703b9d224602ba9af270043d371" }
-  - { name: agent-platform/a2a-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/a2a-gateway, digest: "sha256:4f5b9575deec4c177b6fbfd837cca32c9df521b75b1244fc707228d65721f1cf" }
-  - { name: agent-platform/ops, newName: ghcr.io/deivamanikailasam/agent-platform/ops, digest: "sha256:e123727887f29d6c420165368842dc67e6de80d640b2974a292c9f11bb416ea8" }
+  - { name: agent-platform/agent-api, newName: ghcr.io/deivamanikailasam/agent-platform/agent-api, digest: "sha256:2100e5a678d41ca74a7b60f4464ff27e44e7b08a3add931375c978070151e816" }
+  - { name: agent-platform/agent-worker, newName: ghcr.io/deivamanikailasam/agent-platform/agent-worker, digest: "sha256:55f420c2fabf4587c29fed1f2584600d1fc30f28814157daab94f68b8604a47c" }
+  - { name: agent-platform/mcp-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/mcp-gateway, digest: "sha256:c1580543cd8533b810e5b118be3f3b3f33d13da9713d05dfa53b8b4a3be7763f" }
+  - { name: agent-platform/a2a-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/a2a-gateway, digest: "sha256:b4785c63482cf4ed8121e91746cc08c6453a0c80198a9555fa393f77f5e2d8b5" }
+  - { name: agent-platform/ops, newName: ghcr.io/deivamanikailasam/agent-platform/ops, digest: "sha256:d7d63fe73d1c50120adc6187e96e4321212f93f22287489b6e6266990624c6eb" }
