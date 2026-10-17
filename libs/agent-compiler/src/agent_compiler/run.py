@@ -181,32 +181,31 @@ def executors_for(
         base = Path(spec_path).parent if spec_path else Path.cwd()
 
         async def run_subplan(ref: str, inputs: dict[str, Any], ctx: RunContext) -> RunResult:
-            child = load_spec(base / ref)
-            child_plan = compile_spec(child)
-            child_functions = functions_for(child_plan)
-            runner = NodeRunner(
-                child_functions,
-                # the child runs under the parent's controls: delegation policy, worker
-                # assembly, admission (registry gate), budgets, memory and tracing (Step 40)
-                executors_for(
-                    child,
-                    child_plan,
-                    child_functions,
-                    model=model,
-                    tools=tools,
-                    spec_path=base / ref,
-                    memory=memory,
-                    artefacts=artefacts,
-                    workers=workers,
-                    authorise=authorise,
-                    provider=provider,
-                    admit=admit,
-                    budgets=budgets,
-                ),
+            """A nested spec runs as its own agent, like a team worker: its identity and versions
+            in the audit trail, its own ``invoke_agent`` span, the registry gate, and, when the
+            composition root can assemble it, its own model roles and only its own tools under
+            policy. The parent's delegation policy, worker factory and budgets apply."""
+            path = base / ref
+            child = load_spec(path)
+            ctx = ctx.model_copy(update={"agent_id": child.name, "agent_version": child.version})
+            child_model, child_tools = (
+                await workers(child, compile_spec(child)) if workers is not None else (model, tools)
             )
-            adapter = runtime_for(child, runner=runner)
-            handle = await adapter.build(child_plan)
-            return await adapter.invoke(handle, inputs, ctx)
+            result, _ = await run(
+                child,
+                inputs,
+                ctx,
+                provider,
+                model=child_model,
+                tools=child_tools,
+                spec_path=path,
+                workers=workers,
+                authorise=authorise,
+                flush=False,  # the parent's run owns the trace
+                admit=admit,
+                budgets=budgets,
+            )
+            return result
 
         executors[NodeKind.SUBPLAN] = SubplanNodeExecutor(run_subplan)
     return executors

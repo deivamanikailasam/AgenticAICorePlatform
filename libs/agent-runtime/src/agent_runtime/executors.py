@@ -307,8 +307,10 @@ class SubplanNodeExecutor:
     async def __call__(self, node: PlanNode, values: dict[str, Any], ctx: RunContext) -> Any:
         cfg = _cfg(node)
         inputs = resolve(cfg.get("inputs"), values) if "inputs" in cfg else values.get("input", {})
+        # <run>/<node>, like team workers' <run>/<worker>-<n>, so audit, budgets and evals
+        # attribute the child's events to the run it belongs to
         child = ctx.model_copy(
-            update={"run_id": f"{ctx.run_id}.{node.id}", "parent_run_id": ctx.run_id}
+            update={"run_id": f"{ctx.run_id}/{node.id}", "parent_run_id": ctx.run_id}
         )
         result = await self.run_subplan(str(node.config["spec"]), dict(inputs), child)
         if result.status is not RunStatus.SUCCEEDED:

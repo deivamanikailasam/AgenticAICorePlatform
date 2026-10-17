@@ -299,7 +299,13 @@ graph:
 """,
         str(tmp_path / "agent.yaml"),
     )
-    marks = {"authorise": object(), "workers": object(), "admit": object(), "budgets": object()}
+    assembled: list[str] = []
+
+    async def workers(spec: Any, plan: Any) -> tuple[Any, Any]:
+        assembled.append(spec.name)  # the child is assembled like a worker: own model and tools
+        return None, None
+
+    marks = {"authorise": object(), "workers": workers, "admit": object(), "budgets": object()}
     executors = run_module.executors_for(
         parent,
         compile_spec(parent),
@@ -327,3 +333,4 @@ graph:
             )
         )
     assert {k: seen[k] for k in marks} == marks
+    assert assembled == ["hello-workflow"]
