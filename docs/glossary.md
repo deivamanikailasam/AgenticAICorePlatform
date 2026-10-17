@@ -194,3 +194,10 @@ Every term used in this repository, in plain English. Grows with each step.
 | RPO | Recovery point objective: the most recent work you may lose in a disaster, as a time |
 | RTO | Recovery time objective: how long getting back to a working, verified state may take |
 | Point-in-time recovery | Rebuilding a database from a base backup plus every change logged since, up to a chosen moment |
+| SDK | Software development kit: the small, stable set of names a team imports to extend the platform (`agent_sdk`) |
+| Entry point | A line in a Python package's `pyproject.toml` that says "I provide X"; the platform finds X when the package is installed |
+| Copier template | A folder of files with blanks; copier asks a few questions and fills them in to make a new project, and can update it later |
+| Platform pin | The exact platform commit a project depends on: the one whose signed images its environments run |
+| Constraint (dependency) | A version a project may not move away from, here the versions the platform tested |
+| Remote base | Kustomize manifests taken from another repository at a fixed commit, with local changes on top |
+| Fail closed | When a check can't run, treat it as failed, never as passed |
