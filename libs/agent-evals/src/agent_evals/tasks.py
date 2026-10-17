@@ -27,6 +27,9 @@ never marked wrong on something nobody specified.
   ``max_latency_ms``.
 * ``conversation`` — for multi-turn tasks with a simulated person (``input._user``: persona,
   goal, patience; Step 35): ``goal_met`` and ``max_turns``.
+* ``custom`` — a team's own evaluators (Step 39, agent-sdk): ``{name: config}``, each a callable
+  registered under the ``agent_platform.evaluators`` entry-point group. A name with no
+  evaluator installed, or an evaluator that raises, fails the task.
 * ``rubric`` — a judge rubric (``evals/rubrics/<name>.md``) for what deterministic checks can't
   decide; used only when the judge is enabled.
 """
@@ -115,6 +118,7 @@ class Expected(_Model):
     team: TeamCheck | None = None
     limits: Limits | None = None
     conversation: ConversationCheck | None = None
+    custom: dict[str, dict[str, Any]] = Field(default_factory=dict)
     rubric: str | None = None
 
 

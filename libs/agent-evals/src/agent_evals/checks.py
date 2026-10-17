@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -315,6 +316,44 @@ def check_conversation(c: ConversationCheck, obs: Observation) -> Score:
     )
 
 
+EVALUATOR_GROUP = "agent_platform.evaluators"
+#: ``(config, task, observation) -> Score``: a team's own deterministic check (Step 39)
+Evaluator = Callable[[Mapping[str, Any], Task, Observation], Score]
+
+
+def evaluators() -> dict[str, Evaluator]:
+    from importlib.metadata import entry_points
+
+    return {e.name: e.load() for e in entry_points(group=EVALUATOR_GROUP)}
+
+
+def check_custom(
+    custom: Mapping[str, Mapping[str, Any]],
+    task: Task,
+    obs: Observation,
+    installed: Mapping[str, Evaluator] | None = None,
+) -> list[Score]:
+    """Each named evaluator's score. Fails closed: an evaluator that isn't installed, raises or
+    returns something other than a Score fails the task, so a broken check never passes."""
+    found = evaluators() if installed is None else installed
+    out: list[Score] = []
+    for name, config in sorted(custom.items()):
+        fn = found.get(name)
+        if fn is None:
+            out.append(Score(name, 0.0, False, f"no evaluator '{name}' is installed"))
+            continue
+        try:
+            result: object = fn(config, task, obs)
+        except Exception as exc:  # a team's code: report, never crash the eval
+            out.append(Score(name, 0.0, False, f"evaluator raised {type(exc).__name__}: {exc}"))
+            continue
+        if not isinstance(result, Score):
+            out.append(Score(name, 0.0, False, "evaluator did not return a Score"))
+            continue
+        out.append(result)
+    return out
+
+
 def score(task: Task, obs: Observation) -> list[Score]:
     """Every deterministic check the task names."""
     e = task.expected
@@ -336,6 +375,8 @@ def score(task: Task, obs: Observation) -> list[Score]:
         out.append(check_limits(e.limits, obs))
     if e.conversation is not None:
         out.append(check_conversation(e.conversation, obs))
+    if e.custom:
+        out += check_custom(e.custom, task, obs)
     return out
 
 

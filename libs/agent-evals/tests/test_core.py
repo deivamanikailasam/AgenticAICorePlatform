@@ -289,3 +289,39 @@ def test_team_trajectories_and_word_limits() -> None:
     failed = {s.metric: s.detail for s in score(t, obs) if not s.passed}
     assert failed["answer_correct"] == "6 words, at most 4"
     assert failed["team_trajectory"] == "delegated to tech; 3 delegations, at most 2"
+
+
+# ---------------------------------------------------------------- a team's own evaluators
+
+
+def test_custom_evaluators_score_and_fail_closed() -> None:
+    from agent_evals.checks import Score, check_custom
+
+    def gst(config: dict[str, object], t: Task, obs: Observation) -> Score:
+        rate = float(config["rate"])  # type: ignore[arg-type]
+        ok = abs(obs.output["amount_aud"] - 480 * (1 + rate)) < 0.01
+        return Score("gst", 1.0 if ok else 0.0, ok, f"rate {rate}")
+
+    def broken(config: object, t: Task, obs: Observation) -> Score:
+        raise RuntimeError("boom")
+
+    t = task(custom={"gst": {"rate": 0.1}, "broken": {}, "missing": {}, "wrong": {}})
+    scores = {
+        s.metric: s
+        for s in check_custom(
+            t.expected.custom,
+            t,
+            paid(),
+            {"gst": gst, "broken": broken, "wrong": lambda *_: True},  # type: ignore[dict-item]
+        )
+    }
+    assert scores["gst"].passed
+    assert not scores["broken"].passed
+    assert "RuntimeError: boom" in scores["broken"].detail
+    assert scores["missing"].detail == "no evaluator 'missing' is installed"
+    assert scores["wrong"].detail == "evaluator did not return a Score"
+
+
+def test_a_task_naming_an_uninstalled_evaluator_fails() -> None:
+    t = task(status="succeeded", custom={"not-installed": {}})
+    assert not success(score(t, paid()))
