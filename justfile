@@ -88,6 +88,14 @@ deploy-images env commit:
 deploy-render env:
     uv run python -m scripts.deploy render {{env}}
 
+# Step 38: promotion. e.g. just promote invoice-triage --to staging | --to prod [--shadow] |
+# --to prod --full --api URL | --abort; add --commit for a promote/ branch and a pull request
+promote agent *args:
+    uv run python -m scripts.promote {{agent}} {{args}}
+
+promotion-check *args:
+    uv run python -m scripts.promotion_check {{args}}
+
 # Step 35: red-team suite (OWASP ASI01-ASI10). Scenario attacks need OPA with the policies loaded
 # (`just provision-policies`). Fails on any high/critical finding. e.g. just redteam --tier sandbox
 redteam *args:

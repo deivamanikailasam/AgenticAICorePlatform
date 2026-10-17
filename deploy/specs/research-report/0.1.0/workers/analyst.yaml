@@ -1,0 +1,26 @@
+spec_version: 1
+name: research-report-analyst
+version: 0.1.0
+owner: agent-platform
+description: Works out the figures the report needs from the sources, with the calculator.
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+models: { default: local-qwen-fast }
+runtime: { adapter: langgraph, durability: memory }
+budgets: { max_steps: 6, max_tokens: 20000, max_cost_aud: 0.10, max_wall_seconds: 120 }
+tools:
+  - ref: local://platform/calculator
+graph:
+  nodes:
+    - id: analyse
+      type: agent
+      pattern: react
+      tools: [calculator]
+      config:
+        template: "Task: $input.task. Sources: $input.sources. Compute the figures the report needs."
+        output_schema:
+          type: object
+          properties:
+            figures: { type: object, additionalProperties: { type: number } }
+          required: [figures]

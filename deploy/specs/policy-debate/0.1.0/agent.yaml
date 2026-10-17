@@ -1,0 +1,20 @@
+# Reference spec for pattern: debate (Step 23).
+spec_version: 1
+name: policy-debate
+version: 0.1.0
+owner: agent-platform
+description: Two agents argue a proposal and a judge decides.
+risk_tier: low
+autonomy: multi_agent
+pattern: debate
+models: { default: local-qwen-fast, planner: local-qwen-quality }
+runtime: { adapter: langgraph, durability: checkpoint }
+budgets: { max_steps: 30, max_tokens: 60000, max_cost_aud: 0.30, max_wall_seconds: 300 }
+agents:
+  - { name: pro, spec: workers/pro.yaml, role: For }
+  - { name: con, spec: workers/con.yaml, role: Against }
+  - { name: judge, spec: workers/judge.yaml, role: Decides }
+team:
+  debaters: [pro, con]
+  judge: judge
+  max_turns: 3

@@ -1,0 +1,6 @@
+# Promotion policy (Step 38, agent_governance.promotion). A new version reaches prod first as a
+# candidate at this weight (the spec's 10% canary) or in shadow, and becomes prod's stable version
+# only by replacing the candidate it was, after its online evaluation passed.
+canary:
+  weight: 10
+  modes: [canary, shadow]

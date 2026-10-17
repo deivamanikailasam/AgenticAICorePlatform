@@ -48,6 +48,7 @@ OUT = ROOT / "evals" / "results" / "gates"
 MARKER = "<!-- eval-gates -->"
 SHARED = (
     "libs/",
+    "deploy/releases/",  # Step 38: what serves in staging and prod
     "services/agent-api/",
     "services/agent-worker/",
     "services/mcp-gateway/",
@@ -69,7 +70,13 @@ def affected(paths: Iterable[str], known: Iterable[str]) -> list[str]:
             return names
         for app in names:
             if path.startswith(
-                (f"agents/{app}/", f"apps/{app}/", f"evals/apps/{app}/", f"evals/baselines/{app}.")
+                (
+                    f"agents/{app}/",
+                    f"apps/{app}/",
+                    f"evals/apps/{app}/",
+                    f"evals/baselines/{app}.",
+                    f"deploy/specs/{app}/",
+                )
             ):
                 hit.add(app)
     return sorted(hit)

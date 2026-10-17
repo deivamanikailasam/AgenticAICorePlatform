@@ -31,3 +31,7 @@
 /libs/agent-governance/ @deivamanikailasam
 /scripts/cards.py @deivamanikailasam
 /scripts/governance_gate.py @deivamanikailasam
+/deploy/releases/prod.yaml @deivamanikailasam
+/deploy/specs/ @deivamanikailasam
+/deploy/overlays/prod/ @deivamanikailasam
+/deploy/promotion.yaml @deivamanikailasam

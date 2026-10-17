@@ -9,6 +9,8 @@ resources:
   - ../../base
 components:
   - ../../components/cluster
+  # the versions deploy/releases/staging.yaml names (generated: just deploy-config)
+  - released
 configMapGenerator:
   - name: agent-platform-env
     envs: [env.properties]

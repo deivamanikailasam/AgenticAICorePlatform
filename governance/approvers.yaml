@@ -18,3 +18,8 @@ governance_paths:
   - /libs/agent-governance/
   - /scripts/cards.py
   - /scripts/governance_gate.py
+  # Step 38: what serves in production, and the released versions themselves
+  - /deploy/releases/prod.yaml
+  - /deploy/specs/
+  - /deploy/overlays/prod/
+  - /deploy/promotion.yaml

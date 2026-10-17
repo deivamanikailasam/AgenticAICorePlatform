@@ -292,3 +292,18 @@ async def test_feature_flags_switch_an_agent_or_a_tool_off() -> None:
         result = await run_once(c, manager, "thread-b")
     assert result["status"] == "failed"
     assert writes == [], "the switched-off tool was never called"
+
+
+@pytest.mark.parametrize("env", ["staging", "prod"])
+def test_the_repository_releases_load_as_the_api_would(env: str) -> None:
+    from pathlib import Path
+
+    from agent_api.releases import MemoryReleaseState
+
+    root = Path(__file__).resolve().parents[3]
+    versions = RunManager.load_versions(root / "deploy" / "specs")
+    releases = Releases.from_file(
+        root / "deploy" / "releases" / f"{env}.yaml", versions, MemoryReleaseState()
+    )
+    agents = {p.name for p in (root / "agents").iterdir() if (p / "agent.yaml").exists()}
+    assert set(releases.stable()) == agents

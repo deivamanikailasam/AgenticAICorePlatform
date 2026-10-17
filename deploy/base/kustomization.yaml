@@ -1,6 +1,7 @@
 # Project A on Kubernetes (Step 38): the services, hardened, without anything environment-specific.
 # Overlays (deploy/overlays/<env>) add the namespace, replicas, endpoints, OpenBao role, image
-# digests and autoscaling. Build with `--load-restrictor LoadRestrictionsNone`: the agent specs
+# digests, autoscaling and the agent specs: dev mounts agents/ at main's head
+# (components/head-specs), staging and prod the versions their releases file names. Build with `--load-restrictor LoadRestrictionsNone`: the agent specs
 # and data-lifecycle policy are read from their home in the repo, not copied.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -17,12 +18,7 @@ resources:
   - a2a-gateway.yaml
   - migrate-job.yaml
   - networkpolicies.yaml
-  - specs
 configMapGenerator:
   - name: data-lifecycle
     files:
       - data-lifecycle.yaml=../../governance/data-lifecycle.yaml
-patches:
-  # every pod that runs agents mounts the specs at /app/agents (generated: just deploy-config)
-  - path: specs/volume.yaml
-    target: { kind: Deployment, labelSelector: "agent-platform/specs=mounted" }

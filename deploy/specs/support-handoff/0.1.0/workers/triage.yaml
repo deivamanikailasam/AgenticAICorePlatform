@@ -1,0 +1,19 @@
+spec_version: 1
+name: support-handoff-triage
+version: 0.1.0
+owner: agent-platform
+description: Answers simple questions or hands the customer to billing or technical support.
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+models: { default: local-qwen-fast }
+runtime: { adapter: langgraph, durability: memory }
+budgets: { max_steps: 4, max_tokens: 8000, max_cost_aud: 0.05, max_wall_seconds: 60 }
+graph:
+  nodes:
+    - id: act
+      type: agent
+      pattern: react
+      config:
+        template: "Customer request: $input.task. Earlier handoffs: $input.handoffs. Answer it yourself, or hand off to billing or tech with a short note."
+        output_schema: { type: object, properties: { handoff_to: { type: string }, note: { type: string }, answer: { type: string } } }

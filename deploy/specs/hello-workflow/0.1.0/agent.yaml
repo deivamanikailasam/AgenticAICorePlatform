@@ -1,0 +1,16 @@
+# The smallest useful spec: a one-node deterministic workflow on the default LangGraph adapter.
+spec_version: 1
+name: hello-workflow
+version: 0.1.0
+owner: agent-platform
+description: Greets the caller. Proves spec -> compiler -> runtime -> trace.
+risk_tier: low
+autonomy: workflow
+pattern: workflow
+runtime: { adapter: langgraph, durability: memory }
+budgets: { max_steps: 5, max_wall_seconds: 10 }
+# Step 24: also published over A2A by the a2a-gateway (signed Agent Card, Keycloak auth)
+interop: { a2a_publish: true }
+graph:
+  nodes:
+    - { id: greet, type: function, fn: hello }
