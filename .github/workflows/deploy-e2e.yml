@@ -1,0 +1,76 @@
+name: deploy-e2e
+
+# Step 38: the platform on a real cluster. kind with Argo CD and KEDA; every overlay through the
+# API server's admission as a server-side dry run; the dev environment synced by Argo CD from this
+# commit with the images this commit published; a run through agent-api; network policy enforced.
+on:
+  push:
+    paths:
+      - "deploy/**"
+      - "services/**"
+      - "libs/**"
+      - "scripts/kind_e2e.py"
+      - "scripts/cluster_addons.py"
+      - ".github/workflows/deploy-e2e.yml"
+  schedule:
+    - cron: "29 17 * * *" # daily 17:29 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kind:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      UV_FROZEN: "1"
+      KIND_VERSION: v0.33.0
+      KIND_SHA256: aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d
+      KUBECTL_VERSION: v1.37.1
+      KUBECTL_SHA256: 65691ff77eb6fa44c908b77a1082c9f092c3b9733b5cefabec0d1104890e21a8
+      KUSTOMIZE_VERSION: v5.8.2
+      KUSTOMIZE_SHA256: 06af0a202c2b831207d0173f9c9cdb1b30abceca0747cb3fbb72792d26055c95
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.11.32"
+          python-version: "3.12"
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - name: kind, kubectl, kustomize (checksums verified)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"; cd "$RUNNER_TEMP"
+          curl -sSfL -o bin/kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+          echo "${KIND_SHA256}  bin/kind" | sha256sum -c -
+          curl -sSfL -o bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          echo "${KUBECTL_SHA256}  bin/kubectl" | sha256sum -c -
+          curl -sSfL -o k.tgz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          echo "${KUSTOMIZE_SHA256}  k.tgz" | sha256sum -c -
+          tar -xzf k.tgz -C bin kustomize
+          chmod +x bin/*
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - run: uv sync --all-packages
+      - run: just standin-up
+      - name: provision the stand-in
+        run: |
+          set -a; . tests/stack/standin.env; set +a
+          just provision
+          just migrate
+      - name: kind, Argo CD, admission, GitOps sync and smoke
+        env:
+          E2E_COMMIT: ${{ github.sha }}
+        run: |
+          set -a; . tests/stack/standin.env; set +a
+          just kind-e2e
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: kind-e2e
+          path: evals/results/deploy/
+          retention-days: 90

@@ -1,0 +1,25 @@
+# Argo CD v3.5.3 for the cluster (Step 38). `upstream.yaml` is the release's install manifest,
+# downloaded and checked against its SHA-256 by `just cluster-addons` (not kept in Git); every image
+# is pinned by digest here (deploy/third-party-images.txt) and Redis comes from Docker Hub instead
+# of a rate-limited mirror. Argo CD builds overlays with the load restrictor off, because the
+# specs and policies are read from their home in the repo.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - upstream.yaml
+images:
+  - name: quay.io/argoproj/argocd
+    digest: sha256:dd3f47d5a5e4da563a7a398506e892481b358a7cec50abdf320c71aa55904bfa
+  - name: ghcr.io/dexidp/dex
+    digest: sha256:8499afd690c437f52301efd2b05b2455da5bd2dfc20332cd697dc9937f808462
+  - name: public.ecr.aws/docker/library/redis
+    newName: docker.io/library/redis
+    digest: sha256:08ad0b1d280850169a790dba1393ff7a90aef951fc19632cf4d3ce4f78e679ba
+patches:
+  - target: { kind: ConfigMap, name: argocd-cm }
+    patch: |-
+      - op: add
+        path: /data
+        value:
+          kustomize.buildOptions: --load-restrictor LoadRestrictionsNone

@@ -354,3 +354,11 @@ test-microvm:
 # Step 38: disaster-recovery drill for the agent database (governance/dr.yaml); needs Docker
 dr-drill *args:
     uv run python -m scripts.dr_drill {{args}}
+
+# Step 38: fetch the cluster add-ons (Argo CD, KEDA) and check their SHA-256s
+cluster-addons:
+    uv run python -m scripts.cluster_addons
+
+# Step 38: the platform on kind with Argo CD against the stand-in (CI: deploy-e2e)
+kind-e2e:
+    uv run python -m scripts.kind_e2e

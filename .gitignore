@@ -33,3 +33,7 @@ evals/results/**/*-scripted.json
 evals/results/redteam/
 # eval-gate results are CI artefacts (Step 36)
 evals/results/gates/
+
+# Step 38: cluster add-on manifests, downloaded and checksum-verified by just cluster-addons
+deploy/argocd/install/upstream.yaml
+deploy/keda/upstream.yaml
