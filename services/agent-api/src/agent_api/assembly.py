@@ -25,6 +25,7 @@ from agent_contracts.interfaces import (
     Guardrail,
     ModelClient,
     PolicyDecisionPoint,
+    Tool,
     ToolExecutor,
 )
 from agent_contracts.models import ExecutablePlan, NodeKind, SideEffect
@@ -70,6 +71,22 @@ REMEMBER = "local://platform/remember"
 SQL_READ = "local://platform/sql_read"
 #: always on, whatever the spec lists (Step 27; turning them off needs an ADR)
 BASELINE_GUARDRAILS = ("prompt_injection", "secret_leak")
+
+
+def installed_tool(ref: str) -> Tool | None:
+    """A ``tool.<name>`` component installed in this image (a team's tool, Step 39) whose spec
+    declares exactly ``ref``. Test doubles never count. Every call still goes through policy."""
+    for name in component_registry.names("tool"):
+        cls = component_registry.get("tool", name)
+        if cls.__module__.startswith("agent_contracts.dummies"):
+            continue
+        try:
+            tool = cls()
+        except TypeError:  # needs configuration: registered by its own branch above, if at all
+            continue
+        if isinstance(tool, Tool) and tool.spec.ref == ref:
+            return tool
+    return None
 
 
 async def require_approvals(plan: ExecutablePlan, registry: InMemoryToolRegistry) -> None:
@@ -227,6 +244,8 @@ class Assembly:
                 await registry.register(RagCoreSearchTool(self.rag_core_url, self.exchanger))
             elif scheme == "mcp":
                 servers.add(rest.partition("/")[0])
+            elif scheme == "local" and (installed := installed_tool(tool.ref)) is not None:
+                await registry.register(installed)  # a team's tool from agent-sdk (Step 39)
             elif scheme == "a2a":
                 remote = self.platform.a2a.agent(rest.partition("/")[0])
                 if remote is None:
