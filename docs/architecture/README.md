@@ -1,8 +1,16 @@
 # Architecture
 
 Project A turns an `agent.yaml` into a governed, running system on top of Project 0's shared
-services. This page is the overview; detailed C4, data-flow and sequence diagrams are added as
-the steps that build each part land.
+services. This page is the overview. The detail is on these pages:
+
+| Page | Shows |
+|---|---|
+| [c4.md](c4.md) | Context, containers, the run API's components, deployment |
+| [run-sequence.md](run-sequence.md) | One run, from spec to trace |
+| [approval-sequence.md](approval-sequence.md) | An irreversible action waiting for a person |
+| [mcp-gateway-sequence.md](mcp-gateway-sequence.md) | A tool call through the MCP gateway |
+| [a2a-sequence.md](a2a-sequence.md) | Another agent calling a published agent |
+| [../security/](../security/) | The threat model, with data flows and trust boundaries |
 
 ## Layers (redrawn from the spec's architecture widget)
 
