@@ -1,8 +1,8 @@
 """The platform on a real Kubernetes cluster (Step 38): kind, Argo CD, KEDA, the dev overlay
 synced by Argo CD from this commit, against the Project 0 stand-in. Run by CI (deploy-e2e).
 
-Needs Docker, kind, kubectl and kustomize; the stand-in up and provisioned (`just standin-up`,
-`just provision`, `just migrate`) and the commit's images published (the images workflow).
+Needs Docker, kind, kubectl and kustomize, and the stand-in up and provisioned (`just standin-up`,
+`just provision`, `just migrate`).
 
 1. a kind cluster (pinned node image) with Argo CD and KEDA (pinned releases, images by digest);
 2. **admission**: every overlay (dev, staging, prod) and the Argo CD apps applied as a
@@ -11,8 +11,9 @@ Needs Docker, kind, kubectl and kustomize; the stand-in up and provisioned (`jus
 3. the stand-in bridged in as the `rag-platform` namespace (its containers as endpoints);
    OpenBao's Kubernetes auth configured for the dev namespace's service accounts, with a dev KV
    mount;
-4. **GitOps**: the dev Application synced by Argo CD from this commit, images pinned to the
-   digests this commit published; the pre-sync migration Job runs; everything becomes healthy;
+4. **GitOps**: the dev Application synced by Argo CD from this commit, with the images the dev
+   overlay pins (what Git says is what runs); the pre-sync migration Job runs; everything becomes
+   healthy;
 5. **smoke**: a client in a namespace the ingress policy admits gets a Keycloak token and runs
    hello-workflow through agent-api; a client in any other namespace can't reach agent-api.
 
@@ -34,8 +35,6 @@ import httpx
 import yaml
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-
-from scripts.deploy import _digest
 
 ROOT = Path(__file__).resolve().parents[1]
 CLUSTER = "agent-e2e"
@@ -251,12 +250,8 @@ def gitops(commit: str) -> None:
         for d in docs
         if d["kind"] == "Application" and d["metadata"]["name"] == f"agent-platform-{ENV}"
     )
-    images = [
-        f"agent-platform/{s}=ghcr.io/deivamanikailasam/agent-platform/{s}@{_digest(s, commit)}"
-        for s in ("agent-api", "agent-worker", "mcp-gateway", "a2a-gateway", "ops")
-    ]
+    images = pinned_images()
     app["spec"]["source"]["targetRevision"] = commit
-    app["spec"]["source"]["kustomize"] = {"images": images}
     kubectl("apply", "-f", "-", stdin=yaml.safe_dump_all([project, app]))
     deadline, status = time.monotonic() + 900, {}
     while time.monotonic() < deadline:
@@ -345,8 +340,17 @@ def client_pod(namespace: str, name: str, image: str, code: str) -> tuple[bool, 
     return False, "timed out"
 
 
-def smoke(commit: str) -> None:
-    image = f"ghcr.io/deivamanikailasam/agent-platform/agent-api@{_digest('agent-api', commit)}"
+def pinned_images() -> list[str]:
+    """The images the dev overlay pins, as Argo CD will deploy them."""
+    docs = yaml.safe_load_all(build(f"deploy/overlays/{ENV}"))
+    return sorted(
+        {c["image"] for d in docs if d and d["kind"] in ("Deployment", "Job")
+         for c in d["spec"]["template"]["spec"]["containers"]}
+    )  # fmt: skip
+
+
+def smoke() -> None:
+    image = next(i for i in pinned_images() if "/agent-api@" in i)
     restricted = {"pod-security.kubernetes.io/enforce": "restricted"}
     kubectl("apply", "-f", "-", stdin=yaml.safe_dump_all([
         {"apiVersion": "v1", "kind": "Namespace",
@@ -359,32 +363,17 @@ def smoke(commit: str) -> None:
     step("a namespace the ingress policy does not admit cannot reach agent-api", ok, out)
 
 
-def wait_for_images(commit: str, timeout: float = 1800) -> None:
-    """The images workflow builds this commit's images in parallel; wait until all are pushed."""
-    deadline = time.monotonic() + timeout
-    while True:
-        try:
-            for s in ("agent-api", "agent-worker", "mcp-gateway", "a2a-gateway", "ops"):
-                _digest(s, commit)
-            return
-        except Exception:  # not pushed yet
-            if time.monotonic() > deadline:
-                raise
-            time.sleep(30)
-
-
 def main() -> int:
     commit = os.environ.get("E2E_COMMIT") or sh("git", "-C", str(ROOT), "rev-parse", "HEAD").strip()
     results["commit"] = commit
     ok = True
     try:
-        wait_for_images(commit)
         cluster()
         admission()
         bridge()
         openbao()
         gitops(commit)
-        smoke(commit)
+        smoke()
     except Exception as exc:  # record what failed, then fail
         ok = False
         results["error"] = f"{type(exc).__name__}: {exc}"[-3000:]
