@@ -632,7 +632,8 @@
         "group_chat",
         "map_reduce",
         "debate",
-        "hybrid"
+        "hybrid",
+        "custom"
       ],
       "title": "Pattern",
       "type": "string"

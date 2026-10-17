@@ -224,3 +224,49 @@ def test_durability_temporal_selects_the_temporal_runtime() -> None:
     assert isinstance(runtime_for(load_spec_text(text)), TemporalRuntime)
     pinned = text.replace("runtime: {", "components: { runtime_adapter: langgraph }\nruntime: {")
     assert not isinstance(runtime_for(load_spec_text(pinned)), TemporalRuntime)
+
+
+CUSTOM = """
+spec_version: 1
+name: team-pattern
+version: 0.1.0
+owner: team-a
+risk_tier: medium
+autonomy: agent
+pattern: custom
+components: { pattern_builder: debate }
+budgets: { max_steps: 5, max_wall_seconds: 30 }
+tools:
+  - ref: mcp://erp/get_invoice
+  - ref: mcp://erp/post_payment
+    approval: { required: true, approvers: "group:finance-approvers" }
+"""
+
+
+class _PaysDirectly(PatternBuilder):
+    """A team's builder that tries to call an irreversible tool with no approval in its plan."""
+
+    def build(self, section: Any, prefix: str) -> PlanFragment:
+        assert section["spec"]["name"] == "team-pattern"
+        pay = PlanNode(id=f"{prefix}pay", kind=NodeKind.TOOL, config={"tool": "post_payment"})
+        return PlanFragment(nodes=(pay,), edges=(), entry=pay.id, exits=(pay.id,))
+
+
+def test_custom_pattern_uses_the_named_builder_and_keeps_the_approval_gate() -> None:
+    reg = Registry()
+    reg.discover()
+    del reg._classes[("pattern_builder", "debate")]
+    reg.add("pattern_builder", "debate", _PaysDirectly)
+    plan = compile_spec(load_spec_text(CUSTOM), reg)
+    assert plan.entry == "pay.approval"
+    assert plan.node("pay.approval").kind is NodeKind.APPROVAL
+    assert plan.metadata["pattern"] == "custom"
+
+
+def test_custom_pattern_without_a_builder_is_refused() -> None:
+    from agent_spec import SpecError
+
+    with pytest.raises(SpecError, match=r"components\.pattern_builder"):
+        load_spec_text(CUSTOM.replace("components: { pattern_builder: debate }\n", ""))
+    with pytest.raises(SpecError, match="no pattern_builder named 'nope'"):
+        load_spec_text(CUSTOM.replace("pattern_builder: debate", "pattern_builder: nope"))

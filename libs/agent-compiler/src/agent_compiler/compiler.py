@@ -186,7 +186,10 @@ def compile_spec(
     if platform is not None:
         check_capabilities(spec, platform)
         check_tool_sources(spec, platform)
-    frag = _builder(reg, spec.pattern.value).build(_section(spec), "")
+    pattern = spec.pattern.value
+    if pattern == "custom":  # a team's own builder (Step 39), still checked like every plan
+        pattern = spec.components.get("pattern_builder", "")
+    frag = _builder(reg, pattern).build(_section(spec), "")
     frag = _insert_approvals(_expand_agents(reg, frag, spec), spec)
     _validate(frag)
     plan = ExecutablePlan(

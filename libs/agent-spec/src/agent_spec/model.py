@@ -49,6 +49,8 @@ class Pattern(StrEnum):
     MAP_REDUCE = "map_reduce"
     DEBATE = "debate"
     HYBRID = "hybrid"
+    # a team's own PatternBuilder, named in ``components.pattern_builder`` (Step 39, agent-sdk)
+    CUSTOM = "custom"
 
 
 class Durability(StrEnum):

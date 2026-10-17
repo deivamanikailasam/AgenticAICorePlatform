@@ -9,7 +9,7 @@ under `tools[].config`; it is fetched from OpenBao when the tool is called.
 
 Edges may be written as `a -> b`, `a -> b: on_error`, or `{from: a, to: b, when: on_ok}`.
 
-Patterns: `workflow`, `state_machine`, `prompt_chain`, `router`, `react`, `plan_execute`, `rewoo`, `reflection`, `evaluator_optimiser`, `agentic_rag`, `supervisor`, `hierarchical`, `handoff`, `group_chat`, `map_reduce`, `debate`, `hybrid`
+Patterns: `workflow`, `state_machine`, `prompt_chain`, `router`, `react`, `plan_execute`, `rewoo`, `reflection`, `evaluator_optimiser`, `agentic_rag`, `supervisor`, `hierarchical`, `handoff`, `group_chat`, `map_reduce`, `debate`, `hybrid`, `custom`
 
 ### `AgentSpec (root)`
 
@@ -183,7 +183,7 @@ One of: `function`, `llm`, `tool`, `agent`, `router`, `approval`, `subgraph`, `j
 
 Every value of ``pattern:``; each maps to a PatternBuilder (Steps 4, 12-16, 22-23).
 
-One of: `workflow`, `state_machine`, `prompt_chain`, `router`, `react`, `plan_execute`, `rewoo`, `reflection`, `evaluator_optimiser`, `agentic_rag`, `supervisor`, `hierarchical`, `handoff`, `group_chat`, `map_reduce`, `debate`, `hybrid`
+One of: `workflow`, `state_machine`, `prompt_chain`, `router`, `react`, `plan_execute`, `rewoo`, `reflection`, `evaluator_optimiser`, `agentic_rag`, `supervisor`, `hierarchical`, `handoff`, `group_chat`, `map_reduce`, `debate`, `hybrid`, `custom`
 
 ### `ReviewSettings`
 

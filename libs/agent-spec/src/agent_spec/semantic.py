@@ -176,6 +176,13 @@ def _graph_issues(spec: AgentSpec, graph: Graph) -> list[SpecIssue]:
 def semantic_issues(spec: AgentSpec) -> list[SpecIssue]:
     issues: list[SpecIssue] = []
 
+    if spec.pattern is Pattern.CUSTOM and "pattern_builder" not in spec.components:
+        issues.append(
+            SpecIssue(
+                "components.pattern_builder",
+                "pattern 'custom' needs the registered builder in components.pattern_builder",
+            )
+        )
     if spec.pattern in GRAPH_PATTERNS and spec.graph is None:
         issues.append(SpecIssue("graph", f"pattern '{spec.pattern.value}' needs a graph"))
     if spec.autonomy is Autonomy.WORKFLOW and spec.pattern in AGENTIC_PATTERNS:
