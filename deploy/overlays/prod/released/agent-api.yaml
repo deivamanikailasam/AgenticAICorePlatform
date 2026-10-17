@@ -16,6 +16,8 @@
         path: hello-workflow/0.1.0/agent.yaml
       - key: invoice-triage--0.3.0--agent.yaml
         path: invoice-triage/0.3.0/agent.yaml
+      - key: knowledge-assistant--0.1.0--agent.yaml
+        path: knowledge-assistant/0.1.0/agent.yaml
       - key: policy-debate--0.1.0--agent.yaml
         path: policy-debate/0.1.0/agent.yaml
       - key: policy-debate--0.1.0--workers--con.yaml
