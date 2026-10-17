@@ -20,10 +20,13 @@ from a2a_gateway.inbound import Inbound
 from a2a_gateway.settings import Settings
 
 
-def build(settings: Settings) -> A2aGateway:
-    platform = load_platform()
-    publish = platform.a2a.publish
-    key = asyncio.run(maybe_secret(publish.signing_key, default_resolver()))
+async def signing_key() -> str | None:
+    """The card-signing key, resolved in the serving loop (Step 38: an OpenBao reference)."""
+    return await maybe_secret(load_platform().a2a.publish.signing_key, default_resolver())
+
+
+def build(settings: Settings, key: str | None) -> A2aGateway:
+    publish = load_platform().a2a.publish
     if not key:
         raise SystemExit("a2a.publish.signing_key did not resolve: the gateway signs every card")
     specs = {
@@ -57,7 +60,7 @@ def build(settings: Settings) -> A2aGateway:
 
 
 async def serve(settings: Settings) -> None:
-    gateway = build(settings)
+    gateway = build(settings, await signing_key())
     server = uvicorn.Server(
         uvicorn.Config(gateway.app(), host=settings.host, port=settings.port, log_level="info")
     )
