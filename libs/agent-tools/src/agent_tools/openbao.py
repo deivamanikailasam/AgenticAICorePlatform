@@ -17,6 +17,7 @@ errors.
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import time
 from collections.abc import Awaitable, Callable
@@ -149,9 +150,24 @@ class OpenBaoClient:
     ) -> None:
         self.url = url.rstrip("/")
         self.auth = auth
-        self._http = httpx.AsyncClient(timeout=timeout, transport=transport)
+        self._timeout = timeout
+        self._transport = transport
+        self._clients: dict[asyncio.AbstractEventLoop, httpx.AsyncClient] = {}
         self._token: str | None = None
         self._expires = 0.0
+
+    @property
+    def _http(self) -> httpx.AsyncClient:
+        # One HTTP client per event loop: a process that resolves its secrets with asyncio.run()
+        # before starting its server must not reuse connections bound to the first, closed loop.
+        loop = asyncio.get_running_loop()
+        for old in [lp for lp in self._clients if lp.is_closed()]:
+            del self._clients[old]
+        if loop not in self._clients:
+            self._clients[loop] = httpx.AsyncClient(
+                timeout=self._timeout, transport=self._transport
+            )
+        return self._clients[loop]
 
     async def _header(self) -> dict[str, str]:
         if self._token is None or time.monotonic() > self._expires - 30:
@@ -174,7 +190,9 @@ class OpenBaoClient:
         return resp.json() if resp.content else None
 
     async def aclose(self) -> None:
-        await self._http.aclose()
+        client = self._clients.pop(asyncio.get_running_loop(), None)
+        if client is not None:
+            await client.aclose()
 
 
 # ---------------------------------------------------------------- static secrets

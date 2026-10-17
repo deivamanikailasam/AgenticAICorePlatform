@@ -129,6 +129,39 @@ async def test_kubernetes_login_reads_the_rotated_service_account_token(tmp_path
     ]
 
 
+def test_client_survives_successive_event_loops() -> None:
+    """Services resolve secrets with asyncio.run() before serving in a new loop (Step 38): a
+    keep-alive connection from the first loop must not be reused in the second."""
+    import http.server
+    import threading
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def do_GET(self) -> None:
+            body = json.dumps({"data": {"data": {"dsn": "postgresql://x"}}}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args: Any) -> None:
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        resolver = OpenBaoSecretResolver(
+            OpenBaoClient(f"http://127.0.0.1:{server.server_port}", TokenAuth("t"))
+        )
+        first = asyncio.run(resolver.resolve("${secret:agent-platform/db#dsn}"))
+        second = asyncio.run(resolver.resolve("${secret:agent-platform/db#dsn}"))
+        assert first == second == "postgresql://x"
+    finally:
+        server.shutdown()
+
+
 def test_staging_resolver_uses_kubernetes_auth_and_never_the_environment() -> None:
     from agent_tools.openbao import OpenBaoSecretResolver
     from agent_tools.secrets import default_resolver
