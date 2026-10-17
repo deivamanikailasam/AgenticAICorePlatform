@@ -1,15 +1,16 @@
 kind: agent
 name: research-report
-version: 0.1.0
+version: 0.2.0
 spec: agents/research-report/agent.yaml
-spec_hash: 23a4f1a472a062b4436b9b3e712beeeaae5a32c3dab77b3f85fb1ab367d44e97
+spec_hash: 300bbacca7a6638feeac62edc2fc9186a386e6fd7557eb1328cb8befe9a0c0bc
 system: research-report
 worker: false
-purpose: Researches a question, works out the figures and writes a short cited report.
+purpose: Researches a question with a team of agents, has the cited report reviewed,
+  and publishes it after approval.
 owner: agent-platform
-risk_tier: low
-autonomy: multi_agent
-pattern: supervisor
+risk_tier: medium
+autonomy: hybrid
+pattern: hybrid
 runtime: langgraph, durability checkpoint
 models:
   default: local-qwen-fast
@@ -18,25 +19,29 @@ models:
   planner: local-qwen-quality
   router: local-qwen-fast
   summariser: local-qwen-fast
-tools: []
-workers:
-- researcher
-- analyst
-- writer
+tools:
+- name: publish_report
+  ref: local://platform/publish_report
+  kind: local
+  version: 1.0.0
+  side_effect: irreversible
+  data_classification: internal
+  approval: group:approvers
+workers: []
 data:
+- 'Tool data: internal'
 - 'Run state: checkpoints (encrypted at rest when durable)'
 - 'Prompts and responses: Langfuse only, redacted (Step 30)'
 guardrails:
 - prompt_injection
 - secret_leak
+- tool_args_schema
 human_oversight:
-- No tool needs approval
+- 'publish_report: group:approvers'
 limitations:
-- Stops at 12 steps, 300 s, 60000 tokens, AUD 0.50; a stopped run returns partial
+- Stops at 12 steps, 600 s, 60000 tokens, AUD 0.50; a stopped run returns partial
   output and the reason
 - 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
   on anything consequential'
 - Tool results and retrieved text are treated as data, never as instructions
-- Delegates to 3 worker(s), at most 2 levels deep; each worker has its own tools and
-  budget
-eval_results: 'No recorded eval run (suite: none declared)'
+eval_results: 'No recorded eval run (suite: evals/apps/research-report)'

@@ -177,7 +177,8 @@ PLACES = ["Melbourne", "Sydney", "Brisbane", "Perth", "Adelaide", "Hobart", "Dar
 def research_report(rng: random.Random) -> list[Task]:
     """Each question needs two figures from two documents and one calculation: the report must
     state the computed figure, cite a source and come from the full team (researcher, analyst,
-    writer), with search, calculator and word count used."""
+    writer, critic), with search and calculator used; publishing it must wait for a person's
+    approval (Step 40)."""
     tasks: list[Task] = []
     for i in range(100):
         metric, place = rng.choice(METRICS), rng.choice(PLACES)
@@ -209,8 +210,9 @@ def research_report(rng: random.Random) -> list[Task]:
                 {
                     "status": list(DONE),
                     "answer": {"regex": rf"{abs(change):.1f}\s*%"},
-                    "team": {"workers_required": ["researcher", "analyst", "writer"]},
-                    "tools": {"required": ["search", "calculator"]},
+                    "team": {"workers_required": ["researcher", "analyst", "writer", "critic"]},
+                    "tools": {"required": ["search", "calculator", "publish_report"]},
+                    "policy": {"approval_required": ["publish_report"]},
                     "limits": {"max_cost_aud": 0.50},
                     "rubric": "research-grounding",
                 },

@@ -205,18 +205,20 @@ entries:
   card: docs/cards/agents/policy-debate-pro.md
 - id: AI-research-report
   agent: research-report
-  version: 0.1.0
+  version: 0.2.0
   system: research-report
-  purpose: Researches a question, works out the figures and writes a short cited report.
+  purpose: Researches a question with a team of agents, has the cited report reviewed,
+    and publishes it after approval.
   owner: agent-platform
-  risk_tier: low
-  autonomy: multi_agent
+  risk_tier: medium
+  autonomy: hybrid
   models:
   - local-qwen-fast
   - local-qwen-quality
   human_oversight:
-  - No tool needs approval
+  - 'publish_report: group:approvers'
   data:
+  - 'Tool data: internal'
   - 'Run state: checkpoints (encrypted at rest when durable)'
   - 'Prompts and responses: Langfuse only, redacted (Step 30)'
   affected: Users of the tenant that runs it, and the people or records its tools
@@ -244,6 +246,26 @@ entries:
     act on
   status: see `just agents` (agent registry lifecycle)
   card: docs/cards/agents/research-report-analyst.md
+- id: AI-research-report-critic
+  agent: research-report-critic
+  version: 0.1.0
+  system: research-report
+  purpose: Checks a report against its sources and figures before it can be published.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: hybrid
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/research-report-critic.md
 - id: AI-research-report-researcher
   agent: research-report-researcher
   version: 0.1.0
@@ -265,6 +287,27 @@ entries:
     act on
   status: see `just agents` (agent registry lifecycle)
   card: docs/cards/agents/research-report-researcher.md
+- id: AI-research-report-team
+  agent: research-report-team
+  version: 0.2.0
+  system: research-report
+  purpose: Researches a question, works out the figures, writes a short cited report
+    and has it reviewed.
+  owner: agent-platform
+  risk_tier: low
+  autonomy: multi_agent
+  models:
+  - local-qwen-fast
+  - local-qwen-quality
+  human_oversight:
+  - No tool needs approval
+  data:
+  - 'Run state: checkpoints (encrypted at rest when durable)'
+  - 'Prompts and responses: Langfuse only, redacted (Step 30)'
+  affected: Users of the tenant that runs it, and the people or records its tools
+    act on
+  status: see `just agents` (agent registry lifecycle)
+  card: docs/cards/agents/research-report-team.md
 - id: AI-research-report-writer
   agent: research-report-writer
   version: 0.1.0

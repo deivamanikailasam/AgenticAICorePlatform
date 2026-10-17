@@ -1,0 +1,37 @@
+kind: agent
+name: research-report-critic
+version: 0.1.0
+spec: agents/research-report/workers/critic.yaml
+spec_hash: ed3d3076d983511362c8e1f5b32d1d46477ad94a13b7f7ec51fb69c26ad0513e
+system: research-report
+worker: true
+purpose: Checks a report against its sources and figures before it can be published.
+owner: agent-platform
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+runtime: langgraph, durability memory
+models:
+  default: local-qwen-fast
+  executor: local-qwen-fast
+  judge: local-qwen-quality
+  planner: local-qwen-quality
+  router: local-qwen-fast
+  summariser: local-qwen-fast
+tools: []
+workers: []
+data:
+- 'Run state: checkpoints (encrypted at rest when durable)'
+- 'Prompts and responses: Langfuse only, redacted (Step 30)'
+guardrails:
+- prompt_injection
+- secret_leak
+human_oversight:
+- No tool needs approval
+limitations:
+- Stops at 4 steps, 60 s, 12000 tokens, AUD 0.05; a stopped run returns partial output
+  and the reason
+- 'Model-decided steps: outputs can be wrong or incomplete; check them before acting
+  on anything consequential'
+- Tool results and retrieved text are treated as data, never as instructions
+eval_results: 'No recorded eval run (suite: none declared)'

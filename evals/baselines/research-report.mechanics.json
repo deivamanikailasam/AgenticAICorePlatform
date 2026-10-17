@@ -2,7 +2,7 @@
  "app": "research-report",
  "dataset": {
   "path": "evals/apps/research-report/tasks.jsonl",
-  "sha256": "ac24c3ff51df31ddd54d51120462e5244b5002d468eb83fa1667852e84548222",
+  "sha256": "191b69e5b60cb4b055c10393a67bdebdda313904a7ee7f432d77fee2bcf642b9",
   "tasks": 100
  },
  "kind": "mechanics",
@@ -36,487 +36,487 @@
    "tokens": 60
   },
   "research-003": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-004": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-005": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-006": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-007": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-008": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-009": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-010": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-011": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-012": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-013": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-014": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-015": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-016": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-017": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-018": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-019": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-020": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-021": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-022": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-023": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-024": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-025": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-026": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-027": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-028": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-029": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-030": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-031": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-032": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-033": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-034": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-035": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-036": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-037": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-038": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-039": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-040": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-041": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-042": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-043": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-044": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-045": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-046": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-047": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-048": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-049": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-050": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-051": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-052": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-053": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-054": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-055": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-056": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-057": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-058": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-059": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-060": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-061": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-062": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-063": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-064": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-065": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-066": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-067": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-068": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-069": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-070": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-071": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-072": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-073": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-074": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-075": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-076": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-077": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-078": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-079": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-080": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-081": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-082": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-083": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-084": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-085": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-086": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-087": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-088": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-089": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-090": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-091": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-092": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-093": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-094": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-095": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-096": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-097": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-098": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   },
   "research-099": {
-   "status": "stopped",
+   "status": "failed",
    "success": false,
    "tokens": 0
   }
@@ -534,10 +534,12 @@
    "router": "local-qwen-fast",
    "summariser": "local-qwen-fast"
   },
-  "plan_hash": "d4cb62ac495b7633ef231f6380cfd5d64a1bde3af2b902472a7c890257be0a9b",
+  "plan_hash": "60006e7db610ad9ff967f74731d15a606b04f5b4c24df87fe5724d5184634e3f",
   "prompts": {},
-  "spec": "0.1.0",
-  "spec_hash": "4e808e167e50794b94990478ed97571345ae6404c8e29852c56ffcdfe17009f8",
-  "tools": {}
+  "spec": "0.2.0",
+  "spec_hash": "992082a2c023d776605f9ec09135dee6c31619e91537ecbe37998375a038d562",
+  "tools": {
+   "publish_report": "per server"
+  }
  }
 }

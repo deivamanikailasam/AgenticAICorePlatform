@@ -178,16 +178,21 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  n87fa6038bc["research-report 0.1.0<br/>23a4f1a472a0"]
+  n87fa6038bc["research-report 0.2.0<br/>300bbacca7a6"]
   nc4ad9966a2{{"local-qwen-fast"}}
   n4c67570b38{{"local-qwen-quality"}}
+  nfafea0e1a7[/"local://platform/publish_report 1.0.0"/]
+  n0911c8cd0d[("eval suite: evals/apps/research-report")]
   nec9a7649b7["research-report-analyst 0.1.0<br/>0de52a93f36f"]
   n54295bedf4(["analyse: inline template sha256:244329c9f7c2"])
   n4c1e434af0[/"local://platform/calculator 1.0.0"/]
+  nb4afc0e329["research-report-critic 0.1.0<br/>ed3d3076d983"]
+  n4ce8827ef4(["review: inline template sha256:f68776313a9c"])
   n796505b6be["research-report-researcher 0.1.0<br/>3730edaf361e"]
   nad12a7d031(["research: inline template sha256:d3e1fbfdf74a"])
   n4a856b33d2[/"mcp://rag-core/search 1.0.0"/]
   na56a5e5222[("retrieval corpus: Project 0 rag-core")]
+  n067869a9f5["research-report-team 0.2.0<br/>7dcab18d9069"]
   nc5ecab16b1["research-report-writer 0.1.0<br/>b064771e9043"]
   na4c1875fe6(["write: inline template sha256:3869a055ad44"])
   n2561602399[/"local://platform/word_count 1.0.0"/]
@@ -197,9 +202,8 @@ flowchart LR
   n87fa6038bc -- planner --> n4c67570b38
   n87fa6038bc -- router --> nc4ad9966a2
   n87fa6038bc -- summariser --> nc4ad9966a2
-  n87fa6038bc -- delegates --> n796505b6be
-  n87fa6038bc -- delegates --> nec9a7649b7
-  n87fa6038bc -- delegates --> nc5ecab16b1
+  n87fa6038bc --> nfafea0e1a7
+  n87fa6038bc --> n0911c8cd0d
   nec9a7649b7 --> n54295bedf4
   nec9a7649b7 -- default --> nc4ad9966a2
   nec9a7649b7 -- executor --> nc4ad9966a2
@@ -208,6 +212,13 @@ flowchart LR
   nec9a7649b7 -- router --> nc4ad9966a2
   nec9a7649b7 -- summariser --> nc4ad9966a2
   nec9a7649b7 --> n4c1e434af0
+  nb4afc0e329 --> n4ce8827ef4
+  nb4afc0e329 -- default --> nc4ad9966a2
+  nb4afc0e329 -- executor --> nc4ad9966a2
+  nb4afc0e329 -- judge --> n4c67570b38
+  nb4afc0e329 -- planner --> n4c67570b38
+  nb4afc0e329 -- router --> nc4ad9966a2
+  nb4afc0e329 -- summariser --> nc4ad9966a2
   n796505b6be --> nad12a7d031
   n796505b6be -- default --> nc4ad9966a2
   n796505b6be -- executor --> nc4ad9966a2
@@ -217,6 +228,16 @@ flowchart LR
   n796505b6be -- summariser --> nc4ad9966a2
   n796505b6be --> n4a856b33d2
   n796505b6be --> na56a5e5222
+  n067869a9f5 -- default --> nc4ad9966a2
+  n067869a9f5 -- executor --> nc4ad9966a2
+  n067869a9f5 -- judge --> n4c67570b38
+  n067869a9f5 -- planner --> n4c67570b38
+  n067869a9f5 -- router --> nc4ad9966a2
+  n067869a9f5 -- summariser --> nc4ad9966a2
+  n067869a9f5 -- delegates --> n796505b6be
+  n067869a9f5 -- delegates --> nec9a7649b7
+  n067869a9f5 -- delegates --> nc5ecab16b1
+  n067869a9f5 -- delegates --> nb4afc0e329
   nc5ecab16b1 --> na4c1875fe6
   nc5ecab16b1 -- default --> nc4ad9966a2
   nc5ecab16b1 -- executor --> nc4ad9966a2
@@ -229,9 +250,11 @@ flowchart LR
 
 | Agent | Spec | Prompts | Models | Tools | Datasets |
 |---|---|---|---|---|---|
-| research-report | `agents/research-report/agent.yaml` 0.1.0 `23a4f1a472a0` | - | local-qwen-fast, local-qwen-quality | - | - |
+| research-report | `agents/research-report/agent.yaml` 0.2.0 `300bbacca7a6` | - | local-qwen-fast, local-qwen-quality | `local://platform/publish_report` 1.0.0 | eval suite: evals/apps/research-report |
 | research-report-analyst | `agents/research-report/workers/analyst.yaml` 0.1.0 `0de52a93f36f` | analyse: inline template sha256:244329c9f7c2 | local-qwen-fast, local-qwen-quality | `local://platform/calculator` 1.0.0 | - |
+| research-report-critic | `agents/research-report/workers/critic.yaml` 0.1.0 `ed3d3076d983` | review: inline template sha256:f68776313a9c | local-qwen-fast, local-qwen-quality | - | - |
 | research-report-researcher | `agents/research-report/workers/researcher.yaml` 0.1.0 `3730edaf361e` | research: inline template sha256:d3e1fbfdf74a | local-qwen-fast, local-qwen-quality | `mcp://rag-core/search` 1.0.0 | retrieval corpus: Project 0 rag-core (runtime data) |
+| research-report-team | `agents/research-report/workers/team.yaml` 0.2.0 `7dcab18d9069` | - | local-qwen-fast, local-qwen-quality | - | - |
 | research-report-writer | `agents/research-report/workers/writer.yaml` 0.1.0 `b064771e9043` | write: inline template sha256:3869a055ad44 | local-qwen-fast, local-qwen-quality | `local://platform/word_count` 1.0.0 | - |
 
 ## review-chat

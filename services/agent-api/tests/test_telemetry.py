@@ -24,7 +24,8 @@ async def test_a_team_run_is_one_trace_with_genai_spans(
     resp = await gate.start(app, "research-report")
     run = manager.runs[resp.json()["run_id"]]
     await manager.wait_idle(run)
-    assert run.status == "succeeded", run.events[-1]
+    # the team wrote and reviewed the report; the run waits for approval to publish (Step 40)
+    assert run.status == "interrupted", run.events[-1]
 
     spans = span_exporter.get_finished_spans()
     assert len({s.context.trace_id for s in spans}) == 1, "the whole team run is one trace"
@@ -33,12 +34,17 @@ async def test_a_team_run_is_one_trace_with_genai_spans(
     root = next(s for s in agents if s.name == "invoke_agent research-report")
     assert root.parent is None
     assert root.attributes[S.RUN_ID] == run.run_id
-    assert root.attributes[S.RUN_STATUS] == "succeeded"
-    workers = {s.attributes[S.AGENT_NAME] for s in agents} - {"research-report"}
+    assert root.attributes[S.RUN_STATUS] == "interrupted"
+    team = next(s for s in agents if s.name == "invoke_agent research-report-team")
+    workers = {s.attributes[S.AGENT_NAME] for s in agents} - {
+        "research-report",
+        "research-report-team",
+    }
     assert workers == {
         "research-report-researcher",
         "research-report-analyst",
         "research-report-writer",
+        "research-report-critic",
     }
 
     def agent_of(span):  # the nearest invoke_agent ancestor
@@ -48,9 +54,12 @@ async def test_a_team_run_is_one_trace_with_genai_spans(
                 return span.attributes[S.AGENT_NAME]
         return None
 
-    for worker in (s for s in agents if s is not root):
-        assert agent_of(worker) == "research-report"
-        assert worker.attributes[S.PARENT_RUN_ID] == run.run_id
+    # app -> team (nested as a subgraph, Step 40) -> workers
+    assert agent_of(team) == "research-report"
+    assert team.attributes[S.PARENT_RUN_ID] == run.run_id
+    for worker in (s for s in agents if s not in (root, team)):
+        assert agent_of(worker) == "research-report-team"
+        assert worker.attributes[S.PARENT_RUN_ID] == f"{run.run_id}/research"
     chats = [s for s in spans if s.attributes.get(S.OPERATION) == S.CHAT]
     tools = [s for s in spans if s.name.startswith("execute_tool ")]
     assert chats

@@ -30,8 +30,12 @@
         path: research-report/agent.yaml
       - key: research-report--workers--analyst.yaml
         path: research-report/workers/analyst.yaml
+      - key: research-report--workers--critic.yaml
+        path: research-report/workers/critic.yaml
       - key: research-report--workers--researcher.yaml
         path: research-report/workers/researcher.yaml
+      - key: research-report--workers--team.yaml
+        path: research-report/workers/team.yaml
       - key: research-report--workers--writer.yaml
         path: research-report/workers/writer.yaml
       - key: review-chat--agent.yaml

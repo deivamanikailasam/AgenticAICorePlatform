@@ -38,7 +38,7 @@ from agent_tools.registry import InMemoryToolRegistry
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 ROOT = Path(__file__).resolve().parents[3]
-TEAM = ROOT / "agents/research-report/agent.yaml"
+TEAM = ROOT / "agents/research-report/workers/team.yaml"
 TASK = {"task": "How fast did rooftop solar grow in Victoria last year?"}
 SOURCES = [{"title": "Clean Energy Report 2026", "quote": "Rooftop solar capacity rose 18%."}]
 
@@ -109,6 +109,7 @@ def scripts() -> dict[str, list[Message]]:
                 }
             ),
         ],
+        "research-report-critic": [say({"review": {"approved": True, "issues": []}})],
     }
 
 
@@ -198,7 +199,7 @@ async def test_the_research_report_runs_with_three_workers_and_per_agent_cost_in
         span = spans[f"invoke_agent research-report-{worker}"]
         assert span.attributes["agent_platform.cost.aud"] == pytest.approx(0.002)
         assert span.attributes["gen_ai.usage.input_tokens"] == 200
-        root = spans["invoke_agent research-report"]
+        root = spans["invoke_agent research-report-team"]
         assert span.context.trace_id == root.context.trace_id, "one trace for the whole team"
 
 
@@ -328,6 +329,7 @@ async def test_the_rules_dispatcher_needs_no_model() -> None:
         "researcher",
         "analyst",
         "writer",
+        "critic",
     ]
     assert result.output["answer"].startswith("Rooftop solar")
 
@@ -336,7 +338,7 @@ async def test_nested_teams_stop_at_max_depth(tmp_path: Path) -> None:
     nested = (
         TEAM.read_text()
         .replace("name: research-report", "name: nested-team")
-        .replace("spec: workers/researcher.yaml", f"spec: {tmp_path / 'inner.yaml'}")
+        .replace("spec: researcher.yaml", f"spec: {tmp_path / 'inner.yaml'}")
     )
     inner = nested.replace("name: nested-team", "name: inner-team").replace(
         "max_depth: 3", "max_depth: 1"

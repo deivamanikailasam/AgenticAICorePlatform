@@ -1,0 +1,28 @@
+spec_version: 1
+name: research-report-critic
+version: 0.1.0
+owner: agent-platform
+description: Checks a report against its sources and figures before it can be published.
+risk_tier: low
+autonomy: hybrid
+pattern: hybrid
+models: { default: local-qwen-fast }
+runtime: { adapter: langgraph, durability: memory }
+budgets: { max_steps: 4, max_tokens: 12000, max_cost_aud: 0.05, max_wall_seconds: 60 }
+graph:
+  nodes:
+    - id: review
+      type: agent
+      pattern: react
+      config:
+        template: "Task: $input.task. Sources: $input.sources. Figures: $input.figures. Report: $input.report. Check that every figure in the report matches the figures, every claim is in a source and every source cited is listed. Approve only if all hold; otherwise list the issues."
+        output_schema:
+          type: object
+          properties:
+            review:
+              type: object
+              properties:
+                approved: { type: boolean }
+                issues: { type: array, items: { type: string } }
+              required: [approved]
+          required: [review]

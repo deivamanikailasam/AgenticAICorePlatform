@@ -41,7 +41,7 @@ def high(inv: Inventory, name: str) -> Inventory:
 
 
 def test_every_spec_gets_an_agent_card_with_the_required_fields(inv: Inventory) -> None:
-    assert len(inv.entries) == 21  # 8 top-level specs and 13 workers
+    assert len(inv.entries) == 23  # 8 top-level specs and 15 workers
     for e in inv.entries:
         card = cards.agent_card(e, inv)
         for field in (
@@ -95,7 +95,8 @@ def test_eval_results_are_cited_only_from_a_recorded_run(inv: Inventory) -> None
 
 
 def test_a_system_is_as_risky_as_its_riskiest_agent(inv: Inventory) -> None:
-    assert cards.system_card(inv.by_name("research-report"), inv)["risk_tier"] == "low"
+    # publishing is irreversible and external, so the app is medium even with low-risk workers
+    assert cards.system_card(inv.by_name("research-report"), inv)["risk_tier"] == "medium"
     raised = high(inv, "research-report-writer")
     card = cards.system_card(raised.by_name("research-report"), raised)
     assert card["risk_tier"] == "high"
@@ -103,6 +104,7 @@ def test_a_system_is_as_risky_as_its_riskiest_agent(inv: Inventory) -> None:
     assert {t["ref"] for t in card["tools"]} >= {
         "mcp://rag-core/search",
         "local://platform/calculator",
+        "local://platform/publish_report",
     }
 
 
@@ -125,9 +127,11 @@ def test_lineage_hashes_match_the_audit_trail_versions(inv: Inventory) -> None:
     team = {a["agent"]: a for a in systems["research-report"]["agents"]}
     assert set(team) == {
         "research-report",
+        "research-report-team",
         "research-report-researcher",
         "research-report-analyst",
         "research-report-writer",
+        "research-report-critic",
     }
     entry = inv.by_name("invoice-triage")
     node = systems["invoice-triage"]["agents"][0]

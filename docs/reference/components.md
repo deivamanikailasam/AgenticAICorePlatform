@@ -139,6 +139,7 @@ documented adapter with a contract test and an ADR on when to complete it. The s
 | tool | calculator | implemented | `agent_tools.builtin:CalculatorTool` | Evaluates an arithmetic expression safely (no code execution). |
 | tool | clock | implemented | `agent_tools.builtin:ClockTool` | Returns the current date and time in a time zone (default Australia/Melbourne). |
 | tool | echo | dummy | `agent_contracts.dummies.tools:EchoTool` | Returns its arguments unchanged. |
+| tool | publish_report | implemented | `agent_tools.publish:PublishReportTool` | Publishes a report and returns where it was published, with the report itself. |
 | tool | rag_core_search | implemented | `agent_tools.ragcore:RagCoreSearchTool` | Search company documents through Project 0's rag-core, with the caller's own permissions. |
 | tool | sandbox_python | implemented | `agent_tools.sandbox_tool:SandboxPythonTool` | Run a short Python program in an isolated sandbox (no network) and return its output. |
 | tool | sql_read | implemented | `agent_tools.sql_read:SqlReadTool` |  |

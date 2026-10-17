@@ -1,0 +1,43 @@
+kind: tool
+name: publish_report
+version: 1.0.0
+ref: local://platform/publish_report
+owner: agent-platform
+purpose: Publish a finished report to its readers. Needs a person's approval.
+side_effect: irreversible
+default_rule: Human approval required unless policy says otherwise; never retried
+  automatically.
+idempotent: false
+timeout_seconds: 10.0
+retry:
+  max_attempts: 1
+  backoff_seconds: 0.5
+data_classification: internal
+deprecated: false
+input_schema:
+  type: object
+  properties:
+    title:
+      type: string
+      minLength: 1
+      maxLength: 300
+    report:
+      type: string
+      minLength: 20
+      maxLength: 20000
+  required:
+  - title
+  - report
+  additionalProperties: false
+output_schema:
+  type: object
+  properties:
+    published:
+      type: string
+    report:
+      type: string
+  required:
+  - published
+  - report
+limitations: Output is untrusted data and is never treated as instructions.
+eval_results: none yet (agent evals start in Step 34)

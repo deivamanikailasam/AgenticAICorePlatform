@@ -1,5 +1,6 @@
-"""The research-report team through the run API (Step 22): workers are assembled like agents,
-with their own tools and grants, and delegations are decided by policy and audited."""
+"""The research-report app through the run API (Step 22, Step 40): its team's workers are
+assembled like agents, with their own tools and grants; delegations are decided by policy and
+audited; the reviewed report is published only after a person approves it."""
 
 import json
 from pathlib import Path
@@ -16,6 +17,7 @@ from agent_contracts.interfaces import Tool
 from agent_contracts.models import Message, Role, SideEffect, ToolCall, ToolSpec
 from agent_spec.platform import load_platform
 from agent_tools.builtin import CalculatorTool, WordCountTool
+from agent_tools.publish import PublishReportTool
 from agent_tools.registry import InMemoryToolRegistry
 from mcp.server.auth.provider import AccessToken
 
@@ -43,14 +45,18 @@ class Search(Tool):
         }
 
 
+USERS = {"t": ("alice", ["/acme/research"]), "approver": ("bob", ["/acme/approvers"])}
+
+
 class Verifier:
     async def verify_token(self, token: str) -> AccessToken | None:
+        user, groups = USERS[token]
         return AccessToken(
             token=token,
             client_id="t",
             scopes=[],
             expires_at=None,
-            claims={"preferred_username": "alice", "groups": ["/acme/research"]},
+            claims={"preferred_username": user, "groups": groups},
         )
 
 
@@ -62,21 +68,27 @@ def call(name: str, **args: Any) -> Message:
     return Message(role=Role.ASSISTANT, tool_calls=(ToolCall(name=name, arguments=args),))
 
 
+REPORT = "Rooftop solar grew 18% last year (Clean Energy Report 2026)."
 SCRIPTS = {
-    "research-report": [
-        say({"next": n, "task": n}) for n in ("researcher", "analyst", "writer", "FINISH")
+    "research-report": [],
+    "research-report-team": [
+        say({"next": n, "task": n}) for n in ("researcher", "analyst", "writer", "critic", "FINISH")
     ],
     "research-report-researcher": [call("search", query="solar"), say({"sources": SOURCES})],
     "research-report-analyst": [say({"figures": {"growth_pct": 18}})],
-    "research-report-writer": [
-        say({"report": "Rooftop solar grew 18% last year (Clean Energy Report 2026)."})
-    ],
+    "research-report-writer": [say({"report": REPORT})],
+    "research-report-critic": [say({"review": {"approved": True, "issues": []}})],
 }
 
 
 async def test_the_team_runs_through_the_api_with_audited_delegations() -> None:
     audit = MemoryAuditSink()
-    tools = {"search": Search, "calculator": CalculatorTool, "word_count": WordCountTool}
+    tools = {
+        "search": Search,
+        "calculator": CalculatorTool,
+        "word_count": WordCountTool,
+        "publish_report": PublishReportTool,
+    }
     registries: dict[str, list[str]] = {}
 
     async def registry(spec: Any) -> InMemoryToolRegistry:
@@ -111,13 +123,36 @@ async def test_the_team_runs_through_the_api_with_audited_delegations() -> None:
         state = (
             await c.get(f"/v1/runs/{run.run_id}", headers={"Authorization": "Bearer t"})
         ).json()
+        # the reviewed report waits for a person before it is published
+        assert state["status"] == "interrupted", state
+        action = state["interrupts"][0]["action"]
+        assert action["tool"] == "publish_report"
+        assert action["arguments"]["report"] == REPORT
+        refused = await c.post(
+            f"/v1/runs/{run.run_id}/approvals",
+            json={"decision": "approve"},
+            headers={"Authorization": "Bearer t"},
+        )
+        assert refused.status_code == 403, "the requester cannot approve their own report"
+        approved = await c.post(
+            f"/v1/runs/{run.run_id}/approvals",
+            json={"decision": "approve"},
+            headers={"Authorization": "Bearer approver"},
+        )
+        assert approved.status_code == 202, approved.text
+        await manager.wait_idle(run)
+        state = (
+            await c.get(f"/v1/runs/{run.run_id}", headers={"Authorization": "Bearer t"})
+        ).json()
     assert state["status"] == "succeeded", state
     assert registries == {
-        "research-report": [],
+        "research-report": ["publish_report"],
+        "research-report-team": [],
         "research-report-researcher": ["search"],
         "research-report-analyst": ["calculator"],
         "research-report-writer": ["word_count"],
-    }, "each worker is assembled with only its own tools"
+        "research-report-critic": [],
+    }, "each agent is assembled with only its own tools"
     delegations = [r.event.payload for r in await audit.read() if r.event.type == "agent.delegate"]
-    assert [d["worker"] for d in delegations] == ["researcher", "analyst", "writer"]
+    assert [d["worker"] for d in delegations] == ["researcher", "analyst", "writer", "critic"]
     assert all(d["effect"] == "allow" for d in delegations)

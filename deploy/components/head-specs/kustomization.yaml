@@ -16,7 +16,9 @@ configMapGenerator:
   - policy-debate--workers--pro.yaml=../../../agents/policy-debate/workers/pro.yaml
   - research-report--agent.yaml=../../../agents/research-report/agent.yaml
   - research-report--workers--analyst.yaml=../../../agents/research-report/workers/analyst.yaml
+  - research-report--workers--critic.yaml=../../../agents/research-report/workers/critic.yaml
   - research-report--workers--researcher.yaml=../../../agents/research-report/workers/researcher.yaml
+  - research-report--workers--team.yaml=../../../agents/research-report/workers/team.yaml
   - research-report--workers--writer.yaml=../../../agents/research-report/workers/writer.yaml
   - review-chat--agent.yaml=../../../agents/review-chat/agent.yaml
   - review-chat--workers--critic.yaml=../../../agents/review-chat/workers/critic.yaml

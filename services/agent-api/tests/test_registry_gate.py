@@ -19,6 +19,7 @@ from agent_registry.gate import ApprovedOnly
 from agent_registry.sync import load_all, sync
 from agent_spec.platform import load_platform
 from agent_tools.builtin import CalculatorTool, WordCountTool
+from agent_tools.publish import PublishReportTool
 from agent_tools.registry import InMemoryToolRegistry
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -38,11 +39,20 @@ async def world(
 ) -> tuple[Any, Any, MemoryAuditSink, dict[str, Any]]:
     audit = MemoryAuditSink()
     registry = InMemoryAgentRegistry()
-    await sync(registry, load_all(ROOT / "agents"))
+    specs = load_all(ROOT / "agents")
+    await sync(registry, specs)
+    versions = {s.name: s.version for s in specs}
     for name in approve:
-        await registry.set_status(name, "0.1.0", AgentStatus.APPROVED, by="carol", reason="test")
+        await registry.set_status(
+            name, versions[name], AgentStatus.APPROVED, by="carol", reason="test"
+        )
     assembled: dict[str, Any] = {}
-    tools = {"search": team_api.Search, "calculator": CalculatorTool, "word_count": WordCountTool}
+    tools = {
+        "search": team_api.Search,
+        "calculator": CalculatorTool,
+        "word_count": WordCountTool,
+        "publish_report": PublishReportTool,
+    }
 
     async def tool_registry(spec: Any) -> InMemoryToolRegistry:
         assembled[spec.name] = True
@@ -75,16 +85,26 @@ async def start(app: Any, agent: str) -> httpx.Response:
 
 
 async def test_a_supervisor_cannot_delegate_to_a_draft_agent_in_staging() -> None:
-    approved = ["research-report", "research-report-researcher", "research-report-analyst"]
+    approved = [
+        "research-report",
+        "research-report-team",
+        "research-report-researcher",
+        "research-report-analyst",
+        "research-report-critic",
+    ]
     manager, app, audit, assembled = await world("staging", approved)  # writer stays draft
     resp = await start(app, "research-report")
     assert resp.status_code == 201, resp.text
     run = manager.runs[resp.json()["run_id"]]
     await manager.wait_idle(run)
-    assert run.status == "stopped"  # no report: the writer was never used, no false success
+    # no report: the writer was never used, so the team stops, and nothing is published
+    assert run.status in ("stopped", "failed"), run.status
+    assert not run.interrupts, "no approval is asked for a report that was never written"
     assert "research-report-writer" not in assembled, "a refused worker is never built"
     delegations = [r.event.payload for r in await audit.read() if r.event.type == "agent.delegate"]
-    assert [d["worker"] for d in delegations] == ["researcher", "analyst"]
+    # policy allowed the critic too, but with no report to read it was refused and never built
+    assert [d["worker"] for d in delegations] == ["researcher", "analyst", "critic"]
+    assert "research-report-critic" not in assembled
     refused = [r.event.payload for r in await audit.read() if r.event.type == "registry.refused"]
     assert refused == [
         {
@@ -111,5 +131,7 @@ async def test_drafts_run_in_dev() -> None:
     assert resp.status_code == 201
     run = manager.runs[resp.json()["run_id"]]
     await manager.wait_idle(run)
-    assert run.status == "succeeded", run.events[-1]
+    # the team wrote and reviewed the report; publishing waits for a person
+    assert run.status == "interrupted", run.events[-1]
+    assert run.interrupts[0]["action"]["tool"] == "publish_report"
     assert "research-report-writer" in assembled

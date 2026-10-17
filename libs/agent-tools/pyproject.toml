@@ -36,6 +36,7 @@ dependencies = [
 "tool.rag_core_search" = "agent_tools.ragcore:RagCoreSearchTool"
 "tool.sandbox_python" = "agent_tools.sandbox_tool:SandboxPythonTool"
 "tool.sql_read" = "agent_tools.sql_read:SqlReadTool"
+"tool.publish_report" = "agent_tools.publish:PublishReportTool"
 "credential_broker.openbao" = "agent_tools.openbao:OpenBaoCredentialBroker"
 "credential_broker.vault" = "agent_tools.openbao:VaultCredentialBroker"
 "credential_broker.aws" = "agent_tools.cloud_secrets:AwsCredentialBroker"

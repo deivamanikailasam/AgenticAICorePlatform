@@ -82,14 +82,18 @@ async def test_a_team_run_records_delegations_and_worker_calls_under_the_parent(
     resp = await gate.start(app, "research-report")
     run = manager.runs[resp.json()["run_id"]]
     await manager.wait_idle(run)
-    assert run.status == "succeeded"
+    assert run.status == "interrupted"  # the reviewed report waits for approval to publish
     events = run_scoped(list(await audit.read()), run.run_id)
     assert not [p for e in events for p in validate(e)]
     delegations = [e for e in events if e.type == "agent.delegate"]
-    assert {e.payload["worker"] for e in delegations} == {"researcher", "analyst", "writer"}
-    worker_calls = [
-        e for e in events if e.type == "tool.call" and e.ctx.parent_run_id == run.run_id
-    ]
+    assert {e.payload["worker"] for e in delegations} == {
+        "researcher",
+        "analyst",
+        "writer",
+        "critic",
+    }
+    team_run = f"{run.run_id}/research"  # the team, nested in the app as a subgraph (Step 40)
+    worker_calls = [e for e in events if e.type == "tool.call" and e.ctx.parent_run_id == team_run]
     assert worker_calls, "worker tool calls are recorded as child runs of the team run"
     for e in worker_calls:
         assert e.ctx.agent_id == "research-report-researcher"

@@ -1,10 +1,10 @@
 """Eval harnesses for the reference apps that need no app-specific services (Step 34):
 hello-workflow, the five team specs and the knowledge assistant (Step 40).
 
-Tools are the platform's own: calculator, word count, clock, and the rag-core search tool. The
-search tool talks to rag-core's HTTP API as in production; here that API is answered from the
-documents the tasks carry (``input._corpus``), so research tasks have known sources and known
-figures. Workers are resolved from the spec's directory, as the run API does.
+Tools are the platform's own: calculator, word count, clock, publish report (Step 40) and the
+rag-core search tool. The search tool talks to rag-core's HTTP API as in production; here that
+API is answered from the documents the tasks carry (``input._corpus``), so research tasks have
+known sources and known figures. Workers are resolved from the spec's directory, as the run API does.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from agent_spec import AgentSpec, load_spec_text
 from agent_spec.platform import PlatformConfig
 from agent_tools.builtin import CalculatorTool, ClockTool, WordCountTool
 from agent_tools.identity import ExchangedToken
+from agent_tools.publish import PublishReportTool
 from agent_tools.ragcore import RagCoreSearchTool
 from agent_tools.registry import InMemoryToolRegistry
 
@@ -90,7 +91,7 @@ class SpecHarness:
 
     async def registry(self, spec: AgentSpec) -> InMemoryToolRegistry:
         reg = InMemoryToolRegistry()
-        for tool in (CalculatorTool(), WordCountTool(), ClockTool()):
+        for tool in (CalculatorTool(), WordCountTool(), ClockTool(), PublishReportTool()):
             await reg.register(tool)
         await reg.register(
             RagCoreSearchTool(
