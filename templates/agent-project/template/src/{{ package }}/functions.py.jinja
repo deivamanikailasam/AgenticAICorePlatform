@@ -1,0 +1,38 @@
+"""Workflow functions (``type: function`` nodes), registered in pyproject.toml under
+``agent_platform.functions``.
+
+A function receives the run's state: ``state["input"]`` is the run's input and
+``state["<node id>"]`` the output of each node that ran before it. It returns the node's output.
+Raise an exception to fail the node (an ``on_error`` edge can catch it).
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+CATEGORIES = {
+    "access": ("password", "login", "access", "locked"),
+    "billing": ("invoice", "refund", "charge", "billing", "payment"),
+    "privacy": ("personal data", "privacy", "delete my", "export my"),
+}
+URGENT = ("urgent", "asap", "outage", "cannot work")
+
+
+def classify(state: dict[str, Any]) -> dict[str, Any]:
+    text = str(state["input"]["request"]).lower()
+    category = next(
+        (name for name, words in CATEGORIES.items() if any(w in text for w in words)), "general"
+    )
+    priority = "high" if any(w in text for w in URGENT) else "normal"
+    return {"category": category, "priority": priority}
+
+
+def reply(state: dict[str, Any]) -> dict[str, Any]:
+    triage, policy = state["classify"], state["policy"]
+    return {
+        "category": triage["category"],
+        "priority": triage["priority"],
+        "policy_id": policy["policy_id"],
+        "reply": f"Thanks: this is a {triage['priority']}-priority {triage['category']} request. "
+        f"{policy['summary']} (policy {policy['policy_id']}).",
+    }

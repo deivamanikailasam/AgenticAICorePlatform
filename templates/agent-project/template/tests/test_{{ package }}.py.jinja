@@ -1,0 +1,40 @@
+"""Unit tests for your functions, tools and evaluators (agentctl eval runs the whole agent)."""
+
+from __future__ import annotations
+
+from agent_sdk import Observation, RunContext, Task, Tool
+
+from {{ package }}.evaluators import cites_policy
+from {{ package }}.functions import classify, reply
+from {{ package }}.tools import lookup_policy
+
+CTX = RunContext(tenant_id="test", user_id="test", agent_id="{{ agent_name }}")
+
+
+def test_classify() -> None:
+    assert classify({"input": {"request": "URGENT: I am locked out"}}) == {
+        "category": "access",
+        "priority": "high",
+    }
+    assert classify({"input": {"request": "Hello"}})["category"] == "general"
+
+
+async def test_lookup_policy_is_a_read_only_tool() -> None:
+    t = lookup_policy()
+    assert isinstance(t, Tool)
+    assert t.spec.ref == "local://{{ project_slug }}/lookup_policy"
+    assert t.spec.side_effect.value == "read"
+    assert (await t.invoke({"category": "billing"}, CTX))["policy_id"] == "POL-BILL-02"
+
+
+def test_reply_and_evaluator() -> None:
+    out = reply(
+        {
+            "classify": {"category": "billing", "priority": "normal"},
+            "policy": {"policy_id": "POL-BILL-02", "summary": "Reviewed in 5 days."},
+        }
+    )
+    task = Task(id="t", app="{{ agent_name }}", input={}, expected={})
+    obs = Observation(status="succeeded", output=out)
+    assert cites_policy({"policy_id": "POL-BILL-02"}, task, obs).passed
+    assert not cites_policy({"policy_id": "POL-GEN-00"}, task, obs).passed

@@ -1,0 +1,40 @@
+"""Your tools, registered in pyproject.toml under ``agent_platform.components`` as
+``tool.<name>`` and granted to an agent by ``ref`` in its agent.yaml.
+
+The platform validates arguments against ``input_schema`` before the call, and runs every call
+through policy (OPA), guardrails, budgets and the audit trail. Declare ``side_effect`` honestly:
+``write`` for changes that can be undone, ``irreversible`` for those that can't (payments,
+sending email). Irreversible tools always wait for a person's approval.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
+from agent_sdk import RunContext, SideEffect, tool
+
+POLICIES = {
+    "access": ("POL-ACCESS-01", "Access problems are reset by the service desk within 4 hours."),
+    "billing": ("POL-BILL-02", "Billing disputes are reviewed by finance within 5 business days."),
+    "privacy": ("POL-PRIV-03", "Privacy requests are answered within 30 days, as law requires."),
+    "general": ("POL-GEN-00", "General requests are answered within 2 business days."),
+}
+
+
+@tool(
+    name="lookup_policy",
+    ref="local://{{ project_slug }}/lookup_policy",
+    description="The service policy for a request category.",
+    input_schema={
+        "type": "object",
+        "properties": {"category": {"type": "string", "enum": sorted(POLICIES)}},
+        "required": ["category"],
+        "additionalProperties": False,
+    },
+    side_effect=SideEffect.READ,
+    owner="{{ team }}",
+)
+async def lookup_policy(arguments: Mapping[str, Any], ctx: RunContext) -> dict[str, str]:
+    policy_id, summary = POLICIES[str(arguments["category"])]
+    return {"policy_id": policy_id, "summary": summary}

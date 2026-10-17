@@ -1,0 +1,14 @@
+# The agent-project template (Step 39): a new repository for a team's agents, wired to this
+# platform. See templates/agent-project/README.md.
+#
+#   uvx copier@9.18.2 copy gh:deivamanikailasam/AgenticAICorePlatform my-project
+#
+# The template has no tasks: copier never runs code from it (no --trust needed).
+---
+!include templates/agent-project/questions.yml
+---
+!include templates/agent-project/platform.yml
+---
+_subdirectory: templates/agent-project/template
+_min_copier_version: "9.18.2"
+_answers_file: .copier-answers.yml

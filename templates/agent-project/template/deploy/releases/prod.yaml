@@ -1,0 +1,2 @@
+# What serves in prod (Step 38). Changed only by `agentctl promote` in a pull request.
+agents: {}

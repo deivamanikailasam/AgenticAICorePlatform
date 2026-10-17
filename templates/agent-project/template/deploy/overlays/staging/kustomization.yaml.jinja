@@ -1,0 +1,41 @@
+# staging: changed only by a reviewed pull request (`agentctl promote`); Argo CD syncs it. 2 replicas of
+# each stateless service, workers scaled by KEDA between 1 and 4, Temporal cluster in
+# namespace temporal-staging. Images by digest only.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: {{ project_slug }}-staging
+resources:
+  - namespace.yaml
+  - https://github.com/deivamanikailasam/AgenticAICorePlatform//deploy/base?ref={{ platform_ref }}
+components:
+  - https://github.com/deivamanikailasam/AgenticAICorePlatform//deploy/components/cluster?ref={{ platform_ref }}
+  # the versions deploy/releases/staging.yaml names (generated: agentctl deploy-config)
+  - released
+generatorOptions:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+configMapGenerator:
+  - name: agent-platform-env
+    envs: [env.properties]
+replicas:
+  - { name: agent-api, count: 2 }
+  - { name: mcp-gateway, count: 2 }
+  - { name: a2a-gateway, count: 2 }
+patches:
+  - target: { kind: ScaledObject, name: agent-worker }
+    patch: |-
+      - { op: replace, path: /spec/minReplicaCount, value: 1 }
+      - { op: replace, path: /spec/maxReplicaCount, value: 4 }
+      - { op: replace, path: /spec/triggers/0/metadata/endpoint, value: "temporal-frontend.temporal-staging.svc:7233" }
+  - target: { kind: NetworkPolicy, name: egress-temporal-cluster }
+    patch: |-
+      - op: replace
+        path: /spec/egress/0/to/0/namespaceSelector/matchLabels/kubernetes.io~1metadata.name
+        value: temporal-staging
+# images from commit 9a999b8194459d89d17a1efb64c2bd445d879888 (images workflow; signed, scanned)
+images:
+  - { name: agent-platform/agent-api, newName: ghcr.io/deivamanikailasam/agent-platform/agent-api, digest: "sha256:538130c43a9476b483a870ba2b24a4ffc3ed625b8f7aaa557e722b126faa0048" }
+  - { name: agent-platform/agent-worker, newName: ghcr.io/deivamanikailasam/agent-platform/agent-worker, digest: "sha256:53e22b96585a285439ee0205e738589661df164b8dfeebbc5f3d52ae6cbb0da7" }
+  - { name: agent-platform/mcp-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/mcp-gateway, digest: "sha256:0157bbda682eabf8f3ae8f0c9763a8b726860731612cda781755816176f5404b" }
+  - { name: agent-platform/a2a-gateway, newName: ghcr.io/deivamanikailasam/agent-platform/a2a-gateway, digest: "sha256:e2533c6803fc74f935339cc89f8d1de9152aab0f33bb74a20c0e838551767964" }
+  - { name: agent-platform/ops, newName: ghcr.io/deivamanikailasam/agent-platform/ops, digest: "sha256:44288188576684369ea3a2c88a5daa9e96fd68d2050a3e333a6ba608ff16909d" }

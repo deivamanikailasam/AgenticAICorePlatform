@@ -1,0 +1,82 @@
+# {{ project_name }}
+
+Agents for {{ team }}, on the Agentic AI Core Platform. Made from the platform's agent-project
+template (platform commit `{{ platform_ref[:7] }}`).
+
+## Your first agent, step by step
+
+You need `uv` 0.11 or later and `git`. `kustomize` 5.8.2 is needed only for `agentctl deploy-check`.
+
+```bash
+uv lock                                  # resolve the platform's SDK and its tested versions
+uv sync                                  # install them
+uv run pytest -q                         # your functions, tool and evaluator
+uv run agentctl validate --strict        # agents/*/agent.yaml against the platform's rules
+uv run agentctl run {{ agent_name }} --input '{"request": "I am locked out and cannot log in"}'
+uv run agentctl eval {{ agent_name }}    # the golden tasks in evals/{{ agent_name }}/tasks.jsonl
+git init -b main && git add -A && git commit -m "feat: {{ agent_name }} from the platform template"
+```
+
+Push it to GitHub: `.github/workflows/ci.yml` runs the same checks, the promotion rules and the
+deployment rules on every push and pull request.
+
+`agentctl run` and `agentctl eval` go through the platform's run API in process. That includes the
+production assembly: policy on every tool call, guardrails, budgets and an audit trail. Each
+eval writes a report to `evals/results/`.
+
+## What is where
+
+| Path | What it is |
+|---|---|
+| `agents/<agent>/agent.yaml` | An agent's spec. `main`'s head is what dev runs |
+| `src/{{ package }}/functions.py` | Workflow functions (`type: function` nodes) |
+| `src/{{ package }}/tools.py` | Your tools (`@tool`), granted to an agent by `ref` |
+| `src/{{ package }}/evaluators.py` | Your eval checks, named in a task's `expected.custom` |
+| `pyproject.toml` | Entry points that register all three, and the platform pin |
+| `evals/<agent>/tasks.jsonl` | Golden tasks: an input and what a correct run looks like |
+| `cards/<agent>.md` | The agent card: purpose, data, oversight, limitations, results |
+| `platform.yaml` | Which platform you run against (gateway, model aliases, A2A allowlist) |
+| `deploy/` | Overlays for dev, staging and prod, releases and snapshots |
+| `Dockerfile` | Your images: the platform's signed image plus your package |
+
+## Models
+
+The first agent calls no model. Add `type: llm` or `type: agent` nodes with model aliases from
+`platform.yaml` (`local-qwen-fast`, `local-qwen-quality`, ...). Then choose how runs reach a model:
+- `--provider stand-in`: the stand-in gateway's canned answers. It checks the mechanics only.
+- `--provider gateway`: real models behind Project 0's LiteLLM. Set `P0_LITELLM_URL` and
+  `LITELLM_API_KEY` (the key comes from OpenBao, not from a file in this repository).
+
+Only a `gateway` run measures quality.
+
+## Releasing
+
+1. Merge a change to `agents/<agent>/` with a new `version`: dev runs it.
+2. `uv run agentctl promote <agent> --to staging --commit`, push the branch, open a pull request.
+3. `uv run agentctl promote <agent> --to prod --commit`: a 10% canary in prod, reviewed by a code
+   owner.
+4. When the platform's online evaluation says `pass`:
+   `uv run agentctl promote <agent> --to prod --full --api <prod run API> --commit`.
+   If the canary was rolled back, fix the agent and release a new version.
+
+CI refuses a skipped step, a canary above 10% and an edited snapshot.
+
+## Deploying
+
+The overlays use the platform's base manifests at commit `{{ platform_ref[:7] }}` and its signed
+images. Run them under your own namespaces (`{{ project_slug }}-dev`, `-staging`, `-prod`), with your
+own OpenBao role and mount and Keycloak client.
+
+Once your tools are in your own images:
+1. Build them with the `Dockerfile`, push them, and sign them.
+2. Pin them in each overlay:
+   `kustomize edit set image agent-platform/agent-api=<your image>@sha256:...`
+   (the same for `agent-platform/agent-worker`).
+3. Open a pull request. `uv run agentctl deploy-check` applies the platform's deployment rules:
+   digests, Pod Security "restricted", no secrets in config, deny-by-default network policy, and
+   replicas per environment.
+
+## Calling the platform from elsewhere
+
+Your agents are reachable through the platform's run API, MCP gateway and A2A gateway. See the
+platform's `docs/reference/endpoints.md`.

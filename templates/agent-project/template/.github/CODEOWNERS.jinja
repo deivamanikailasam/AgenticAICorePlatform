@@ -1,0 +1,7 @@
+# Who must review what (made from the platform's template, Step 39). Prod releases and released
+# snapshots are the governance paths: protect main and require a code owner's review.
+*                         @{{ github_owner }}
+/deploy/releases/prod.yaml @{{ github_owner }}
+/deploy/specs/            @{{ github_owner }}
+/deploy/overlays/prod/    @{{ github_owner }}
+/deploy/promotion.yaml    @{{ github_owner }}

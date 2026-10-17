@@ -1,0 +1,31 @@
+# Agent card: {{ agent_name }}
+
+Keep this card current with the spec. Reviewers read it before approving a release. The
+platform's own cards (`docs/cards/agents/` there) show the same sections filled in.
+
+| | |
+|---|---|
+| **Owner** | {{ team }} |
+| **Risk tier** | {{ risk_tier }} |
+| **Autonomy / pattern** | workflow / workflow |
+| **Spec** | `agents/{{ agent_name }}/agent.yaml` |
+
+## Purpose
+Classifies a request and replies with the service policy that applies.
+
+## Tools and data
+- `lookup_policy` (`local://{{ project_slug }}/lookup_policy`): read-only. It returns policy text
+  that is internal, with no personal data.
+- Input: the request text. It may contain personal data, so it is treated as confidential.
+
+## Human oversight
+None needed for a read-only reply. Add `approval` to any tool that writes or can't be undone.
+
+## Limitations
+Keyword rules, English only. A request that mentions two categories gets the first one that
+matches.
+
+## Evaluation results
+`uv run agentctl eval {{ agent_name }}`: 5 golden tasks, no model calls. Report the results of a
+`--provider gateway` run here once the agent uses a model. Give each figure with its task count.
+Never report a stand-in run as quality.

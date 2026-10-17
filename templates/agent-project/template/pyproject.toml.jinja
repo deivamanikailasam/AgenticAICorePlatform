@@ -1,0 +1,50 @@
+[project]
+name = "{{ project_slug }}"
+version = "0.1.0"
+description = "{{ project_name }}: agents on the Agentic AI Core Platform"
+requires-python = ">=3.12,<3.13"
+dependencies = ["agent-sdk"]
+
+# Your extensions, found by the platform through these entry points.
+[project.entry-points."agent_platform.components"]
+"tool.{{ project_slug }}.lookup_policy" = "{{ package }}.tools:lookup_policy"
+
+[project.entry-points."agent_platform.functions"]
+"{{ package }}.classify" = "{{ package }}.functions:classify"
+"{{ package }}.reply" = "{{ package }}.functions:reply"
+
+[project.entry-points."agent_platform.evaluators"]
+"{{ package }}.cites_policy" = "{{ package }}.evaluators:cites_policy"
+
+[dependency-groups]
+dev = ["ruff==0.17.0", "pytest>=9.1.1,<10", "pytest-asyncio>=1.4.0,<2"]
+
+[tool.uv]
+# The platform at the commit whose signed images the platform's environments run, and the
+# third-party versions it was tested with (its uv.lock), so this project resolves the same.
+constraint-dependencies = [
+{%- for c in platform_constraints %}
+    "{{ c }}",
+{%- endfor %}
+]
+
+[tool.uv.sources]
+agent-sdk = { git = "{{ platform_repo }}", rev = "{{ platform_ref }}", subdirectory = "libs/agent-sdk" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC"]
+ignore = ["S101"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["hatchling==1.32.4"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/{{ package }}"]

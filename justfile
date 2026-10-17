@@ -19,7 +19,7 @@ sync:
     uv sync --all-packages --frozen
 
 # Everything a contributor runs before pushing (CI runs the same)
-check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check deploy-config-check
+check: lint typecheck test policy-test obs-test compose-check secret-scan catalogue-check spec-reference-check cards-check validate redteam-check threat-check deploy-config-check template-data-check
 
 lint:
     uv run ruff check .
@@ -362,3 +362,14 @@ cluster-addons:
 # Step 38: the platform on kind with Argo CD against the stand-in (CI: deploy-e2e)
 kind-e2e:
     uv run python -m scripts.kind_e2e
+
+# Step 39: the agent-project template's platform-derived files (pins, overlays, generated config)
+template-data:
+    uv run python -m scripts.template_data write
+
+template-data-check:
+    uv run python -m scripts.template_data check
+
+# Step 39: a project from the template through its first 30 minutes, timed (CI: template-e2e)
+template-e2e *args:
+    uv run python -m scripts.template_e2e {{args}}

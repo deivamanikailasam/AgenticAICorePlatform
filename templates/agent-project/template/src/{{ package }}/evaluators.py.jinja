@@ -1,0 +1,26 @@
+"""Your eval checks, registered in pyproject.toml under ``agent_platform.evaluators`` and named
+in a golden task's ``expected.custom`` with their configuration.
+
+An evaluator gets the task's configuration, the task and what the run did (output, tool calls,
+approvals, usage) and returns a ``Score``. A task that names an evaluator that isn't installed,
+or one that raises, fails.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
+from agent_sdk import Observation, Score, Task
+
+
+def cites_policy(config: Mapping[str, Any], task: Task, obs: Observation) -> Score:
+    """The reply names the policy it applied, and it is the expected one."""
+    output = obs.output if isinstance(obs.output, dict) else {}
+    expected, cited = config.get("policy_id"), output.get("policy_id")
+    ok = (
+        bool(cited)
+        and (expected is None or cited == expected)
+        and str(cited) in str(output.get("reply", ""))
+    )
+    return Score("cites_policy", 1.0 if ok else 0.0, ok, f"cited {cited!r}, expected {expected!r}")

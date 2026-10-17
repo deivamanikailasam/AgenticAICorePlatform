@@ -1,0 +1,14 @@
+# {{ project_name }}'s images: the platform's signed image for a service, plus this package (its
+# tools, functions and evaluators) and its platform.yaml. Build one per service that runs agents:
+#   docker build --build-arg BASE=<agent-api image@digest> -t {{ project_slug }}/agent-api .
+#   docker build --build-arg BASE=<agent-worker image@digest> -t {{ project_slug }}/agent-worker .
+# The defaults are the images deploy/overlays/dev pins (platform commit {{ platform_ref[:7] }}).
+ARG BASE={{ platform_images['agent-api'] }}
+FROM ${BASE}
+USER root
+COPY pyproject.toml /src/project/pyproject.toml
+COPY src /src/project/src
+COPY platform.yaml /app/platform.yaml
+# --no-deps: the platform's packages are already in the image, at the version this project pins
+RUN uv pip install --python /app/.venv/bin/python --no-deps --no-cache /src/project
+USER 10001

@@ -24,6 +24,7 @@ dev = [
     "types-jsonschema>=4.26.0.20261006",
     "uvicorn>=0.54.0,<1",
     "playwright==1.63.0",
+    "copier==9.18.2",
 ]
 
 [tool.uv]

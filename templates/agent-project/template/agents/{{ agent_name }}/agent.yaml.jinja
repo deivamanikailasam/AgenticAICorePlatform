@@ -1,0 +1,31 @@
+# {{ project_name }}: the first agent, made from the platform's template (Step 39).
+#
+# A deterministic workflow, so it runs and passes its golden tasks with no model and no services:
+# a function classifies the request, a tool of your own looks up the policy that applies, and a
+# second function writes the reply. Replace the functions with your logic, add model nodes
+# (type: llm or agent) and tools (MCP servers on the platform's allowlist, or your own) as the
+# agent grows. Reference: the platform's docs/reference/agent-yaml.md.
+spec_version: 1
+name: {{ agent_name }}
+version: 0.1.0
+owner: {{ team }}
+description: Classifies a request and replies with the policy that applies.
+risk_tier: {{ risk_tier }}
+autonomy: workflow
+pattern: workflow
+runtime: { adapter: langgraph, durability: checkpoint }
+budgets: { max_steps: 10, max_wall_seconds: 30 }
+tools:
+  - ref: local://{{ project_slug }}/lookup_policy   # your tool: src/{{ package }}/tools.py
+guardrails: [tool_args_schema]
+graph:
+  nodes:
+    - { id: classify, type: function, fn: {{ package }}.classify }
+    - id: policy
+      type: tool
+      tool: lookup_policy
+      config: { args: { category: $classify.category } }
+    - { id: reply, type: function, fn: {{ package }}.reply }
+  edges:
+    - { from: classify, to: policy }
+    - { from: policy, to: reply }

@@ -1,0 +1,59 @@
+# CI for {{ project_name }} (made from the platform's agent-project template, Step 39).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+{% raw %}
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: lint, tests, specs, evals, deployment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      KUSTOMIZE_VERSION: v5.8.2
+      KUSTOMIZE_SHA256: 06af0a202c2b831207d0173f9c9cdb1b30abceca0747cb3fbb72792d26055c95
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the promotion rules compare with the base commit
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.11.32"
+          python-version: "3.12"
+      - name: kustomize (checksum verified)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"; cd "$RUNNER_TEMP"
+          curl -sSfL -o k.tgz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          echo "${KUSTOMIZE_SHA256}  k.tgz" | sha256sum -c -
+          tar -xzf k.tgz -C bin kustomize
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+      - run: uv run agentctl validate --strict
+      - name: golden tasks (no model calls; gateway runs need a LiteLLM key)
+        run: for a in agents/*/; do uv run agentctl eval "$(basename "$a")"; done
+      - name: promotion rules and generated deployment config
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$base" 2>/dev/null; then
+            base="$(git rev-list --max-parents=0 HEAD | tail -1)"
+          fi
+          uv run agentctl deploy-config --check --base "$base"
+      - run: uv run agentctl deploy-check
+{%- endraw %}

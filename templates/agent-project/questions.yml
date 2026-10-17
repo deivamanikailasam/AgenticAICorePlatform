@@ -1,0 +1,39 @@
+# What copier asks when it makes a new agent project (Step 39).
+project_name:
+  type: str
+  help: Your project's name, in words (e.g. "Claims Desk")
+  validator: "{% if not project_name.strip() %}a name is required{% endif %}"
+project_slug:
+  type: str
+  help: Its short name, used for the repository, namespaces and tool refs
+  default: "{{ project_name.strip() | lower | replace(' ', '-') }}"
+  validator: >-
+    {% if not (project_slug | regex_search('^[a-z][a-z0-9-]{1,30}[a-z0-9]$')) %}lowercase
+    letters, digits and dashes, 3 to 32 characters{% endif %}
+package:
+  type: str
+  help: The Python package for your tools, functions and evaluators
+  default: "{{ project_slug | replace('-', '_') }}"
+  validator: >-
+    {% if not (package | regex_search('^[a-z][a-z0-9_]{1,40}$')) %}a Python identifier in
+    lowercase{% endif %}
+team:
+  type: str
+  help: The team that owns the agents (agent.yaml owner, CODEOWNERS)
+  default: "{{ project_slug }}-team"
+github_owner:
+  type: str
+  help: The GitHub user or organisation the repository lives under (for CODEOWNERS and images)
+  default: deivamanikailasam
+agent_name:
+  type: str
+  help: The first agent's name
+  default: "{{ project_slug }}-triage"
+  validator: >-
+    {% if not (agent_name | regex_search('^[a-z][a-z0-9-]{1,62}$')) %}lowercase letters,
+    digits and dashes{% endif %}
+risk_tier:
+  type: str
+  help: The first agent's risk tier (governance/approvers and eval gates follow it)
+  choices: [low, medium, high]
+  default: low
