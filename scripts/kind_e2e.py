@@ -103,7 +103,8 @@ def cluster() -> None:
         ("argocd", "argocd-server"),
         ("argocd", "argocd-repo-server"),
         ("keda", "keda-operator"),
-        ("keda", "keda-admission-webhooks"),
+        ("keda", "keda-metrics-apiserver"),
+        ("keda", "keda-admission"),
     ):
         kubectl("-n", ns, "rollout", "status", f"deploy/{deploy}", "--timeout=300s")
     kubectl(
