@@ -22,6 +22,7 @@ from agent_api.assembly import Assembly, load_gateway_keys
 from agent_api.desk import ApprovalDesk
 from agent_api.identity import identity_from_env
 from agent_api.registry import registry_gate
+from agent_api.releases import MemoryReleaseState, PostgresReleaseState, Releases
 from agent_api.runs import RunManager
 from agent_api.settings import Settings
 from agent_api.store import PostgresRunStore, RunStore
@@ -54,8 +55,17 @@ def main() -> None:
     gateway_keys = asyncio.run(load_gateway_keys(platform, identity.secrets, settings.environment))
     # Step 25: every deployed spec is in the registry (new versions as draft); in staging and
     # prod only approved versions run or are delegated to
-    agents = RunManager.load_agents(settings.agents_dir)
-    gate = asyncio.run(registry_gate(settings.environment, audit, agents))
+    releases = None
+    if settings.releases_file:  # Step 38: several versions, canary or shadow, online gate
+        versions = RunManager.load_versions(settings.versions_dir)
+        state = PostgresReleaseState(settings.db_dsn) if settings.db_dsn else MemoryReleaseState()
+        releases = Releases.from_file(settings.releases_file, versions, state)
+        agents = releases.stable()
+        deployed = {f"{n}@{v}": s for (n, v), s in versions.items()}
+    else:
+        agents = RunManager.load_agents(settings.agents_dir)
+        deployed = dict(agents)
+    gate = asyncio.run(registry_gate(settings.environment, audit, deployed))
     assembly = Assembly(
         platform,
         build_pdp(settings.pdp, opa_url=settings.opa_url, cerbos_url=settings.cerbos_url),
@@ -84,6 +94,7 @@ def main() -> None:
         store,
         desk=ApprovalDesk(approval_gate, router, audit),
         node=settings.node,  # Step 38: replicas share runs through leases
+        releases=releases,
     )
     verifier = KeycloakTokenVerifier(
         settings.issuer, audience=settings.audience, jwks_url=settings.jwks_url

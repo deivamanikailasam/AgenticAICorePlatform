@@ -127,3 +127,15 @@ groups:
           summary: "Tenant {{ $labels.agent_platform_tenant_id }} spent AUD {{ $value | humanize }} in the last hour"
           description: A tenant's spend is above the hourly guard limit.
           runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/cost.md
+
+      - alert: AgentReleaseRolledBack
+        # Step 38: the online-eval gate rolled a candidate version back (it already serves no
+        # one); its owner must find out why before a fixed version is released
+        expr: sum by (gen_ai_agent_name, version) (increase(agent_platform_release_rollbacks_total[15m])) > 0
+        labels:
+          severity: ticket
+          team: agent-platform
+        annotations:
+          summary: "{{ $labels.gen_ai_agent_name }} {{ $labels.version }} was rolled back by its online-eval gate"
+          description: The candidate failed its gate and serves no traffic now. Read the reason in GET /v1/admin/releases and the release.rolled_back audit event.
+          runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/release-rollback.md

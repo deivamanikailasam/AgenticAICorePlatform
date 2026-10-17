@@ -92,3 +92,33 @@ async def test_leases_let_one_replica_drive_a_run_and_another_take_over() -> Non
     finally:
         with psycopg.connect(dsn) as conn:
             conn.execute("delete from agent_runtime.runs where idempotency_key = %s", (key,))
+
+
+async def test_release_state_is_shared_through_postgres() -> None:
+    """Step 38: a rollback recorded by one replica is seen by every replica; outcomes are kept
+    once per run and mode."""
+    from datetime import UTC, datetime, timedelta
+
+    from agent_api.releases import Outcome, PostgresReleaseState
+
+    dsn = os.environ.get("AGENT_DB_DSN")
+    if not dsn:
+        pytest.skip("AGENT_DB_DSN not set")
+    agent = f"agent-{uuid.uuid4().hex[:8]}"
+    one, other = PostgresReleaseState(dsn), PostgresReleaseState(dsn)
+    try:
+        assert await other.rolled_back(agent, "1.1.0") is None
+        assert await one.roll_back(agent, "1.1.0", "failure rate up") is True
+        assert await one.roll_back(agent, "1.1.0", "again") is False, "rolled back once"
+        assert await other.rolled_back(agent, "1.1.0") == "failure rate up"
+        outcome = Outcome(agent, "1.1.0", uuid.uuid4().hex, "canary", False, 0.01, 1.5)
+        await one.record(outcome)
+        await other.record(outcome)  # the same run scored twice is kept once
+        since = datetime.now(UTC) - timedelta(minutes=5)
+        assert [(o.ok, o.mode) for o in await other.outcomes(agent, "1.1.0", since)] == [
+            (False, "canary")
+        ]
+    finally:
+        with psycopg.connect(dsn) as conn:
+            conn.execute("delete from agent_runtime.release_state where agent = %s", (agent,))
+            conn.execute("delete from agent_runtime.release_outcomes where agent = %s", (agent,))

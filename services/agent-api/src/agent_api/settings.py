@@ -30,6 +30,10 @@ class Settings:
     )
     audience: str = field(default_factory=lambda: _env("AGENT_API_AUDIENCE", "agent-platform"))
     agents_dir: str = field(default_factory=lambda: _env("AGENT_API_AGENTS_DIR", "agents"))
+    # Step 38: in staging and prod, the environment's releases file and the released spec
+    # versions (<agent>/<version>/agent.yaml); unset, every spec in agents_dir is stable
+    releases_file: str = field(default_factory=lambda: _env("AGENT_API_RELEASES", ""))
+    versions_dir: str = field(default_factory=lambda: _env("AGENT_API_VERSIONS_DIR", ""))
     # dev | staging | prod: staging and prod run only approved agents (Step 25)
     environment: str = field(default_factory=lambda: _env("AGENT_ENV", "dev"))
     pdp: str = field(default_factory=lambda: _env("AGENT_API_PDP", "opa"))

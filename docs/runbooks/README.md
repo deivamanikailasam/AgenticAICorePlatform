@@ -12,6 +12,7 @@ One page per alert in `infra/observability/prometheus/agent-rules.yaml`. Each al
 | AgentToolErrorRateHigh | ticket | [tool-errors.md](tool-errors.md) |
 | AgentApprovalsBacklog | ticket | [approvals-backlog.md](approvals-backlog.md) |
 | AgentTenantCostHigh | ticket | [cost.md](cost.md) |
+| AgentReleaseRolledBack | ticket | [release-rollback.md](release-rollback.md) |
 
 Every page has the same four parts: what it means, what to check, how to fix it, and when to
 escalate. The dashboard is **Agent platform** in Grafana; traces are in Tempo (no prompt content)

@@ -90,6 +90,17 @@ CATALOGUE: dict[str, EventType] = {
         EventType("a2a.call", "A call to a remote A2A agent", ("agent", "ok")),
         EventType("a2a.inbound", "A remote client called a published agent", ()),
         EventType("registry.refused", "An agent version was not allowed to run", ()),
+        # releases (Step 38)
+        EventType(
+            "release.shadow_run",
+            "A candidate version ran in the shadow of a stable run (no side effects)",
+            ("version", "status", "primary_run"),
+        ),
+        EventType(
+            "release.rolled_back",
+            "The online-eval gate rolled a candidate version back",
+            ("version", "reason"),
+        ),
     )
 }
 

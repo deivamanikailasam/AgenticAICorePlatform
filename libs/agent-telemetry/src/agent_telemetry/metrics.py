@@ -12,6 +12,7 @@ to Prometheus (``agent_platform_runs_total``, ``gen_ai_invoke_agent_duration_sec
 | p50/p95 latency | ``gen_ai.invoke_agent.duration`` (histogram, s); model calls: ``gen_ai.client.operation.duration`` |
 | budget trips | ``agent_platform.budget.trips`` (counter; ``limit``) |
 | guardrail hits | ``agent_platform.guardrail.hits`` (counter; ``guardrail``, ``stage``, ``action``) |
+| release online evaluation (Step 38) | ``agent_platform.release.scored`` (counter; ``version``, ``mode``, ``ok``) and ``agent_platform.release.rollbacks`` (counter; ``version``) |
 
 Labels stay low-cardinality: agent, tenant, tool, model, status, limit; never run or user ids.
 """
@@ -136,6 +137,16 @@ class AgentMetrics:
             unit="{token}",
             description="Output tokens used",
         )
+        self.release_scored = m.create_counter(
+            "agent_platform.release.scored",
+            unit="{run}",
+            description="Runs scored by online evaluation, per version and release mode",
+        )
+        self.release_rollbacks = m.create_counter(
+            "agent_platform.release.rollbacks",
+            unit="{rollback}",
+            description="Candidate versions rolled back by the online-eval gate",
+        )
         self._pending: Callable[[], Iterable[tuple[int, dict[str, Any]]]] = lambda: ()
         m.create_observable_gauge(
             "agent_platform.approvals.pending",
@@ -209,6 +220,14 @@ class AgentMetrics:
         if not error:
             self.input_tokens.add(input_tokens, attrs)
             self.output_tokens.add(output_tokens, attrs)
+
+    def release_outcome(self, agent: str, version: str, mode: str, ok: bool) -> None:
+        self.release_scored.add(
+            1, {S.AGENT_NAME: agent, "version": version, "mode": mode, "ok": str(ok).lower()}
+        )
+
+    def release_rolled_back(self, agent: str, version: str) -> None:
+        self.release_rollbacks.add(1, {S.AGENT_NAME: agent, "version": version})
 
     def guardrail_hit(self, guardrail: str, stage: str, action: str) -> None:
         self.guardrail_hits.add(1, {"guardrail": guardrail, "stage": stage, "action": action})

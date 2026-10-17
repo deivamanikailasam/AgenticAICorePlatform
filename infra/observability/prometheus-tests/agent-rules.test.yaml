@@ -98,3 +98,28 @@ tests:
               summary: "prompt_injection.rules blocked 30 times at retrieved in 10 minutes"
               description: A burst of blocks can be an attack (prompt injection through documents or tools) or a broken detector.
               runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/guardrail-blocks.md
+
+  # an automatic rollback opens a ticket for the version, once
+  - interval: 1m
+    input_series:
+      - series: 'agent_platform_release_rollbacks_total{gen_ai_agent_name="invoice-triage",version="0.4.0"}'
+        values: '0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: AgentReleaseRolledBack
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: AgentReleaseRolledBack
+        exp_alerts:
+          - exp_labels:
+              severity: ticket
+              team: agent-platform
+              gen_ai_agent_name: invoice-triage
+              version: 0.4.0
+            exp_annotations:
+              summary: "invoice-triage 0.4.0 was rolled back by its online-eval gate"
+              description: The candidate failed its gate and serves no traffic now. Read the reason in GET /v1/admin/releases and the release.rolled_back audit event.
+              runbook_url: https://github.com/deivamanikailasam/AgenticAICorePlatform/blob/main/docs/runbooks/release-rollback.md
+      - eval_time: 24m
+        alertname: AgentReleaseRolledBack
+        exp_alerts: []

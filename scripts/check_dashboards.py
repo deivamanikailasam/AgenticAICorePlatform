@@ -34,6 +34,8 @@ INSTRUMENTS: dict[str, str] = {
     "agent_platform.budget.trips": "counter",
     "agent_platform.guardrail.hits": "counter",
     "agent_platform.approvals.pending": "gauge",
+    "agent_platform.release.scored": "counter",
+    "agent_platform.release.rollbacks": "counter",
     "gen_ai.invoke_agent.duration": "histogram_seconds",
     "gen_ai.execute_tool.duration": "histogram_seconds",
     "gen_ai.client.operation.duration": "histogram_seconds",

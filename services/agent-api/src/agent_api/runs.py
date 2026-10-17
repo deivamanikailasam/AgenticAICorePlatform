@@ -50,6 +50,7 @@ from agent_contracts.models import (
     RunResult,
     RunState,
     ToolSpec,
+    new_id,
 )
 from agent_runtime.approvals import in_group
 from agent_runtime.checkpoints import fork_thread, history
@@ -68,6 +69,7 @@ from agent_tools.identity import subject_token
 from agent_api.agui import Translator
 from agent_api.assembly import Assembly
 from agent_api.desk import ApprovalDesk, ApprovalExpiredError
+from agent_api.releases import Outcome, Releases
 from agent_api.store import IdempotencyRaceError, MemoryRunStore, RunStore
 
 # runs that have ended: the only ones retention may prune
@@ -157,6 +159,7 @@ class Run:
             "client_id": self.owner.client_id,
             "thread_id": self.thread_id,
             "agent": self.agent,
+            "agent_version": self.ctx.agent_version,
             "inputs": self.inputs,
             "status": self.status,
             "interrupts": self.interrupts,
@@ -173,6 +176,8 @@ class Run:
 
 #: where each loaded agent's spec file lives: team workers are resolved relative to it
 SPEC_PATHS: dict[str, Path] = {}
+#: the same per (agent, version), for deployments that carry several versions (Step 38)
+VERSION_PATHS: dict[tuple[str, str], Path] = {}
 
 
 class ConflictError(ValueError):
@@ -195,11 +200,15 @@ class RunManager:
         store: RunStore | None = None,
         desk: ApprovalDesk | None = None,
         node: str | None = None,
+        releases: Releases | None = None,
     ) -> None:
-        self.agents = dict(agents)
+        # Step 38: which version of each agent serves (stable, canary or shadow candidate)
+        self.releases = releases or Releases.single(agents)
+        self.agents = dict(agents) if releases is None else releases.stable()
         # Step 38: this replica's address when several share the store (None: the only one)
         self.node = node
         self.held: set[str] = set()
+        self._shadows: set[asyncio.Task[None]] = set()
         self.assembly = assembly
         self.store = store or MemoryRunStore()
         self.runs: dict[str, Run] = {}
@@ -231,7 +240,26 @@ class RunManager:
             spec = load_spec(path)
             agents[spec.name] = spec
             SPEC_PATHS[spec.name] = path.resolve()
+            VERSION_PATHS[(spec.name, spec.version)] = path.resolve()
         return agents
+
+    @classmethod
+    def load_versions(cls, directory: str | Path) -> dict[tuple[str, str], AgentSpec]:
+        """Released specs, ``<agent>/<version>/agent.yaml`` (deploy/specs, Step 38). A version's
+        directory must hold that version."""
+        versions = {}
+        for path in sorted(Path(directory).glob("*/*/agent.yaml")):
+            spec = load_spec(path)
+            if (spec.name, spec.version) != (path.parent.parent.name, path.parent.name):
+                raise ValueError(f"{path} holds {spec.name} {spec.version}")
+            versions[(spec.name, spec.version)] = spec
+            VERSION_PATHS[(spec.name, spec.version)] = path.resolve()
+        return versions
+
+    def spec_of(self, run: Run) -> AgentSpec:
+        """The spec version this run started on; it finishes on it (Step 38)."""
+        found = self.releases.versions.get((run.agent, run.ctx.agent_version))
+        return found if found is not None else self.agents[run.agent]
 
     # ------------------------------------------------------------ access
 
@@ -404,17 +432,24 @@ class RunManager:
                 found = await self._idempotent_elsewhere(who, idempotency_key, body)
                 if found is not None:
                     return found, False
-        spec = self.agents[agent]
+        # Step 38: a thread stays on the version its first run was given
+        thread = thread_id or new_id()
+        spec, shadow = await self.releases.choose(agent, thread)
         ctx = RunContext(
             tenant_id=who.tenant,
             user_id=who.user,
             agent_id=spec.name,
             agent_version=spec.version,
             risk_tier=spec.risk_tier,
-            **({"thread_id": thread_id} if thread_id else {}),
+            thread_id=thread,
         )
         if self.assembly.admit is not None:  # Step 25: only approved agents in staging and prod
             refused = await self.assembly.admit(spec, ctx)
+            stable = self.agents[agent]
+            if refused and spec.version != stable.version:
+                # a candidate not (yet) approved never serves: the stable version does
+                spec, ctx = stable, ctx.model_copy(update={"agent_version": stable.version})
+                refused = await self.assembly.admit(spec, ctx)
             if refused:
                 raise PermissionError(refused)
         plan = compile_spec(spec)
@@ -447,6 +482,8 @@ class RunManager:
             self.idempotency[(who.tenant, who.user, idempotency_key)] = (run.run_id, body)
         await self._hold(run.run_id)
         self._start(run, adapter.invoke(handle, inputs, ctx), first=True)
+        if shadow is not None:  # the candidate runs the same input, without side effects
+            self._shadows.add(asyncio.create_task(self._shadow(shadow, inputs, who, run)))
         return run, True
 
     async def _idempotent_elsewhere(self, who: Principal, key: str, body: str) -> Run | None:
@@ -460,10 +497,20 @@ class RunManager:
             raise RunElsewhereError(peer)
         return self.runs[rec["run_id"]]
 
+    def _disabled_tools(self, agent: str) -> frozenset[str]:
+        channel = self.releases.channels.get(agent)
+        return channel.flags.disabled_tools if channel is not None else frozenset()
+
     async def _prepare(
         self, spec: AgentSpec, plan: ExecutablePlan, journal: RunJournal | None
     ) -> tuple[RuntimeAdapter, str]:
-        parts = await self.assembly.build(spec, plan, journal, spec_path=SPEC_PATHS.get(spec.name))
+        parts = await self.assembly.build(
+            spec,
+            plan,
+            journal,
+            spec_path=VERSION_PATHS.get((spec.name, spec.version)) or SPEC_PATHS.get(spec.name),
+            disabled_tools=self._disabled_tools(spec.name),
+        )
         registry = getattr(parts.tools, "registry", None)
         if registry is not None:  # side effects of the agent's tools, for approval routing
             specs = {t.name: t for t in await registry.list()}
@@ -502,7 +549,9 @@ class RunManager:
             token="",  # tokens are never stored; on-behalf-of tools need a new one
             client_id=rec.get("client_id", ""),
         )
-        spec = self.agents.get(rec["agent"])
+        spec = self.releases.versions.get(
+            (rec["agent"], str(rec.get("agent_version")))
+        ) or self.agents.get(rec["agent"])
         status = str(rec["status"])
         active = status in ("pending", "running", "interrupted")
         plan = compile_spec(spec) if spec else None
@@ -512,8 +561,11 @@ class RunManager:
             agent_id=rec["agent"],
             run_id=rec["run_id"],
             thread_id=rec["thread_id"],
-            **({"risk_tier": spec.risk_tier} if spec else {}),
         )
+        if spec is not None:
+            ctx = ctx.model_copy(
+                update={"risk_tier": spec.risk_tier, "agent_version": spec.version}
+            )
         journal = None
         checkpointer = self.assembly.checkpointer
         if active and checkpointer is not None:
@@ -609,11 +661,12 @@ class RunManager:
         if source is None:
             raise KeyError(checkpoint_id)
         new_thread, new_run = await fork_thread(checkpointer, who.tenant, thread_id, checkpoint_id)
-        spec = self.agents[source.agent]
+        spec = self.spec_of(source)
         ctx = RunContext(
             tenant_id=who.tenant,
             user_id=who.user,
             agent_id=spec.name,
+            agent_version=spec.version,
             risk_tier=spec.risk_tier,
             run_id=new_run,
             thread_id=new_thread,
@@ -662,7 +715,7 @@ class RunManager:
             await self.desk.open(
                 [item],
                 run.ctx,
-                self.agents[run.agent].risk_tier,
+                self.spec_of(run).risk_tier,
                 self.tool_specs.get(run.agent, {}),
             )
         try:
@@ -736,7 +789,7 @@ class RunManager:
         return digest / 0xFFFFFFFF < rate
 
     async def _sample_for_review(self, run: Run, output: Any) -> None:
-        settings = self.agents[run.agent].review
+        settings = self.spec_of(run).review
         if settings.sample_rate <= 0 or not self.sampled(run.run_id, settings.sample_rate):
             return
         self.reviews[run.run_id] = {
@@ -829,6 +882,104 @@ class RunManager:
         )
         return handover
 
+    # ------------------------------------------------------------ releases (Step 38)
+
+    async def _score(
+        self, spec: AgentSpec, run: Run | None, status: str, cost: float, seconds: float, mode: str
+    ) -> None:
+        """Online evaluation: score a finished run of a scored version; roll the candidate back
+        when the gate is breached."""
+        if status not in ("succeeded", "failed", "stopped") or run is None:
+            return
+        if not self.releases.scored(spec, run.run_id):
+            return
+        ok = status == "succeeded"
+        agent_metrics().release_outcome(spec.name, spec.version, mode, ok)
+        verdict, rolled = await self.releases.score(
+            Outcome(spec.name, spec.version, run.run_id, mode, ok, cost, seconds)
+        )
+        if rolled and verdict is not None:
+            candidate = self.releases.channels[spec.name].candidate
+            assert candidate is not None
+            agent_metrics().release_rolled_back(spec.name, candidate.version)
+            await self._audit_event(
+                "release.rolled_back",
+                run.ctx,
+                {
+                    "version": candidate.version,
+                    "reason": "; ".join(verdict.reasons),
+                    "numbers": verdict.numbers,
+                },
+            )
+
+    async def _shadow(
+        self, spec: AgentSpec, inputs: dict[str, Any], who: Principal, primary: Run
+    ) -> None:
+        """Run the candidate on the same input in the background: no writes, no approvals
+        asked for, nothing the caller sees; only its outcome is scored and audited."""
+        ctx = RunContext(
+            tenant_id=who.tenant,
+            user_id=who.user,
+            agent_id=spec.name,
+            agent_version=spec.version,
+            risk_tier=spec.risk_tier,
+        )
+        sink = current_sink.set(None)
+        caller = current_caller.set(
+            Caller(subject=who.subject, via="agent-api", client_id=who.client_id)
+        )
+        user = subject_token.set(who.token)
+        began, status, cost = time.perf_counter(), "failed", 0.0
+        try:
+            plan = compile_spec(spec)
+            parts = await self.assembly.build(
+                spec,
+                plan,
+                spec_path=VERSION_PATHS.get((spec.name, spec.version)),
+                shadow=True,
+                disabled_tools=self._disabled_tools(spec.name),
+            )
+            adapter = runtime_for(spec, runner=parts.runner)
+            handle = await adapter.build(plan)
+            await self.assembly.budgets.open(spec, ctx)
+            result = await asyncio.wait_for(
+                adapter.invoke(handle, inputs, ctx), timeout=spec.budgets.max_wall_seconds + 5
+            )
+            if result.status.value != "interrupted":
+                result = await self.assembly.budgets.finish(spec, ctx, result, None)
+            status = result.status.value
+            cost = self.assembly.ledger.total(ctx.run_id).cost_aud
+        except Exception as exc:  # a shadow never affects the stable run
+            status = f"failed: {type(exc).__name__}"
+        finally:
+            subject_token.reset(user)
+            current_caller.reset(caller)
+            current_sink.reset(sink)
+        await self._audit_event(
+            "release.shadow_run",
+            ctx,
+            {"version": spec.version, "status": status, "primary_run": primary.run_id},
+        )
+        shadow_run = Run(
+            run_id=ctx.run_id,
+            thread_id=ctx.thread_id,
+            agent=spec.name,
+            owner=who,
+            ctx=ctx,
+            plan=ExecutablePlan.model_construct(name=spec.name, nodes=(), entry="", exits=()),
+            adapter=None,
+            handle="",
+            inputs={},
+        )
+        await self._score(
+            spec,
+            shadow_run,
+            "failed" if status.startswith("failed") else status,
+            cost,
+            time.perf_counter() - began,
+            "shadow",
+        )
+
     async def _audit_event(self, kind: str, ctx: RunContext, payload: dict[str, Any]) -> None:
         await self.assembly.audit.append(AuditEvent(type=kind, ctx=ctx, payload=payload))
 
@@ -857,7 +1008,7 @@ class RunManager:
         if run.active or run.status != "failed":
             raise ConflictError(f"run {run.run_id} is {run.status}, not failed")
         checkpointer = self.assembly.checkpointer
-        spec = self.agents.get(run.agent)
+        spec = self.spec_of(run) if run.agent in self.agents else None
         if checkpointer is None or spec is None:
             raise ConflictError("retrying needs a checkpointer (durable runs)")
         journal = await load_journal(checkpointer, run.ctx)
@@ -1095,7 +1246,7 @@ class RunManager:
                 run, RunEvent(type=RunEventType.RUN_STARTED, run_id=run.run_id, data=started)
             )
             budgets = self.assembly.budgets
-            spec = self.agents[run.agent]
+            spec = self.spec_of(run)
             # Step 30: one invoke_agent span per run (and per resume); everything the run does,
             # model calls, tool calls and team workers, nests under it
             began = time.perf_counter()
@@ -1144,6 +1295,15 @@ class RunManager:
                     usage.cost_aud,
                     result.state.stop_reason,
                 )
+                # Step 38: online evaluation of the version that served this run
+                await self._score(
+                    spec,
+                    run,
+                    result.status.value,
+                    usage.cost_aud,
+                    time.perf_counter() - began,
+                    self.releases.mode_of(spec.name, spec.version),
+                )
             run.status = result.status.value
             if run.status == "succeeded":
                 await self._sample_for_review(run, result.output)
@@ -1164,7 +1324,7 @@ class RunManager:
                     await self.desk.open(
                         run.interrupts,
                         run.ctx,
-                        self.agents[run.agent].risk_tier,
+                        self.spec_of(run).risk_tier,
                         self.tool_specs.get(run.agent, {}),
                     )
                 await self._record(

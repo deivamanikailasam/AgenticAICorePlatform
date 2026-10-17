@@ -22,6 +22,7 @@
 ``GET  /v1/memories?agent=A``              inspect: what agent A remembers for the caller
 ``DELETE /v1/memories/{agent}/{id}``       the caller deletes one of their own memories
 ``POST /v1/admin/memory/flush``            flush every memory one run wrote (officers)
+``GET  /v1/admin/releases``                versions, candidates, flags, online-eval verdicts
 =========================================  ==============================================
 
 Every call needs a bearer token verified against Keycloak (issuer, signature, expiry,
@@ -302,6 +303,12 @@ def build_app(
             return JSONResponse({"error": "no retention policy configured"}, 503)
         return JSONResponse({"pruned": await manager.apply_retention(policy, who)})
 
+    async def releases(request: Request, who: Principal) -> Response:
+        """Step 38: what serves, the candidate and its online-eval verdict (operators)."""
+        if not set(who.roles) & {"platform-operator", RunManager.TAKEOVER_ROLE}:
+            raise PermissionError("releases need the platform-operator or operator role")
+        return JSONResponse({"releases": await manager.releases.report()})
+
     async def memories(request: Request, who: Principal) -> Response:
         agent = request.query_params.get("agent", "")
         return JSONResponse({"memories": await manager.memories(agent, who)})
@@ -404,6 +411,7 @@ def build_app(
             Route("/v1/memories", guarded(memories)),
             Route("/v1/memories/{agent}/{item_id}", guarded(forget), methods=["DELETE"]),
             Route("/v1/admin/memory/flush", guarded(flush), methods=["POST"]),
+            Route("/v1/admin/releases", guarded(releases)),
             WebSocketRoute("/v1/runs/{run_id}/ws", socket),
         ],
     )

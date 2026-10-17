@@ -10,7 +10,7 @@ Anything else is refused when the run is created.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -61,6 +61,8 @@ from agent_tools.ragcore import RagCoreSearchTool
 from agent_tools.registry import InMemoryToolRegistry
 from agent_tools.secrets import DEV_STAGES, SecretResolver, default_resolver
 from agent_tools.sql_read import SqlReadTool
+
+from agent_api.releases import FlaggedToolExecutor, ShadowToolExecutor
 
 ModelFactory = Callable[[AgentSpec], ModelClient]
 MemoryFactory = Callable[[AgentSpec], Awaitable[MemoryService | None]]
@@ -251,7 +253,11 @@ class Assembly:
         plan: ExecutablePlan,
         journal: RunJournal | None = None,
         spec_path: Path | None = None,
+        shadow: bool = False,
+        disabled_tools: Collection[str] = (),
     ) -> Assembled:
+        """Everything one run of ``spec`` needs. A shadow run (Step 38) never performs a write;
+        tools switched off by a feature flag refuse every call."""
         memory = await self.memory_factory(spec)
         registry = await self.registry_factory(spec)
         if any(t.ref == REMEMBER for t in spec.tools):
@@ -270,7 +276,7 @@ class Assembly:
         )
         guardrails = self.guardrails_for(spec)
         # Step 30: execute_tool spans around everything, refused calls included
-        tools = TracingToolExecutor(
+        tools: ToolExecutor = TracingToolExecutor(
             BudgetedToolExecutor(
                 EventingToolExecutor(
                     GuardedToolExecutor(
@@ -293,6 +299,10 @@ class Assembly:
             agent=spec.name,
             refs=tool_refs(plan),
         )
+        if disabled_tools:
+            tools = FlaggedToolExecutor(tools, disabled_tools)
+        if shadow:
+            tools = ShadowToolExecutor(tools, registry)
         model = StreamingModelClient(
             BudgetedModelClient(
                 GuardedModelClient(
